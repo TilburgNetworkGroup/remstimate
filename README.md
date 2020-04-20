@@ -28,7 +28,7 @@ library(remstimate)
 ```
 
 ### NEWS
-See the `NEWS` file for the most up to date changes.
+See [NEWS](NEWS.md) file for the most up to date changes.
 
 ### Notes
 To collaborators: if you have suggestions of any improvement or you notice an error, open an issue and label it.
