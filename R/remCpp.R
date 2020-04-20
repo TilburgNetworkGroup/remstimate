@@ -31,7 +31,7 @@ remCpp <- function(pars_init = NULL,
                  event_binary = event_binary,
                  interevent_time = interevent_time,
                  hessian = TRUE,
-                 n_cores = threads)
+                 threads = threads)
 
     # storing output
     out <- list()
