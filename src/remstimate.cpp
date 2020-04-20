@@ -9,10 +9,8 @@
 #include <string>
 
 
-
+//' useful function that acts like print() in R
 #define LOG(x) std::cout << x << "\n"
-
-//  BEGIN Preprocessing functions //
 
 //' lpd (Log-Pointwise Density of REM)
 //'
