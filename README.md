@@ -1,4 +1,4 @@
-# remstimate (Version 1.0)
+# remstimate (Version: 1.0)
 # Optimization Tools for Relational Event Model
 ### Table of contents
 * [About the package](#about-the-package)
@@ -12,8 +12,8 @@ The `remstimate` package provides a set of functions that perform necessary calc
 
 ### Programming Languages
 The package contains code written in:
-* R (Version 3.6.3)
-* Rcpp (Version: 1.0.4.6) and RcppArmadillo (Version: 0.9.860.2.0)
+* R (>= 3.6.3)
+* Rcpp (>= 1.0.4.6) and RcppArmadillo (>= 0.9.860.2.0)
 * C++11 (Compiler Version: GCC-8.1.0)
 	
 ### Installing the package
