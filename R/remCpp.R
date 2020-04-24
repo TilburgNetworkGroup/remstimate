@@ -8,6 +8,7 @@
 #' @param threads number of cores to use in the parallelization (i would change this parameter in 'n_threads')
 #'
 #' @return  object list (the function saves also the output of optim)
+#' @export
 remCpp <- function(pars_init = NULL,
                     stats, 
                     event_binary, 

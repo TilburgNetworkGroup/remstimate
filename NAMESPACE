@@ -2,5 +2,6 @@
 
 export(lpd)
 export(nllik)
+export(remCpp)
 importFrom(Rcpp,sourceCpp)
 useDynLib(remstimate)
