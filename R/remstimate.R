@@ -1,4 +1,4 @@
-#' remCpp  
+#' remstimate  
 #'
 #' A function that returns maximum likelihood estimates of REM (interval timing only) by using the optim function
 #'
@@ -9,7 +9,7 @@
 #'
 #' @return  object list (the function saves also the output of optim)
 #' @export
-remCpp <- function(pars_init = NULL,
+remstimate <- function(pars_init = NULL,
                     stats, 
                     event_binary, 
                     interevent_time, 

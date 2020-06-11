@@ -7,10 +7,23 @@
 #include <map>
 #include <iterator>
 #include <string>
-
+#include "reh.h"
+#include "remstimateBoost.h"
 
 //' useful function that acts like print() in R
 #define LOG(x) std::cout << x << "\n"
+
+// loglikelihood function
+
+// gradient function
+
+// hessian function
+
+// function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+
+//////////////////////////////////////////////////////////////////////////////////
+////////////             old functions are BELOW             /////////////////////
+//////////////////////////////////////////////////////////////////////////////////
 
 //' lpd (Log-Pointwise Density of REM)
 //'
