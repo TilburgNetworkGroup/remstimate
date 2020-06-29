@@ -1,4 +1,4 @@
-# remstimate (Version: 1.0)
+# remstimate (Version: 1.0.0)
 # Optimization Tools for Relational Event Model
 ### Table of contents
 * [About the package](#about-the-package)
