@@ -8,4 +8,4 @@ _lpd_ (calculates the same as _nllik_ but only for a specific time point and wit
 
 _11/06/2020_ :
 * Created _reh.h_ were the utility functions to preprocess data will be developed;
-* _remstimateBoost.cpp_ will contain the routines that speed up the computation of the loglikelihood and its first and second derivatives.
+* _remstimateBoost.h_ will contain the routines that speed up the computation of the loglikelihood and its first and second derivatives.
