@@ -1,12 +1,19 @@
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
 #include <iostream>
-#include <omp.h>
 #include <RcppArmadilloExtensions/sample.h>
 #include <typeinfo>
 #include <map>
 #include <iterator>
 #include <string>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#ifndef REMSTIMATEBOOST_H
+#define REMSTIMATEBOOST_H
+
 
 // things to do :
 // (1) change naming convention of functions and arguments and make it consistent with the whole package (as well as the other packages in remverse);
@@ -28,7 +35,7 @@
 //' @export
 // [[Rcpp::export]]  
 arma::mat cube_to_matrix(arma::cube S){
-  arma::mat aux(S.n_rows*S.n_slices, S.n_cols, fill::zeros); 
+  arma::mat aux(S.n_rows*S.n_slices, S.n_cols, arma::fill::zeros); 
   arma::uword num = 0;
   
   for(arma::uword i = 0; i < S.n_slices; ++i){
@@ -37,7 +44,7 @@ arma::mat cube_to_matrix(arma::cube S){
       num += 1;
     }
   }
-
+  
   return aux;
 }
 
@@ -53,7 +60,7 @@ arma::mat cube_to_matrix(arma::cube S){
 //' @export
 // [[Rcpp::export]]
 arma::mat get_unique_vectors(const arma::mat& A){
-  arma::uvec indices(A.n_rows, fill::zeros);
+  arma::uvec indices(A.n_rows, arma::fill::zeros);
   
   for(arma::uword i = 0; i < A.n_rows; ++i){
     for(arma::uword j = i+1; j < A.n_rows; ++j){
@@ -63,7 +70,7 @@ arma::mat get_unique_vectors(const arma::mat& A){
       }
     } 
   }  
-  return A.rows(find(indices == 0));
+  return A.rows(arma::find(indices == 0));
 }
 
 //' get_events_index (to remove, since a similar function will be written in reh.h)
@@ -109,7 +116,7 @@ arma::uvec get_events_index(const arma::mat& edgelist, const arma::mat& riskset)
 // [[Rcpp::export]]
 arma::vec compute_q(const arma::vec& index, const arma::mat& edgelist, const arma::mat& U, const arma::cube& S){
   arma::mat sReal(edgelist.n_rows, U.n_cols);
-  arma::mat Uindex(U.n_rows, sReal.n_rows, fill::zeros);
+  arma::mat Uindex(U.n_rows, sReal.n_rows, arma::fill::zeros);
   
   for(arma::uword i = 0; i < index.n_elem; ++i){
     sReal.row(i) = S.slice(i).row(index(i));
@@ -126,7 +133,7 @@ arma::vec compute_q(const arma::vec& index, const arma::mat& edgelist, const arm
   arma::vec q(U.n_rows);
   
   for(arma::uword i = 0; i < q.n_elem; ++i){
-    q(i) = sum(Uindex.row(i));
+    q(i) = arma::sum(Uindex.row(i));
   }
   
   return q;
@@ -146,7 +153,7 @@ arma::vec compute_q(const arma::vec& index, const arma::mat& edgelist, const arm
 //' @export
 // [[Rcpp::export]]
 arma::vec compute_m(const arma::vec& index, const arma::mat& edgelist, const arma::mat& U, const arma::cube& S){
-  arma::mat MM(U.n_rows, edgelist.n_rows, fill::zeros);
+  arma::mat MM(U.n_rows, edgelist.n_rows, arma::fill::zeros);
   
   for(arma::uword i = 0; i < edgelist.n_rows; ++i){
     for(arma::uword j = 0; j < U.n_rows; ++j){
@@ -161,11 +168,11 @@ arma::vec compute_m(const arma::vec& index, const arma::mat& edgelist, const arm
     }
   }
   
-  arma::vec time(edgelist.n_rows+1, fill::zeros);
+  arma::vec time(edgelist.n_rows+1, arma::fill::zeros);
   
   for(arma::uword i = 0; i < edgelist.n_rows; ++i) time(i+1) = edgelist(i,0);
   
-  time = diff(time);
+  time = arma::diff(time);
   
   arma::vec m(U.n_rows);
   
@@ -188,5 +195,7 @@ arma::vec compute_m(const arma::vec& index, const arma::mat& edgelist, const arm
 //' @export
 // [[Rcpp::export]]
 double logLike(arma::vec beta, const arma::mat& U, const arma::vec q, const arma::vec m){
-  return(sum(q.t() * (U * beta) - m.t() * exp(U * beta)));
+  return(arma::sum(q.t() * (U * beta) - m.t() * exp(U * beta)));
 }
+
+#endif

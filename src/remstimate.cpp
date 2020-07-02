@@ -10,9 +10,6 @@
 #include "reh.h"
 #include "remstimateBoost.h"
 
-//' useful function that acts like print() in R
-#define LOG(x) std::cout << x << "\n"
-
 // loglikelihood function
 
 // gradient function
