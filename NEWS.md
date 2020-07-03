@@ -1,4 +1,4 @@
-# NEWS (last update on July 7, 2020)
+# NEWS (last update on July 3, 2020)
 
 _20/04/2020_ :
 * created repository with first commit;
@@ -10,6 +10,6 @@ _11/06/2020_ :
 * Created _reh.h_ were the utility functions to preprocess data will be developed;
 * _remstimateBoost.h_ will contain the routines that speed up the computation of the loglikelihood and its first and second derivatives.
 
-_07/03/2020_ :
+_03/07/2020_ :
 *  _reh.h_ changed to _reh.cpp_ and it contains utility functions used in _reh.R_ within the R function `reh(...)` ;
 * _messages.cpp_ will contain functions `errorMessage(cond)` and `warningMessage(cond)` that will return appropriate error/warning messages according to the _cond_ argument.
