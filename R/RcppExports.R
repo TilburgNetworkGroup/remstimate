@@ -54,23 +54,6 @@ convertEdgelist <- function(edgelist, actorsDictionary, typesDictionary, M) {
     .Call('_remstimate_convertEdgelist', PACKAGE = 'remstimate', edgelist, actorsDictionary, typesDictionary, M)
 }
 
-#' reh (a function to pre-process the REH input)
-#'
-#' description of remstimate::reh here (most likeliy the function won't be exported as a function in R but only intended to be used internally, since the
-#' conversion to integer id's and all that follows can be a kind of pre-processing difficult to digest and not so intuitive)
-#'
-#' @param edgelist a matrix of columns : time, sender, receiver (if timing is interval, then time column is a sorted continuous vector. If timing is ordinal, then time column is still sorted but is a vector of integers)
-#' @param riskset a list where for each time point a matrix of those dyads NOT included in the risk set is provided (as in [sender,receiver]).
-#' @param covariates a list of covariates (actor-level, dyadic-level): we should know whether they are actor-level or dyadic-level (see how 'remstats' handle this in the remstats::remstats() function).
-#' @param actorsDictionary
-#'
-#' @return list of objects useful for the analysis of the REH (read more here)
-#'
-#' @export
-reh <- function(edgelist, riskset, covariates, actorsDictionary) {
-    .Call('_remstimate_reh', PACKAGE = 'remstimate', edgelist, riskset, covariates, actorsDictionary)
-}
-
 #' lpd (Log-Pointwise Density of REM)
 #'
 #' @param pars is a vector of parameters (note: the order must be aligned witht the column order in 'stats')

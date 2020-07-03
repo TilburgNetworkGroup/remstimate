@@ -69,20 +69,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// reh
-Rcpp::List reh(arma::mat edgelist, Rcpp::List riskset, Rcpp::List covariates, Rcpp::List actorsDictionary);
-RcppExport SEXP _remstimate_reh(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP covariatesSEXP, SEXP actorsDictionarySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type edgelist(edgelistSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type riskset(risksetSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type covariates(covariatesSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type actorsDictionary(actorsDictionarySEXP);
-    rcpp_result_gen = Rcpp::wrap(reh(edgelist, riskset, covariates, actorsDictionary));
-    return rcpp_result_gen;
-END_RCPP
-}
 // lpd
 double lpd(arma::vec pars, arma::mat stats, arma::uvec event, double interevent_time);
 RcppExport SEXP _remstimate_lpd(SEXP parsSEXP, SEXP statsSEXP, SEXP eventSEXP, SEXP interevent_timeSEXP) {
@@ -195,7 +181,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_getRiskset", (DL_FUNC) &_remstimate_getRiskset, 4},
     {"_remstimate_getRisksetCube", (DL_FUNC) &_remstimate_getRisksetCube, 3},
     {"_remstimate_convertEdgelist", (DL_FUNC) &_remstimate_convertEdgelist, 4},
-    {"_remstimate_reh", (DL_FUNC) &_remstimate_reh, 4},
     {"_remstimate_lpd", (DL_FUNC) &_remstimate_lpd, 4},
     {"_remstimate_nllik", (DL_FUNC) &_remstimate_nllik, 5},
     {"_remstimate_cube_to_matrix", (DL_FUNC) &_remstimate_cube_to_matrix, 1},
