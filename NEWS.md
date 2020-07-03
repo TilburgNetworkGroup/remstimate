@@ -1,4 +1,4 @@
-# NEWS (last update on June 11, 2020)
+# NEWS (last update on July 7, 2020)
 
 _20/04/2020_ :
 * created repository with first commit;
