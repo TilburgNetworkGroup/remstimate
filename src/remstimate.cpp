@@ -7,7 +7,6 @@
 #include <map>
 #include <iterator>
 #include <string>
-#include "reh.h"
 #include "remstimateBoost.h"
 
 // loglikelihood function

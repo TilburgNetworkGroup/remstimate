@@ -1,19 +1,11 @@
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
 #include <iostream>
-#include <RcppArmadilloExtensions/sample.h>
+#include <omp.h>
 #include <typeinfo>
 #include <map>
 #include <iterator>
 #include <string>
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
-#ifndef REH_H
-#define REH_H
-
 
 //' getRiskset (obtain permutations of actors' ids and event types).
 //'
@@ -109,6 +101,3 @@ Rcpp::DataFrame convertEdgelist(Rcpp::DataFrame edgelist, Rcpp::List actorsDicti
                                                           Rcpp::Named("weight") = edgelist["weight"]);
     return outEdgelist;
 }
-
-
-#endif
