@@ -19,14 +19,14 @@
 // [[Rcpp::export]]
 arma::mat getRiskset(arma::uvec actorID, arma::uvec typeID, arma::uword N, arma::uword C){
     arma::uword i,j,c;
-    arma::mat riskset(N*N,3);
+    arma::mat riskset(N*N*C,3);
     for(c = 0; c < C; c++){
         for(i = 0; i < N; i++){
             for(j = 0; j < N ; j++){
                     if(j != i){
-                riskset(j+i*N+c*(N*N),0) = actorID(i);
-                riskset(j+i*N+c*(N*N),1) = actorID(j);
-                riskset(j+i*N+c*(N*N),2) = typeID(c);
+                    riskset(j+i*N+c*(N*N),0) = actorID(i);
+                    riskset(j+i*N+c*(N*N),1) = actorID(j);
+                    riskset(j+i*N+c*(N*N),2) = typeID(c);
                 }
                 else {
                     riskset(j+i*N+c*(N*N),0) = NAN;

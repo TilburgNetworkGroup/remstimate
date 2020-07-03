@@ -20,6 +20,8 @@ reh <- function(edgelist, riskset, covariates){
 
     # Initializing useful variables
     out$M <- dim(edgelist)[1]
+
+    # intereventTime variable (we should handle in such a way that if Date class variable is provided we can process that data type as well)
     out$intereventTime <- diff(c(0,edgelist$time))
 
     # Create a dictionary for actors and event types, that is like: 'string_name' = integer (IDentifier)
@@ -47,5 +49,5 @@ reh <- function(edgelist, riskset, covariates){
                                     
     # Preprocess covariates here (we want to make 'remstats' understand our input)
     # ...
-    
+    return(out)
 }
