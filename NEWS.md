@@ -11,5 +11,5 @@ _11/06/2020_ :
 * _remstimateBoost.h_ will contain the routines that speed up the computation of the loglikelihood and its first and second derivatives.
 
 _07/03/2020_ :
-*  _reh.h_ changed to _reh.cpp_ and create da _reh.R_
+*  _reh.h_ changed to _reh.cpp_ and it contains utility functions used in _reh.R_ within the R function `reh(...)` ;
 * _messages.cpp_ will contain functions `errorMessage(cond)` and `warningMessage(cond)` that will return appropriate error/warning messages according to the _cond_ argument.
