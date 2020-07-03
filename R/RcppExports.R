@@ -19,15 +19,15 @@ errorMessage <- function(cond) {
 
 #' getRiskset (obtain permutations of actors' ids and event types).
 #'
-#' @param actorsID vector of actors' id's.
-#' @param typesID vector of types' id's.
+#' @param actorID vector of actors' id's.
+#' @param typeID vector of types' id's.
 #' @param N number of actors in the dataset.
 #' @param C number of event types
 #'
 #' @return matrix of possible dyadic events.
 #'
-getRiskset <- function(actorsID, typesID, N, C) {
-    .Call('_remstimate_getRiskset', PACKAGE = 'remstimate', actorsID, typesID, N, C)
+getRiskset <- function(actorID, typeID, N, C) {
+    .Call('_remstimate_getRiskset', PACKAGE = 'remstimate', actorID, typeID, N, C)
 }
 
 #' getRisksetCube

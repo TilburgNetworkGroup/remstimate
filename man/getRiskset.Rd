@@ -4,12 +4,12 @@
 \alias{getRiskset}
 \title{getRiskset (obtain permutations of actors' ids and event types).}
 \usage{
-getRiskset(actorsID, typesID, N, C)
+getRiskset(actorID, typeID, N, C)
 }
 \arguments{
-\item{actorsID}{vector of actors' id's.}
+\item{actorID}{vector of actors' id's.}
 
-\item{typesID}{vector of types' id's.}
+\item{typeID}{vector of types' id's.}
 
 \item{N}{number of actors in the dataset.}
 

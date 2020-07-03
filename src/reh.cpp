@@ -9,24 +9,24 @@
 
 //' getRiskset (obtain permutations of actors' ids and event types).
 //'
-//' @param actorsID vector of actors' id's.
-//' @param typesID vector of types' id's.
+//' @param actorID vector of actors' id's.
+//' @param typeID vector of types' id's.
 //' @param N number of actors in the dataset.
 //' @param C number of event types
 //'
 //' @return matrix of possible dyadic events.
 //'
 // [[Rcpp::export]]
-arma::mat getRiskset(arma::uvec actorsID, arma::uvec typesID, arma::uword N, arma::uword C){
+arma::mat getRiskset(arma::uvec actorID, arma::uvec typeID, arma::uword N, arma::uword C){
     arma::uword i,j,c;
     arma::mat riskset(N*N,3);
     for(c = 0; c < C; c++){
         for(i = 0; i < N; i++){
             for(j = 0; j < N ; j++){
                     if(j != i){
-                riskset(j+i*N+c*(N*N),0) = actorsID(i);
-                riskset(j+i*N+c*(N*N),1) = actorsID(j);
-                riskset(j+i*N+c*(N*N),2) = typesID(c);
+                riskset(j+i*N+c*(N*N),0) = actorID(i);
+                riskset(j+i*N+c*(N*N),1) = actorID(j);
+                riskset(j+i*N+c*(N*N),2) = typeID(c);
                 }
                 else {
                     riskset(j+i*N+c*(N*N),0) = NAN;

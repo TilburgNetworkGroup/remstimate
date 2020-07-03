@@ -29,16 +29,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // getRiskset
-arma::mat getRiskset(arma::uvec actorsID, arma::uvec typesID, arma::uword N, arma::uword C);
-RcppExport SEXP _remstimate_getRiskset(SEXP actorsIDSEXP, SEXP typesIDSEXP, SEXP NSEXP, SEXP CSEXP) {
+arma::mat getRiskset(arma::uvec actorID, arma::uvec typeID, arma::uword N, arma::uword C);
+RcppExport SEXP _remstimate_getRiskset(SEXP actorIDSEXP, SEXP typeIDSEXP, SEXP NSEXP, SEXP CSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uvec >::type actorsID(actorsIDSEXP);
-    Rcpp::traits::input_parameter< arma::uvec >::type typesID(typesIDSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type actorID(actorIDSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type typeID(typeIDSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type N(NSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type C(CSEXP);
-    rcpp_result_gen = Rcpp::wrap(getRiskset(actorsID, typesID, N, C));
+    rcpp_result_gen = Rcpp::wrap(getRiskset(actorID, typeID, N, C));
     return rcpp_result_gen;
 END_RCPP
 }

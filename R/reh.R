@@ -34,7 +34,7 @@ reh <- function(edgelist, riskset, covariates){
     # riskset objects (it is not the rehBinary but it just includes all the possible combination of [sender,receiver,type]) ...
 
     # ... arranged in a matrix [D*3]
-    out$risksetMatrix <- matrix(na.omit(getRiskset(actorsID = out$actorsDictionary$actorID, typesID = out$typesDictionary$typeID, N = out$N, C = out$C)),ncol=3)
+    out$risksetMatrix <- matrix(na.omit(getRiskset(actorID = out$actorsDictionary$actorID, typeID = out$typesDictionary$typeID, N = out$N, C = out$C)),ncol=3)
 
     # ... arranged in a cube [N*N*C]
     out$risksetCube <- getRisksetCube(risksetMatrix = out$risksetMatrix, N = out$N, C = out$C)
