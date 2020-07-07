@@ -15,6 +15,6 @@ _03/07/2020_ :
 * _messages.cpp_ will contain functions `errorMessage(cond)` and `warningMessage(cond)` that will return appropriate error/warning messages according to the _cond_ argument.
 
 _07/07/2020_ :
-*  `reh()` will be the only preprocessing function and it is coded in Rcpp (see reh.cpp file) whereas the R function and the _reh.R_ file are removed;
+*  `reh()` will be the only preprocessing function and it is coded in Rcpp (see _reh.cpp_ file) whereas the R function and the _reh.R_ file are removed;
 * utility functions called inside `reh()` are added inside the _reh.cpp_ file, before the `reh()` function itself;
 * _messages.cpp_ becomes an header file _messages.h_ and the aim/content remains the same.
