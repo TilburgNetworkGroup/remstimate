@@ -113,7 +113,7 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
             Rcpp::StringMatrix omitDyads = riskset[m];
 
             // number of dyads to omit from the riskset at the m-th time point
-            arma::uword D_loc = omitDyads.nrow();
+            arma::uword D_m = omitDyads.nrow();
 
             // converting input senders, receivers and types to std::string vectors
             Rcpp::StringVector omitDyadsSender = omitDyads.column(0);
@@ -124,10 +124,10 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
             std::vector<std::string> stringOmitType = Rcpp::as<std::vector<std::string>>(omitDyadsType); // type
 
             // allocating space for the converted senders, receivers and types
-            Rcpp::NumericVector omitSender(D_loc),omitReceiver(D_loc),omitType(D_loc);
+            Rcpp::NumericVector omitSender(D_m),omitReceiver(D_m),omitType(D_m);
 
             // find sender
-            for(d = 0; d < D_loc; d++){
+            for(d = 0; d < D_m; d++){
                 std::vector<std::string>::iterator i = std::find(actor.begin(), actor.end(), stringOmitSender[d]);
                 omitSender[d] = actorID.at(std::distance(actor.begin(), i));
                 // find receiver
@@ -137,10 +137,10 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
                 std::vector<std::string>::iterator c = std::find(type.begin(), type.end(), stringOmitType[d]);
                 omitType[d] = typeID.at(std::distance(type.begin(), c));
             }
-            Rcpp::DataFrame converted_loc = Rcpp::DataFrame::create(Rcpp::Named("sender") = omitSender,
+            Rcpp::DataFrame converted_m = Rcpp::DataFrame::create(Rcpp::Named("sender") = omitSender,
                                                                     Rcpp::Named("receiver") = omitReceiver,
                                                                     Rcpp::Named("type") = omitType);
-            outRiskset.push_back(converted_loc);
+            outRiskset.push_back(converted_m);
         }
         else{
             outRiskset.push_back(R_NaN);
@@ -186,12 +186,12 @@ arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::ucube
             arma::mat omitDyads = riskset[m];
 
             // number of dyads to omit from the riskset at the m-th time point
-            arma::uword D_loc = omitDyads.n_rows;
+            arma::uword D_m = omitDyads.n_rows;
             // getting sender, receiver and type combinations to omit from the riskset at the m-th time point
             arma::vec omitSender = omitDyads.col(0); // sender
             arma::vec omitReceiver = omitDyads.col(1); // receiver
             arma::vec omitType = omitDyads.col(2); // type
-            for(d = 0; d < D_loc; d++){
+            for(d = 0; d < D_m; d++){
                 arma::uword event_d = risksetCube(omitSender(d),omitReceiver(d),omitType(d));
                 outBinaryREH(m,event_d) = -1;
             }
