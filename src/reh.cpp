@@ -8,6 +8,9 @@
 #include <string>
 #include "messages.h"
 
+
+#define LOG(x) std::cout << x << "\n"
+
 //' getRisksetMatrix (obtain permutations of actors' ids and event types).
 //'
 //' @param actorID vector of actors' id's.
@@ -68,6 +71,7 @@ arma::ucube getRisksetCube(arma::umat risksetMatrix, arma::uword N, arma::uword 
 //' @param riskset riskset list with old actors sitring names.
 //' @param actorsDictionary dictionary of actors names (input string name = integer id)
 //' @param typesDicitonary dictionary of event types (input string name = integer id)
+//' @param M number of observed relational events
 //'
 //' @return cube of possible combination [sender,receiver,type]: the cell value is the column index in the rehBinary matrix
 //'
@@ -89,32 +93,35 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
     std::vector<std::string> actor = Rcpp::as<std::vector<std::string>>(actorsDictionary["actor"]);
     std::vector<int> actorID = actorsDictionary["actorID"];
     std::vector<std::string> type = Rcpp::as<std::vector<std::string>>(typesDictionary["type"]);
-    Rcpp::NumericVector typeID = typesDictionary["typeID"];
+    std::vector<int> typeID = typesDictionary["typeID"];
 
     for(m = 0; m < M; m++){
         // (1) converting m-th event in the edgelist input
         // find sender
         std::vector<std::string>::iterator i = std::find(actor.begin(), actor.end(), stringSender[m]);
-        outputSender[m] = actorID.at(distance(actor.begin(), i));
+        outputSender[m] = actorID.at(std::distance(actor.begin(), i));
         // find receiver
         std::vector<std::string>::iterator j = std::find(actor.begin(), actor.end(), stringReceiver[m]);
-        outputReceiver[m] = actorID.at(distance(actor.begin(), j));
+        outputReceiver[m] = actorID.at(std::distance(actor.begin(), j));
         // find type 
         std::vector<std::string>::iterator c = std::find(type.begin(), type.end(), stringType[m]);
-        outputType[m] = typeID.at(distance(type.begin(), c));
+        outputType[m] = typeID.at(std::distance(type.begin(), c));
 
         // (2) converting m-th object in the riskset input list
-        if(riskset[m] != R_NilValue){
+        if(!R_IsNaN(riskset[m])){ //
             // we expect a Rcpp::DataFrame (sender,receiver,type)
-            Rcpp::DataFrame omitDyads = riskset[m];
+            Rcpp::StringMatrix omitDyads = riskset[m];
 
             // number of dyads to omit from the riskset at the m-th time point
-            arma::uword D_loc = omitDyads.nrows();
+            arma::uword D_loc = omitDyads.nrow();
 
             // converting input senders, receivers and types to std::string vectors
-            std::vector<std::string> stringOmitSender = Rcpp::as<std::vector<std::string>>(omitDyads["sender"]);
-            std::vector<std::string> stringOmitReceiver = Rcpp::as<std::vector<std::string>>(omitDyads["receiver"]);
-            std::vector<std::string> stringOmitType = Rcpp::as<std::vector<std::string>>(omitDyads["type"]);
+            Rcpp::StringVector omitDyadsSender = omitDyads.column(0);
+            Rcpp::StringVector omitDyadsReceiver = omitDyads.column(1);
+            Rcpp::StringVector omitDyadsType = omitDyads.column(2);
+            std::vector<std::string> stringOmitSender = Rcpp::as<std::vector<std::string>>(omitDyadsSender); // sender
+            std::vector<std::string> stringOmitReceiver = Rcpp::as<std::vector<std::string>>(omitDyadsReceiver); // receiver
+            std::vector<std::string> stringOmitType = Rcpp::as<std::vector<std::string>>(omitDyadsType); // type
 
             // allocating space for the converted senders, receivers and types
             Rcpp::NumericVector omitSender(D_loc),omitReceiver(D_loc),omitType(D_loc);
@@ -122,13 +129,13 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
             // find sender
             for(d = 0; d < D_loc; d++){
                 std::vector<std::string>::iterator i = std::find(actor.begin(), actor.end(), stringOmitSender[d]);
-                omitSender[d] = actorID.at(distance(actor.begin(), i));
+                omitSender[d] = actorID.at(std::distance(actor.begin(), i));
                 // find receiver
                 std::vector<std::string>::iterator j = std::find(actor.begin(), actor.end(), stringOmitReceiver[d]);
-                omitReceiver[d] = actorID.at(distance(actor.begin(), j));
+                omitReceiver[d] = actorID.at(std::distance(actor.begin(), j));
                 // find type 
                 std::vector<std::string>::iterator c = std::find(type.begin(), type.end(), stringOmitType[d]);
-                omitType[d] = typeID.at(distance(type.begin(), c));
+                omitType[d] = typeID.at(std::distance(type.begin(), c));
             }
             Rcpp::DataFrame converted_loc = Rcpp::DataFrame::create(Rcpp::Named("sender") = omitSender,
                                                                     Rcpp::Named("receiver") = omitReceiver,
@@ -136,7 +143,7 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
             outRiskset.push_back(converted_loc);
         }
         else{
-            outRiskset.push_back(R_NilValue);
+            outRiskset.push_back(R_NaN);
         }
 
     }
@@ -162,7 +169,7 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
 //' @return utility matrix per row 0 if the event could happen but didn't, 1 if the event happend, -1 if the event couldn't occur
 //' 
 // [[Rcpp::export]]
-arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::cube risksetCube, arma::uword M, arma::uword D) {
+arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::ucube risksetCube, arma::uword M, arma::uword D) {
     arma::uword m,d;
     arma::mat outBinaryREH(M,D,arma::fill::zeros); // by setting the initial values to zero we already handle those
                                                     // relational events that could have occurred but didn't
@@ -172,28 +179,28 @@ arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::cube 
     for(m = 0; m < M; m++){
         // relational event that occurred
         arma::uword event_m = risksetCube(sender[m],receiver[m],type[m]);
-        outBinaryREH(M,event_m) = 1;
-
+        outBinaryREH(m,event_m) = 1;
         // relational events that couldn't occur
-        if(riskset[m] != R_NilValue){
+        if(!R_IsNaN(riskset[m])){
             // we expect a Rcpp::DataFrame (sender,receiver,type)
-            Rcpp::DataFrame omitDyads = riskset[m];
+            arma::mat omitDyads = riskset[m];
 
             // number of dyads to omit from the riskset at the m-th time point
-            arma::uword D_loc = omitDyads.nrows();
+            arma::uword D_loc = omitDyads.n_rows;
             // getting sender, receiver and type combinations to omit from the riskset at the m-th time point
-            Rcpp::NumericVector omitSender = omitDyads["sender"];
-            Rcpp::NumericVector omitReceiver = omitDyads["receiver"];
-            Rcpp::NumericVector omitType = omitDyads["type"];
+            arma::vec omitSender = omitDyads.col(0); // sender
+            arma::vec omitReceiver = omitDyads.col(1); // receiver
+            arma::vec omitType = omitDyads.col(2); // type
             for(d = 0; d < D_loc; d++){
-                arma::uword event_d = risksetCube(omitSender[d],omitReceiver[d],omitType[d]);
-                outBinaryREH(M,event_d) = -1;
+                arma::uword event_d = risksetCube(omitSender(d),omitReceiver(d),omitType(d));
+                outBinaryREH(m,event_d) = -1;
             }
         }
     }
 
     return outBinaryREH;
 }
+
 
 //' reh (a function for preprocessing data)
 //'
@@ -232,7 +239,6 @@ Rcpp::List reh(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::List covariat
     time_loc.push_front(t0);
     out["intereventTime"] = Rcpp::diff(time_loc); 
 
-
     // StringVector of senders
     Rcpp::StringVector senders = edgelist["sender"];
 
@@ -241,8 +247,8 @@ Rcpp::List reh(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::List covariat
 
     //StringVector of senders and receivers (this procedure of preallocation the whole StrigVector works faster than a for loop with of push_front's)
     Rcpp::StringVector senders_and_receivers(senders.length()+receivers.length());
-    senders_and_receivers[Rcpp::Range(0,senders.length()-1)] = senders;
-    senders_and_receivers[Rcpp::Range(senders.length(),senders_and_receivers.length()-1)] = receivers;
+    senders_and_receivers[Rcpp::Range(0,(senders.length()-1))] = senders;
+    senders_and_receivers[Rcpp::Range(senders.length(),(senders_and_receivers.length()-1))] = receivers;
 
     // Finding unique strings in senders_and_receivers 
     Rcpp::StringVector actor = Rcpp::unique(senders_and_receivers);
@@ -266,6 +272,7 @@ Rcpp::List reh(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::List covariat
 
     // ... arranged in a matrix [D*3]
     out["risksetMatrix"] = getRisksetMatrix(actorsDictionary["actorID"],typesDictionary["typeID"],out["N"],out["C"]);
+
 
     // ... arranged in a cube [N*N*C]
     out["risksetCube"] = getRisksetCube(out["risksetMatrix"],out["N"],out["C"]);

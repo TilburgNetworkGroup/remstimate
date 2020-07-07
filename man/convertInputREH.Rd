@@ -13,6 +13,8 @@ convertInputREH(edgelist, riskset, actorsDictionary, typesDictionary, M)
 
 \item{actorsDictionary}{dictionary of actors names (input string name = integer id)}
 
+\item{M}{number of observed relational events}
+
 \item{typesDicitonary}{dictionary of event types (input string name = integer id)}
 }
 \value{

@@ -71,14 +71,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // getBinaryREH
-arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::cube risksetCube, arma::uword M, arma::uword D);
+arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::ucube risksetCube, arma::uword M, arma::uword D);
 RcppExport SEXP _remstimate_getBinaryREH(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP risksetCubeSEXP, SEXP MSEXP, SEXP DSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::DataFrame >::type edgelist(edgelistSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type riskset(risksetSEXP);
-    Rcpp::traits::input_parameter< arma::cube >::type risksetCube(risksetCubeSEXP);
+    Rcpp::traits::input_parameter< arma::ucube >::type risksetCube(risksetCubeSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type M(MSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type D(DSEXP);
     rcpp_result_gen = Rcpp::wrap(getBinaryREH(edgelist, riskset, risksetCube, M, D));

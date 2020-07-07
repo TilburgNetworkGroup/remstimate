@@ -48,6 +48,7 @@ getRisksetCube <- function(risksetMatrix, N, C) {
 #' @param riskset riskset list with old actors sitring names.
 #' @param actorsDictionary dictionary of actors names (input string name = integer id)
 #' @param typesDicitonary dictionary of event types (input string name = integer id)
+#' @param M number of observed relational events
 #'
 #' @return cube of possible combination [sender,receiver,type]: the cell value is the column index in the rehBinary matrix
 #'
