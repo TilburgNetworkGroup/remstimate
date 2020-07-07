@@ -6,6 +6,11 @@
 #include <iterator>
 #include <string>
 
+
+#ifndef MESSAGES_H
+#define MESSAGES_H
+
+
 //' warningMessage
 //'
 //' @param cond  it is the warning number
@@ -51,5 +56,4 @@ std::string errorMessage(arma::uword cond){
       return message;
 }
 
-
-
+#endif

@@ -17,7 +17,7 @@ errorMessage <- function(cond) {
     .Call('_remstimate_errorMessage', PACKAGE = 'remstimate', cond)
 }
 
-#' getRiskset (obtain permutations of actors' ids and event types).
+#' getRisksetMatrix (obtain permutations of actors' ids and event types).
 #'
 #' @param actorID vector of actors' id's.
 #' @param typeID vector of types' id's.
@@ -26,8 +26,8 @@ errorMessage <- function(cond) {
 #'
 #' @return matrix of possible dyadic events.
 #'
-getRiskset <- function(actorID, typeID, N, C) {
-    .Call('_remstimate_getRiskset', PACKAGE = 'remstimate', actorID, typeID, N, C)
+getRisksetMatrix <- function(actorID, typeID, N, C) {
+    .Call('_remstimate_getRisksetMatrix', PACKAGE = 'remstimate', actorID, typeID, N, C)
 }
 
 #' getRisksetCube
@@ -42,16 +42,44 @@ getRisksetCube <- function(risksetMatrix, N, C) {
     .Call('_remstimate_getRisksetCube', PACKAGE = 'remstimate', risksetMatrix, N, C)
 }
 
-#' convertEdgelist
+#' convertInputREH
 #'
 #' @param edgelist is the input data frame with information about [time,sender,receiver,type,weight] by row.
+#' @param riskset riskset list with old actors sitring names.
 #' @param actorsDictionary dictionary of actors names (input string name = integer id)
 #' @param typesDicitonary dictionary of event types (input string name = integer id)
 #'
 #' @return cube of possible combination [sender,receiver,type]: the cell value is the column index in the rehBinary matrix
 #'
-convertEdgelist <- function(edgelist, actorsDictionary, typesDictionary, M) {
-    .Call('_remstimate_convertEdgelist', PACKAGE = 'remstimate', edgelist, actorsDictionary, typesDictionary, M)
+convertInputREH <- function(edgelist, riskset, actorsDictionary, typesDictionary, M) {
+    .Call('_remstimate_convertInputREH', PACKAGE = 'remstimate', edgelist, riskset, actorsDictionary, typesDictionary, M)
+}
+
+#' getBinaryREH (a function that returns a utility matrix used in optimization algorithms)
+#'
+#' @param edgelist edgelist converted according to actorID and typeID
+#' @param riskset riskset list converted according to actorID and typeID
+#' @param risksetCube arma::cube object [N*N*C] where the cell value returns the column index to use in the outBinaryREH
+#' @param M number of observed relational events
+#' @param D number of possible dyads (accounting for event types as well)
+#'
+#' @return utility matrix per row 0 if the event could happen but didn't, 1 if the event happend, -1 if the event couldn't occur
+#' 
+getBinaryREH <- function(edgelist, riskset, risksetCube, M, D) {
+    .Call('_remstimate_getBinaryREH', PACKAGE = 'remstimate', edgelist, riskset, risksetCube, M, D)
+}
+
+#' reh (a function for preprocessing data)
+#'
+#' @param edgelist is a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]
+#' @param riskset is a list of length the number of events, each object a matrix with unobserved dyads (using actors string names)
+#' @param covariates list of covariates to be provided according to the input structure working with 'remstats'
+#'
+#' @return list of objects
+#' 
+#' @export 
+reh <- function(edgelist, riskset, covariates) {
+    .Call('_remstimate_reh', PACKAGE = 'remstimate', edgelist, riskset, covariates)
 }
 
 #' lpd (Log-Pointwise Density of REM)

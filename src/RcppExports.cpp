@@ -28,9 +28,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// getRiskset
-arma::mat getRiskset(arma::uvec actorID, arma::uvec typeID, arma::uword N, arma::uword C);
-RcppExport SEXP _remstimate_getRiskset(SEXP actorIDSEXP, SEXP typeIDSEXP, SEXP NSEXP, SEXP CSEXP) {
+// getRisksetMatrix
+arma::mat getRisksetMatrix(arma::uvec actorID, arma::uvec typeID, arma::uword N, arma::uword C);
+RcppExport SEXP _remstimate_getRisksetMatrix(SEXP actorIDSEXP, SEXP typeIDSEXP, SEXP NSEXP, SEXP CSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -38,7 +38,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::uvec >::type typeID(typeIDSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type N(NSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type C(CSEXP);
-    rcpp_result_gen = Rcpp::wrap(getRiskset(actorID, typeID, N, C));
+    rcpp_result_gen = Rcpp::wrap(getRisksetMatrix(actorID, typeID, N, C));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -55,17 +55,46 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// convertEdgelist
-Rcpp::DataFrame convertEdgelist(Rcpp::DataFrame edgelist, Rcpp::List actorsDictionary, Rcpp::List typesDictionary, arma::uword M);
-RcppExport SEXP _remstimate_convertEdgelist(SEXP edgelistSEXP, SEXP actorsDictionarySEXP, SEXP typesDictionarySEXP, SEXP MSEXP) {
+// convertInputREH
+Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::List actorsDictionary, Rcpp::List typesDictionary, arma::uword M);
+RcppExport SEXP _remstimate_convertInputREH(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP actorsDictionarySEXP, SEXP typesDictionarySEXP, SEXP MSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::DataFrame >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type riskset(risksetSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type actorsDictionary(actorsDictionarySEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type typesDictionary(typesDictionarySEXP);
     Rcpp::traits::input_parameter< arma::uword >::type M(MSEXP);
-    rcpp_result_gen = Rcpp::wrap(convertEdgelist(edgelist, actorsDictionary, typesDictionary, M));
+    rcpp_result_gen = Rcpp::wrap(convertInputREH(edgelist, riskset, actorsDictionary, typesDictionary, M));
+    return rcpp_result_gen;
+END_RCPP
+}
+// getBinaryREH
+arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::cube risksetCube, arma::uword M, arma::uword D);
+RcppExport SEXP _remstimate_getBinaryREH(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP risksetCubeSEXP, SEXP MSEXP, SEXP DSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type risksetCube(risksetCubeSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type M(MSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type D(DSEXP);
+    rcpp_result_gen = Rcpp::wrap(getBinaryREH(edgelist, riskset, risksetCube, M, D));
+    return rcpp_result_gen;
+END_RCPP
+}
+// reh
+Rcpp::List reh(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::List covariates);
+RcppExport SEXP _remstimate_reh(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP covariatesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type covariates(covariatesSEXP);
+    rcpp_result_gen = Rcpp::wrap(reh(edgelist, riskset, covariates));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -178,9 +207,11 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_warningMessage", (DL_FUNC) &_remstimate_warningMessage, 1},
     {"_remstimate_errorMessage", (DL_FUNC) &_remstimate_errorMessage, 1},
-    {"_remstimate_getRiskset", (DL_FUNC) &_remstimate_getRiskset, 4},
+    {"_remstimate_getRisksetMatrix", (DL_FUNC) &_remstimate_getRisksetMatrix, 4},
     {"_remstimate_getRisksetCube", (DL_FUNC) &_remstimate_getRisksetCube, 3},
-    {"_remstimate_convertEdgelist", (DL_FUNC) &_remstimate_convertEdgelist, 4},
+    {"_remstimate_convertInputREH", (DL_FUNC) &_remstimate_convertInputREH, 5},
+    {"_remstimate_getBinaryREH", (DL_FUNC) &_remstimate_getBinaryREH, 5},
+    {"_remstimate_reh", (DL_FUNC) &_remstimate_reh, 3},
     {"_remstimate_lpd", (DL_FUNC) &_remstimate_lpd, 4},
     {"_remstimate_nllik", (DL_FUNC) &_remstimate_nllik, 5},
     {"_remstimate_cube_to_matrix", (DL_FUNC) &_remstimate_cube_to_matrix, 1},
