@@ -18,3 +18,6 @@ _07/07/2020_ :
 *  `reh()` will be the only preprocessing function and it is coded in Rcpp (see _reh.cpp_ file) whereas the R function and the _reh.R_ file are removed;
 * utility functions called inside `reh()` are added inside the _reh.cpp_ file, before the `reh()` function itself;
 * _messages.cpp_ becomes a header file _messages.h_ and the aim/content remains the same.
+
+_04/09/2020_ :
+* (news to be updated)
