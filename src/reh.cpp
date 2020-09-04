@@ -6,7 +6,7 @@
 #include <map>
 #include <iterator>
 #include <string>
-#include "messages.h"
+
 
 
 #define LOG(x) std::cout << x << "\n"
@@ -79,7 +79,7 @@ arma::ucube getRisksetCube(arma::umat risksetMatrix, arma::uword N, arma::uword 
 Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::List actorsDictionary, Rcpp::List typesDictionary, arma::uword M) {
 
     arma::uword m,d;
-    Rcpp::NumericVector outputSender(M),outputReceiver(M),outputType(M);
+    Rcpp::IntegerVector outputSender(M),outputReceiver(M),outputType(M);
     Rcpp::List outRiskset = Rcpp::List::create();
 
     // Creating output list object
@@ -124,7 +124,7 @@ Rcpp::List convertInputREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::L
             std::vector<std::string> stringOmitType = Rcpp::as<std::vector<std::string>>(omitDyadsType); // type
 
             // allocating space for the converted senders, receivers and types
-            Rcpp::NumericVector omitSender(D_m),omitReceiver(D_m),omitType(D_m);
+            Rcpp::IntegerVector omitSender(D_m),omitReceiver(D_m),omitType(D_m);
 
             // find sender
             for(d = 0; d < D_m; d++){
@@ -173,12 +173,12 @@ arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::ucube
     arma::uword m,d;
     arma::mat outBinaryREH(M,D,arma::fill::zeros); // by setting the initial values to zero we already handle those
                                                     // relational events that could have occurred but didn't
-    Rcpp::NumericVector sender = edgelist["sender"];
-    Rcpp::NumericVector receiver = edgelist["receiver"];
-    Rcpp::NumericVector type = edgelist["type"];
+    Rcpp::IntegerVector sender = edgelist["sender"];
+    Rcpp::IntegerVector receiver = edgelist["receiver"];
+    Rcpp::IntegerVector type = edgelist["type"];
     for(m = 0; m < M; m++){
         // relational event that occurred
-        arma::uword event_m = risksetCube(sender[m],receiver[m],type[m]);
+        arma::uword event_m = risksetCube(sender(m),receiver[m],type[m]);
         outBinaryREH(m,event_m) = 1;
         // relational events that couldn't occur
         if(!R_IsNaN(riskset[m])){
@@ -205,7 +205,7 @@ arma::mat getBinaryREH(Rcpp::DataFrame edgelist, Rcpp::List riskset, arma::ucube
 //' reh (a function for preprocessing data)
 //'
 //' @param edgelist is a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]
-//' @param riskset is a list of length the number of events, each object a matrix with unobserved dyads (using actors string names)
+//' @param riskset is a list of length equal to the number of events, each object a matrix with unobserved dyads (using actors string names)
 //' @param covariates list of covariates to be provided according to the input structure working with 'remstats'
 //'
 //' @return list of objects
@@ -267,12 +267,11 @@ Rcpp::List reh(Rcpp::DataFrame edgelist, Rcpp::List riskset, Rcpp::List covariat
     Rcpp::List actorsDictionary = Rcpp::List::create(Rcpp::Named("actor") = actor, Rcpp::Named("actorID") = Rcpp::Range(0,actor.length()-1)); 
     out["actorsDictionary"] = actorsDictionary;
     Rcpp::List typesDictionary = Rcpp::List::create(Rcpp::Named("type") = type, Rcpp::Named("typeID") = Rcpp::Range(0,type.length()-1)); 
-
+    out["typesDictionary"] = typesDictionary;
     // Creating riskset objects (it is not the rehBinary but it just includes all the possible combination of [sender,receiver,type]) ...
 
     // ... arranged in a matrix [D*3]
     out["risksetMatrix"] = getRisksetMatrix(actorsDictionary["actorID"],typesDictionary["typeID"],out["N"],out["C"]);
-
 
     // ... arranged in a cube [N*N*C]
     out["risksetCube"] = getRisksetCube(out["risksetMatrix"],out["N"],out["C"]);

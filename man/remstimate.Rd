@@ -6,22 +6,36 @@
 \title{remstimate}
 \usage{
 remstimate(
-  pars_init = NULL,
-  stats,
-  event_binary,
-  interevent_time,
-  threads,
-  method = c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN", "Brent")
+  formula = NULL,
+  edgelist,
+  riskset = replicate(NROW(edgelist), NaN, simplify = FALSE),
+  covariates = list(a = NULL),
+  stats = NULL,
+  method = c("MLE", "BSIR", "MCMC"),
+  optimization = c("trust", "optim", "GD", "SGD", "MBGD"),
+  fast = FALSE,
+  threshold = 0.5,
+  ...
 )
 }
 \arguments{
+\item{formula}{formula object (see 'remstats' for now)}
+
+\item{edgelist}{a a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]}
+
+\item{riskset}{is a list of length equal to the number of events, each object a matrix with unobserved dyads (using actors string names)}
+
+\item{covariates}{list of covariates to be provided according to the input structure working with 'remstats'}
+
 \item{stats}{an array of dimensions n_dyads*statistics*M (if stats is an array for relevent::rem then use aperm(a = stats, perm = c(2,3,1)) )}
 
-\item{event_binary}{a matrix of dimensions M*n_dyads (for each time point it is a vector with 1 when the dyad is observed 0 for the others)}
+\item{method}{estimation method MLE (Maximum Likelihood Estimates), BSIR (Bayesian Sampling Importance Resampling), MCMC (Markov Chain Monte Carlo)}
 
-\item{interevent_time}{a vector of interevent times}
+\item{optimization}{optimization method to be used (when MLE): trust/optim will use the corresponding functions, GD, SGD, MBGD.}
 
-\item{threads}{number of cores to use in the parallelization (i would change this parameter in 'n_threads')}
+\item{fast}{FALSE/TRUE whether to use the fast calculation of loglikelihood/gradient/hessian values inside the optimization algorithm}
+
+\item{threshold}{percentage value indicating the minimum value for an actual improvment (in order to decide whether to use the fast approach for the likelihood or not).}
 }
 \value{
 object list (the function saves also the output of optim)

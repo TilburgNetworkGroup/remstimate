@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{lpd}
 \alias{lpd}
-\title{lpd (Log-Pointwise Density of REM)}
+\title{lpd (Log-Pointwise Density of REM - to rewrite according to the 0/1/-1 event vector)}
 \usage{
 lpd(pars, stats, event, interevent_time)
 }
@@ -19,5 +19,5 @@ lpd(pars, stats, event, interevent_time)
 log-pointwise density value of a specific time point
 }
 \description{
-lpd (Log-Pointwise Density of REM)
+lpd (Log-Pointwise Density of REM - to rewrite according to the 0/1/-1 event vector)
 }

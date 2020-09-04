@@ -15,20 +15,18 @@
 //'
 //' @param cond  it is the warning number
 //'
-// [[Rcpp::export]] 
-std::string warningMessage(arma::uword cond){
+// [[Rcpp::export]]
+std::string warningMessage(int cond){
       std::string message = "undefined";
       switch(cond){
             case 0:
-            {
                   message = "Hello Toronto";
                   break;
-            }
+            
             case 1:
-            {
                   message = "Hello Canada";
                   break;
-            }
+            
       }
       return message;
 }
@@ -38,20 +36,17 @@ std::string warningMessage(arma::uword cond){
 //'
 //' @param cond  it is the error number
 //'
-// [[Rcpp::export]] 
-std::string errorMessage(arma::uword cond){
+// [[Rcpp::export]]
+std::string errorMessage(int cond){
       std::string message = "undefiend";
       switch(cond){
             case 0:
-            {
                   message = "Hello Holland";
                   break;
-            }
+            
             case 1:
-            {
                   message = "Hello Kyoto";
                   break;
-            }
       }
       return message;
 }

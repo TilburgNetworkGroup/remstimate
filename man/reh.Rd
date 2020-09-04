@@ -9,7 +9,7 @@ reh(edgelist, riskset, covariates)
 \arguments{
 \item{edgelist}{is a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]}
 
-\item{riskset}{is a list of length the number of events, each object a matrix with unobserved dyads (using actors string names)}
+\item{riskset}{is a list of length equal to the number of events, each object a matrix with unobserved dyads (using actors string names)}
 
 \item{covariates}{list of covariates to be provided according to the input structure working with 'remstats'}
 }

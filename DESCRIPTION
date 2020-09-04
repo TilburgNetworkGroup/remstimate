@@ -50,8 +50,8 @@ Maintainer: Giuseppe Arena <g.arena@tilburguniversity.edu>
 Description: This package offers a set of tools for the optimization of the likelihood in a relational event modeling framework (initial objective: to compare time performance with relevent::rem function and to improve them).
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Depends: R (>= 2.10)
-Imports: Rcpp 
+Imports: Rcpp, trust, tcltk
 LinkingTo: Rcpp, RcppArmadillo
 SystemRequirements: GNU make

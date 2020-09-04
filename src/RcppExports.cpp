@@ -6,24 +6,268 @@
 
 using namespace Rcpp;
 
+// standardize
+arma::mat standardize(arma::mat stat);
+RcppExport SEXP _remstimate_standardize(SEXP statSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type stat(statSEXP);
+    rcpp_result_gen = Rcpp::wrap(standardize(stat));
+    return rcpp_result_gen;
+END_RCPP
+}
+// divide_by_past
+arma::mat divide_by_past(arma::mat stat);
+RcppExport SEXP _remstimate_divide_by_past(SEXP statSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type stat(statSEXP);
+    rcpp_result_gen = Rcpp::wrap(divide_by_past(stat));
+    return rcpp_result_gen;
+END_RCPP
+}
+// divide_by_2past
+arma::mat divide_by_2past(arma::mat stat);
+RcppExport SEXP _remstimate_divide_by_2past(SEXP statSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type stat(statSEXP);
+    rcpp_result_gen = Rcpp::wrap(divide_by_2past(stat));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_actorEffect
+arma::mat compute_actorEffect(const arma::mat& values, int type, const arma::mat& edgelist, const arma::mat& riskset, int start, int stop);
+RcppExport SEXP _remstimate_compute_actorEffect(SEXP valuesSEXP, SEXP typeSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_actorEffect(values, type, edgelist, riskset, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_dyadEffect
+arma::mat compute_dyadEffect(const arma::mat& values, int type, const arma::mat& edgelist, const arma::mat& riskset, int start, int stop, double equal_val);
+RcppExport SEXP _remstimate_compute_dyadEffect(SEXP valuesSEXP, SEXP typeSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP startSEXP, SEXP stopSEXP, SEXP equal_valSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    Rcpp::traits::input_parameter< double >::type equal_val(equal_valSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_dyadEffect(values, type, edgelist, riskset, start, stop, equal_val));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_inertia
+arma::mat compute_inertia(const arma::mat& edgelist, const arma::mat& riskset, double memory_value, bool with_type, const arma::vec& event_weights, int start, int stop);
+RcppExport SEXP _remstimate_compute_inertia(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP memory_valueSEXP, SEXP with_typeSEXP, SEXP event_weightsSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< double >::type memory_value(memory_valueSEXP);
+    Rcpp::traits::input_parameter< bool >::type with_type(with_typeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type event_weights(event_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_inertia(edgelist, riskset, memory_value, with_type, event_weights, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_reciprocity
+arma::mat compute_reciprocity(const arma::mat& edgelist, const arma::mat& riskset, double memory_value, bool with_type, const arma::vec& event_weights, int start, int stop);
+RcppExport SEXP _remstimate_compute_reciprocity(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP memory_valueSEXP, SEXP with_typeSEXP, SEXP event_weightsSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< double >::type memory_value(memory_valueSEXP);
+    Rcpp::traits::input_parameter< bool >::type with_type(with_typeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type event_weights(event_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_reciprocity(edgelist, riskset, memory_value, with_type, event_weights, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_degree
+arma::mat compute_degree(int type, const arma::mat& edgelist, const arma::mat& riskset, double memory_value, bool with_type, const arma::vec& event_weights, int start, int stop);
+RcppExport SEXP _remstimate_compute_degree(SEXP typeSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP memory_valueSEXP, SEXP with_typeSEXP, SEXP event_weightsSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< double >::type memory_value(memory_valueSEXP);
+    Rcpp::traits::input_parameter< bool >::type with_type(with_typeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type event_weights(event_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_degree(type, edgelist, riskset, memory_value, with_type, event_weights, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_triad
+arma::mat compute_triad(int type, const arma::mat& edgelist, const arma::mat& riskset, double memory_value, bool with_type, const arma::vec& event_weights, int start, int stop);
+RcppExport SEXP _remstimate_compute_triad(SEXP typeSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP memory_valueSEXP, SEXP with_typeSEXP, SEXP event_weightsSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< double >::type memory_value(memory_valueSEXP);
+    Rcpp::traits::input_parameter< bool >::type with_type(with_typeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type event_weights(event_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_triad(type, edgelist, riskset, memory_value, with_type, event_weights, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_pshift
+arma::mat compute_pshift(int type, const arma::mat& edgelist, const arma::mat& riskset, bool with_type, int start, int stop);
+RcppExport SEXP _remstimate_compute_pshift(SEXP typeSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP with_typeSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< bool >::type with_type(with_typeSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_pshift(type, edgelist, riskset, with_type, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_rrank
+arma::mat compute_rrank(int type, const arma::mat& edgelist, const arma::mat& riskset, bool with_type, int start, int stop);
+RcppExport SEXP _remstimate_compute_rrank(SEXP typeSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP with_typeSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< bool >::type with_type(with_typeSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_rrank(type, edgelist, riskset, with_type, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_baselineType
+arma::mat compute_baselineType(const arma::mat& values, const arma::mat& edgelist, const arma::mat& riskset, int start, int stop);
+RcppExport SEXP _remstimate_compute_baselineType(SEXP valuesSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_baselineType(values, edgelist, riskset, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_interact
+arma::mat compute_interact(arma::mat x, arma::cube statistics);
+RcppExport SEXP _remstimate_compute_interact(SEXP xSEXP, SEXP statisticsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type statistics(statisticsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_interact(x, statistics));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_eventEffect
+arma::mat compute_eventEffect(arma::mat x, arma::cube statistics, int start, int stop);
+RcppExport SEXP _remstimate_compute_eventEffect(SEXP xSEXP, SEXP statisticsSEXP, SEXP startSEXP, SEXP stopSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type statistics(statisticsSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_eventEffect(x, statistics, start, stop));
+    return rcpp_result_gen;
+END_RCPP
+}
+// recency
+arma::mat recency(const arma::mat& edgelist, const arma::mat& riskset, double memory_value, int type);
+RcppExport SEXP _remstimate_recency(SEXP edgelistSEXP, SEXP risksetSEXP, SEXP memory_valueSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< double >::type memory_value(memory_valueSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(recency(edgelist, riskset, memory_value, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_stats
+arma::cube compute_stats(const arma::vec& effects, const arma::mat& edgelist, const arma::mat& riskset, int start, int stop, const Rcpp::List& values, const arma::vec& scaling, const arma::vec& memory_value, const arma::vec& with_type, const arma::mat& event_weights, const arma::vec& equal_val);
+RcppExport SEXP _remstimate_compute_stats(SEXP effectsSEXP, SEXP edgelistSEXP, SEXP risksetSEXP, SEXP startSEXP, SEXP stopSEXP, SEXP valuesSEXP, SEXP scalingSEXP, SEXP memory_valueSEXP, SEXP with_typeSEXP, SEXP event_weightsSEXP, SEXP equal_valSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type effects(effectsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
+    Rcpp::traits::input_parameter< int >::type start(startSEXP);
+    Rcpp::traits::input_parameter< int >::type stop(stopSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type scaling(scalingSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type memory_value(memory_valueSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type with_type(with_typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type event_weights(event_weightsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type equal_val(equal_valSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_stats(effects, edgelist, riskset, start, stop, values, scaling, memory_value, with_type, event_weights, equal_val));
+    return rcpp_result_gen;
+END_RCPP
+}
 // warningMessage
-std::string warningMessage(arma::uword cond);
+std::string warningMessage(int cond);
 RcppExport SEXP _remstimate_warningMessage(SEXP condSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uword >::type cond(condSEXP);
+    Rcpp::traits::input_parameter< int >::type cond(condSEXP);
     rcpp_result_gen = Rcpp::wrap(warningMessage(cond));
     return rcpp_result_gen;
 END_RCPP
 }
 // errorMessage
-std::string errorMessage(arma::uword cond);
+std::string errorMessage(int cond);
 RcppExport SEXP _remstimate_errorMessage(SEXP condSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uword >::type cond(condSEXP);
+    Rcpp::traits::input_parameter< int >::type cond(condSEXP);
     rcpp_result_gen = Rcpp::wrap(errorMessage(cond));
     return rcpp_result_gen;
 END_RCPP
@@ -98,6 +342,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// remDerivatives
+Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time);
+RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type event_binary(event_binarySEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivatives(pars, stats, event_binary, interevent_time));
+    return rcpp_result_gen;
+END_RCPP
+}
 // lpd
 double lpd(arma::vec pars, arma::mat stats, arma::uvec event, double interevent_time);
 RcppExport SEXP _remstimate_lpd(SEXP parsSEXP, SEXP statsSEXP, SEXP eventSEXP, SEXP interevent_timeSEXP) {
@@ -112,99 +370,78 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// nllik
-double nllik(arma::vec pars, arma::cube stats, arma::umat event_binary, arma::vec interevent_time, int threads);
-RcppExport SEXP _remstimate_nllik(SEXP parsSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP threadsSEXP) {
+// getUniqueVectors
+arma::mat getUniqueVectors(arma::cube stats);
+RcppExport SEXP _remstimate_getUniqueVectors(SEXP statsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< arma::cube >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< arma::umat >::type event_binary(event_binarySEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type interevent_time(interevent_timeSEXP);
-    Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(nllik(pars, stats, event_binary, interevent_time, threads));
+    rcpp_result_gen = Rcpp::wrap(getUniqueVectors(stats));
     return rcpp_result_gen;
 END_RCPP
 }
-// cube_to_matrix
-arma::mat cube_to_matrix(arma::cube S);
-RcppExport SEXP _remstimate_cube_to_matrix(SEXP SSEXP) {
+// computeTimes
+arma::vec computeTimes(const arma::mat& unique_vectors_stats, const arma::uword& M, const arma::cube& stats, const arma::vec& intereventTime);
+RcppExport SEXP _remstimate_computeTimes(SEXP unique_vectors_statsSEXP, SEXP MSEXP, SEXP statsSEXP, SEXP intereventTimeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::cube >::type S(SSEXP);
-    rcpp_result_gen = Rcpp::wrap(cube_to_matrix(S));
+    Rcpp::traits::input_parameter< const arma::mat& >::type unique_vectors_stats(unique_vectors_statsSEXP);
+    Rcpp::traits::input_parameter< const arma::uword& >::type M(MSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type intereventTime(intereventTimeSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeTimes(unique_vectors_stats, M, stats, intereventTime));
     return rcpp_result_gen;
 END_RCPP
 }
-// get_unique_vectors
-arma::mat get_unique_vectors(const arma::mat& A);
-RcppExport SEXP _remstimate_get_unique_vectors(SEXP ASEXP) {
+// computeOccurrencies
+arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::umat& risksetMatrix, const arma::uword& M, const arma::mat& unique_vectors_stats, const arma::cube& stats);
+RcppExport SEXP _remstimate_computeOccurrencies(SEXP edgelistSEXP, SEXP risksetMatrixSEXP, SEXP MSEXP, SEXP unique_vectors_statsSEXP, SEXP statsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
-    rcpp_result_gen = Rcpp::wrap(get_unique_vectors(A));
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type risksetMatrix(risksetMatrixSEXP);
+    Rcpp::traits::input_parameter< const arma::uword& >::type M(MSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type unique_vectors_stats(unique_vectors_statsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeOccurrencies(edgelist, risksetMatrix, M, unique_vectors_stats, stats));
     return rcpp_result_gen;
 END_RCPP
 }
-// get_events_index
-arma::uvec get_events_index(const arma::mat& edgelist, const arma::mat& riskset);
-RcppExport SEXP _remstimate_get_events_index(SEXP edgelistSEXP, SEXP risksetSEXP) {
+// remDerivativesFast
+Rcpp::List remDerivativesFast(const arma::vec& pars, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats);
+RcppExport SEXP _remstimate_remDerivativesFast(SEXP parsSEXP, SEXP times_rSEXP, SEXP occurrencies_rSEXP, SEXP unique_vectors_statsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type riskset(risksetSEXP);
-    rcpp_result_gen = Rcpp::wrap(get_events_index(edgelist, riskset));
-    return rcpp_result_gen;
-END_RCPP
-}
-// compute_q
-arma::vec compute_q(const arma::vec& index, const arma::mat& edgelist, const arma::mat& U, const arma::cube& S);
-RcppExport SEXP _remstimate_compute_q(SEXP indexSEXP, SEXP edgelistSEXP, SEXP USEXP, SEXP SSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type index(indexSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type U(USEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type S(SSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_q(index, edgelist, U, S));
-    return rcpp_result_gen;
-END_RCPP
-}
-// compute_m
-arma::vec compute_m(const arma::vec& index, const arma::mat& edgelist, const arma::mat& U, const arma::cube& S);
-RcppExport SEXP _remstimate_compute_m(SEXP indexSEXP, SEXP edgelistSEXP, SEXP USEXP, SEXP SSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type index(indexSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type U(USEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type S(SSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_m(index, edgelist, U, S));
-    return rcpp_result_gen;
-END_RCPP
-}
-// logLike
-double logLike(arma::vec beta, const arma::mat& U, const arma::vec q, const arma::vec m);
-RcppExport SEXP _remstimate_logLike(SEXP betaSEXP, SEXP USEXP, SEXP qSEXP, SEXP mSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type U(USEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type q(qSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(logLike(beta, U, q, m));
+    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type times_r(times_rSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type occurrencies_r(occurrencies_rSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type unique_vectors_stats(unique_vectors_statsSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivativesFast(pars, times_r, occurrencies_r, unique_vectors_stats));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_remstimate_standardize", (DL_FUNC) &_remstimate_standardize, 1},
+    {"_remstimate_divide_by_past", (DL_FUNC) &_remstimate_divide_by_past, 1},
+    {"_remstimate_divide_by_2past", (DL_FUNC) &_remstimate_divide_by_2past, 1},
+    {"_remstimate_compute_actorEffect", (DL_FUNC) &_remstimate_compute_actorEffect, 6},
+    {"_remstimate_compute_dyadEffect", (DL_FUNC) &_remstimate_compute_dyadEffect, 7},
+    {"_remstimate_compute_inertia", (DL_FUNC) &_remstimate_compute_inertia, 7},
+    {"_remstimate_compute_reciprocity", (DL_FUNC) &_remstimate_compute_reciprocity, 7},
+    {"_remstimate_compute_degree", (DL_FUNC) &_remstimate_compute_degree, 8},
+    {"_remstimate_compute_triad", (DL_FUNC) &_remstimate_compute_triad, 8},
+    {"_remstimate_compute_pshift", (DL_FUNC) &_remstimate_compute_pshift, 6},
+    {"_remstimate_compute_rrank", (DL_FUNC) &_remstimate_compute_rrank, 6},
+    {"_remstimate_compute_baselineType", (DL_FUNC) &_remstimate_compute_baselineType, 5},
+    {"_remstimate_compute_interact", (DL_FUNC) &_remstimate_compute_interact, 2},
+    {"_remstimate_compute_eventEffect", (DL_FUNC) &_remstimate_compute_eventEffect, 4},
+    {"_remstimate_recency", (DL_FUNC) &_remstimate_recency, 4},
+    {"_remstimate_compute_stats", (DL_FUNC) &_remstimate_compute_stats, 11},
     {"_remstimate_warningMessage", (DL_FUNC) &_remstimate_warningMessage, 1},
     {"_remstimate_errorMessage", (DL_FUNC) &_remstimate_errorMessage, 1},
     {"_remstimate_getRisksetMatrix", (DL_FUNC) &_remstimate_getRisksetMatrix, 4},
@@ -212,14 +449,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_convertInputREH", (DL_FUNC) &_remstimate_convertInputREH, 5},
     {"_remstimate_getBinaryREH", (DL_FUNC) &_remstimate_getBinaryREH, 5},
     {"_remstimate_reh", (DL_FUNC) &_remstimate_reh, 3},
+    {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 4},
     {"_remstimate_lpd", (DL_FUNC) &_remstimate_lpd, 4},
-    {"_remstimate_nllik", (DL_FUNC) &_remstimate_nllik, 5},
-    {"_remstimate_cube_to_matrix", (DL_FUNC) &_remstimate_cube_to_matrix, 1},
-    {"_remstimate_get_unique_vectors", (DL_FUNC) &_remstimate_get_unique_vectors, 1},
-    {"_remstimate_get_events_index", (DL_FUNC) &_remstimate_get_events_index, 2},
-    {"_remstimate_compute_q", (DL_FUNC) &_remstimate_compute_q, 4},
-    {"_remstimate_compute_m", (DL_FUNC) &_remstimate_compute_m, 4},
-    {"_remstimate_logLike", (DL_FUNC) &_remstimate_logLike, 4},
+    {"_remstimate_getUniqueVectors", (DL_FUNC) &_remstimate_getUniqueVectors, 1},
+    {"_remstimate_computeTimes", (DL_FUNC) &_remstimate_computeTimes, 4},
+    {"_remstimate_computeOccurrencies", (DL_FUNC) &_remstimate_computeOccurrencies, 5},
+    {"_remstimate_remDerivativesFast", (DL_FUNC) &_remstimate_remDerivativesFast, 4},
     {NULL, NULL, 0}
 };
 
