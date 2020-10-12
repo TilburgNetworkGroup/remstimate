@@ -1,4 +1,4 @@
-# NEWS (last update on July 7, 2020)
+# NEWS (last update on September 4, 2020)
 
 _20/04/2020_ :
 * created repository with first commit;
@@ -20,4 +20,9 @@ _07/07/2020_ :
 * _messages.cpp_ becomes a header file _messages.h_ and the aim/content remains the same.
 
 _04/09/2020_ :
-* (news to be updated)
+*  _messages_ becomes again an Rcpp file. This exstension appears to suit better the intent of the content/aim of error and warning messages;
+* _remstimate.R_ contains the main function `remstimate()` which is aimed to run either a MLE or a Bayesian approach by using different optimization/methods. It also includes a switch to the fast method to compute the likelihood. The fast method is run if the actual improvement (percentage of improvement) is higher than a threshold set by the user (default 0.5);
+* _reh.cpp_ : contains `getRisksetMatrix()`, `getRisksetCube()`, `convertInputREH()`, `getBinaryREH()` and `reh()`. This last function is the one that preprocesses the input given by the user which consists in: edgelist, riskset and covariates. intereventTime variable and covariates input still need to be preprocessed via specific utility functions;
+* _remstimate.cpp_ : contains `remDerivatives()` (which returns the value of loglikelihood, gradient, hessian at a specific parameter value), `lpd()` (log-pointwise density), utility functions for the fast method (`cube2matrix()`, `getUniqueVectors()`, `computeTimes()`, `computeOccurrencies()`) which is run with the function `remDerivativesFast()`;
+* Since `compute_stats()` is not an exported function in `remstats`, _getStats.R_ / _compute_stats.cpp_ / _compute_stats.h_ are temporary files so as to calculate statistics, run the estimation and compare estimates with `relevent::rem()`.  `getStats()` is the alias of `remstats::remstats()` with some modifications at the stage of the preprocessing of the network;
+
