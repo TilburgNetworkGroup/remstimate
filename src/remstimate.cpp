@@ -7,7 +7,88 @@
 #include <map>
 #include <iterator>
 #include <string>
+#include <remstats.h>
 
+
+// compute_statsCpp (description is the same as in remstats)
+//
+// Calls functions in compute_effects.h to compute statistics, scales 
+// statistics, and combines all computed statistics in an array. 
+// 
+//  effects: vector of length p with integers referring to effect types.
+//  edgelist: matrix [time, sender/actor1, receiver/actor2, (type), 
+// riskset position]
+//  riskset: matrix [sender/actor1, receiver/actor2, (type)]
+//  start: integer value referring to the first row + 1in the edgelist 
+// for which effects have to be computed
+//  stop: integer value referring to the last row + 1 in the edgelist 
+// for which effects have to be computed
+//  values: list of length p with matrices with exogenous information 
+// for the exogenous effects and NULL for all other effects
+//  scaling: vector of length p with integer values referring to the 
+// type of scaling method that has to be applied to the statistic.
+//  memory_value: vector of length p with numeric values referring to 
+// the length of the window in which past events are considered for endogenous 
+// effects
+//  with_type: vector of length p with logical values indicating whether 
+// effects have to be computed considering event types a dependent variable
+//  event_weights: matrix with p columns where each column refers to the 
+// weights of the events for a specific effect
+//  equal_val: vector of length p 
+//
+//  statistics: array [timepoint x riskset position x statistic]
+//
+//[[Rcpp::export]]
+arma::cube compute_statsCpp(const arma::vec& effects, const arma::mat& edgelist, 
+    const arma::mat& riskset, int start, int stop, 
+    const Rcpp::List& values, const arma::vec& scaling, 
+    const arma::vec& memory_value, const arma::vec& with_type, 
+    const arma::mat& event_weights, const arma::vec& equal_val) {
+
+arma::cube out = remstats::compute_stats(effects, edgelist, riskset, start, stop, 
+        values, scaling, memory_value, with_type, event_weights, equal_val);
+        return out;
+
+}
+
+//' nLoglik
+//'
+//' function that returns the negative of the loglikelihood value at specific parameters' values
+//' 
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//'
+//' @return list of values: loglik, gradient, hessian
+//'
+//' @export
+// [[Rcpp::export]]
+double nLoglik(const arma::vec &pars,const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time){
+    arma::uword D = event_binary.n_cols;
+    arma::uword M = event_binary.n_rows; // number of events
+
+    arma::uword d,m; 
+    arma::vec log_lambda(D,arma::fill::zeros) ;
+
+    double loglik = 0.0;
+    
+    for(m = 0; m < M; m++){
+        arma::mat stats_m = stats.slice(m); // dimensions : [D*U]
+        log_lambda = stats_m.t() * pars;
+        
+        for(d = 0; d < D; d++){
+            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
+                if(event_binary(m,d) == 1){ // if event occured
+                    loglik += log_lambda.at(d);
+                }               
+                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);
+                loglik -= dtelp;                
+            }            
+        }        
+    }
+    return -loglik;
+}
 
 //' remDerivatives
 //'

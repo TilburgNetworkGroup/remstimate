@@ -58,7 +58,7 @@
 #' sender (or first actor) and the third column to the receiver (or second 
 #' actor). The fourth column may refer to the type of the event, this column is 
 #' only used when \code{with_type = TRUE}.
-#' @param dat output of reh() (preprocessed edgelist)
+#' @param data reh S3 object
 #' @param directed Logical value. Indicates whether events in the edgelist are 
 #' directed (\code{directed = TRUE}, default) or undirected 
 #' (\code{directed = FALSE}).
@@ -81,7 +81,7 @@
 #' remstats(form, edgelist = history)
 #' 
 #' @export 
-getStats <- function(formula, edgelist, dat, directed = TRUE, with_type = FALSE, 
+getStats <- function(formula, edgelist, data, directed = TRUE, with_type = FALSE, 
     start = NULL, stop = NULL) {
 
     # Get effects information
@@ -111,13 +111,12 @@ getStats <- function(formula, edgelist, dat, directed = TRUE, with_type = FALSE,
     #dat <- prepEdgelist(edgelist, directed, with_type, riskset, 
     #    actors, types)
 
-    actors <- dat$actorsDictionary$actorID
-    actorsUser <- dat$actorsDictionary$actor
-    edgelist <- as.matrix(dat$edgelist)
-    #edgelistUser <- edgelist
-    riskset <- dat$risksetMatrix
-    #risksetUser <- dat$risksetUser
-    #evls <- dat$evls
+    actors <- data$actorsDictionary$actorID+1
+    actorsUser <- data$actorsDictionary$actor
+    edgelist <- as.matrix(data$edgelist)
+    edgelist[,2:4] <- edgelist[,2:4]+1
+    riskset <- data$risksetMatrix+1
+
 
     # Prepare the effects
     all_effects <- c(
@@ -265,7 +264,7 @@ getStats <- function(formula, edgelist, dat, directed = TRUE, with_type = FALSE,
     })
     #return(list(eff=eff,edgelist=edgelist,riskset=riskset,start=start,stop=stop,values=values,scaling=scaling,memory_value=memory_value,with_typeVar=with_typeVar,event_weights=event_weights,equal_val=equal_val))
     # Compute statistics
-    statistics <- compute_stats(eff, edgelist, riskset, start, stop, 
+    statistics <- compute_statsCpp(eff, edgelist, riskset, start, stop, 
         values, scaling, memory_value, with_typeVar, event_weights, equal_val)
 
     # Prepare output

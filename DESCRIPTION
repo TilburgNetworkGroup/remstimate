@@ -8,7 +8,7 @@ Authors@R:
         person(
             given = "Giuseppe",
             family = "Arena",
-            role = "aut",
+            role = c("aut","cre"),
             email = "g.arena@tilburguniversity.edu"),
         person(
             given = "Rumana",
@@ -18,7 +18,7 @@ Authors@R:
         person(
             given = "Marlyne",
             family = "Meijerink-Bosman",
-            role = c("aut", "cre"),
+            role = c("aut"),
             email = "m.l.meijerink@tilburguniversity.edu"),
         person(
             given = "Diana",
@@ -53,5 +53,5 @@ LazyData: true
 RoxygenNote: 7.1.1
 Depends: R (>= 2.10)
 Imports: Rcpp, trust, tcltk
-LinkingTo: Rcpp, RcppArmadillo
+LinkingTo: Rcpp, RcppArmadillo, remstats, remify
 SystemRequirements: GNU make

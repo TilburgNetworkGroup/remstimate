@@ -1,36 +1,55 @@
+#' reh  
+#'
+#' A function that returns a 'reh' S3 object 
+#'
+#' @param edgelist a a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]
+#' @param riskset is a list of length equal to the number of events, each object a matrix with unobserved dyads (using actors string names)
+#' @param covariates list of covariates to be provided according to the input structure working with 'remstats'
+#'
+#' @return  object list (the function saves also the output of optim)
+#' @export
+
+reh <- function(edgelist,
+                riskset = replicate(NROW(edgelist),NaN,simplify=FALSE), 
+                covariates = list(a = NULL)){
+
+    out <- remify::rehCpp(edgelist = edgelist, riskset = riskset, covariates = covariates)
+
+    # possibly these won't be returned anymore
+    out$old_edgelist <- edgelist
+    out$old_riskset <- riskset
+    out$old_covariates <- covariates
+    
+    class(out) <- "reh"
+    return(out)
+}
+
 #' remstimate  
 #'
 #' A function that returns maximum likelihood estimates of REM (interval timing only) by using the optim function
 #'
 #' @param formula formula object (see 'remstats' for now)
-#' @param edgelist a a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]
-#' @param riskset is a list of length equal to the number of events, each object a matrix with unobserved dyads (using actors string names)
-#' @param covariates list of covariates to be provided according to the input structure working with 'remstats'
-#' @param stats an array of dimensions n_dyads*statistics*M (if stats is an array for relevent::rem then use aperm(a = stats, perm = c(2,3,1)) )
+#' @param data is a reh S3 object
 #' @param approach estimation approach: MLE (Maximum Likelihood Estimates) or Bayesian 
-#' @param optimization optimization method to be used: trust/optim will use the corresponding functions, GD, BSIR, BPM, HMC
+#' @param method optimization method to be used: trust/optim will use the corresponding functions, GD, BSIR, BPM, HMC
 #' @param fast FALSE/TRUE whether to use the fast calculation of loglikelihood/gradient/hessian values inside the optimization algorithm
 #' @param threshold percentage value indicating the minimum value for an actual improvment (in order to decide whether to use the fast approach for the likelihood or not).
+#' @param stats an array of dimensions n_dyads*statistics*M (if stats is an array for relevent::rem then use aperm(a = stats, perm = c(2,3,1)) )
 #'
 #' @return  object list (the function saves also the output of optim)
 #' @export
 remstimate <- function(formula = NULL,
-                       edgelist,
-                       riskset = replicate(NROW(edgelist),NaN,simplify=FALSE),
-                       covariates = list(a = NULL),
-                       stats = NULL,  
+                       data,  
                        approach = c("MLE","Bayesian"),
-                       optimization = c("trust","optim","GD","BSIR","BPM","HMC"),
+                       method = c("trust","optim","GD","BSIR","BPM","HMC"),
                        fast = FALSE,
                        threshold = 0.5,
+                       stats = NULL,
                        ...){
-
-    # ... processing input _edgelist_ 
-    preprocessedREH <- reh(edgelist = edgelist, riskset = riskset, covariates = covariates)
-
+    # ... check on input _data_                      
     # ... processing the input _formula_  and getting statistics (_stats_) 
     if(!is.null(formula)){
-        stats <- getStats(formula = formula, edgelist = edgelist, dat = preprocessedREH, directed = TRUE, with_type = TRUE, ...)
+        stats <- getStats(formula = formula, edgelist = data$old_edgelist, data = data, directed = TRUE, with_type = TRUE, ...)
         stats <- aperm(stats, perm = c(3,2,1))
     }
     else{
@@ -38,7 +57,7 @@ remstimate <- function(formula = NULL,
             errorMessage(0) # the array of statistics stats is not specified. Please use specify either 'formula' or 'stats'
         }
     }
-    # ... processing input _method_ and _optimization_ :  adding controls over the text input by using errorMessage(cond), and threshold parameter (must be in [0,1])
+    # ... processing input _approach_ and _method_ :  adding controls over the text input by using errorMessage(cond), and threshold parameter (must be in [0,1])
     # ...
 
     # ... throw warningMessage(cond) according to input _threshold_ value
@@ -57,8 +76,8 @@ remstimate <- function(formula = NULL,
         
         # evalFast(...) output must be a percentage
         actual_improvement <-  0.0 # this is a temporary value set to 0.0
-        #evalFast(M =  preprocessedREH$M,
-        #                                N = preprocessedREH$N,
+        #evalFast(M =  data$M,
+        #                                N = data$N,
         #                                U = dim(stats)[3],
         #                                R = dim(remstimateList$unique_vectors_stats)[1])
 
@@ -79,12 +98,12 @@ remstimate <- function(formula = NULL,
                 # ... compute times_r : given a unique vector of statistics is the sum for each time point (m=1,...,M) of the corresponding interevent (survival) time (t[m]-t[m-1]) multiplied by the number of dyads that have the same vector of statistics at t[m].
                 remstimateList$times_r <- computeTimes(unique_vectors_stats = remstimateList$unique_vectors_stats,
                                                        stats = stats, 
-                                                       intereventTime = preprocessedREH$intereventTime)
+                                                       intereventTime = data$intereventTime)
 
                 # ... compute occurrencies_r : that is a vector of counts indicating how many times each of the unique vector (indexed by r) of statistics occurred in the network (as in contributing to the hazard in the likelihood).
-                remstimateList$occurrencies_r <- computeOccurrencies(edgelist = preprocessedREH$edgelist, 
-                                                                     risksetMatrix = preprocessedREH$risksetMatrix, 
-                                                                     M = preprocessedREH$M, 
+                remstimateList$occurrencies_r <- computeOccurrencies(edgelist = data$edgelist, 
+                                                                     risksetMatrix = data$risksetMatrix, 
+                                                                     M = data$M, 
                                                                      unique_vectors_stats = remstimateList$unique_vectors_stats, 
                                                                      stats = stats)
             }
@@ -98,17 +117,17 @@ remstimate <- function(formula = NULL,
 
     # ... [1] Maximum Likelihood Estimates (MLE) or Bayesian
     if(approach == "MLE"){
-        # ... [0] check that argument optimization contains only [trust,optim,DG]
+        # ... [0] check that argument _method_ contains only [trust,optim,DG]
         # ... [1.1] with trust::trust()
-        if(optimization == "trust"){
+        if(method == "trust"){
             if(!remstimateList$fast){
                 remstimateList$optimum <- trust::trust(objfun = remDerivatives, 
                                                        parinit = rep(0,dim(stats)[1]), 
                                                        rinit = 1, 
                                                        rmax = 100, 
                                                        stats = stats, #.GlobalEnv$stats, 
-                                                       event_binary = preprocessedREH$rehBinary, #.GlobalEnv$binaryREH, 
-                                                       interevent_time = preprocessedREH$intereventTime) #.GlobalEnv$intereventTime)  
+                                                       event_binary = data$rehBinary, #.GlobalEnv$binaryREH, 
+                                                       interevent_time = data$intereventTime) #.GlobalEnv$intereventTime)  
                                                        return(remstimateList$optimum)         
             }
             else{
@@ -125,19 +144,30 @@ remstimate <- function(formula = NULL,
          #  remstimateList$out$llik <- -remstimateList$optimum$value # loglikelihood value at MLE values (we take the '-value' because we minimized the '-loglik')
          #  remstimateList$out$vcovMatrix <- solve(remstimateList$optimum$hessian)
          #  remstimateList$out$AIC <- 2*length(remstimateList$out$coef) - 2*remstimateList$out$llik # AIC
-         #  remstimateList$out$BIC <- length(remstimateList$out$coef)*log(preprocessedREH$M) - 2*remstimateList$out$llik # BIC
+         #  remstimateList$out$BIC <- length(remstimateList$out$coef)*log(data$M) - 2*remstimateList$out$llik # BIC
         }
 
         # ... [1.2] with stats::optim()
-        if(optimization == "optim"){        
-            #ott <- optim(par = pars_init,
-            #             fn = nllik,
-            #             stats = stats,
-            #             event_binary = event_binary,
-            #             interevent_time = interevent_time,
-            #             hessian = TRUE,
-            #             threads = threads,
-            #             ...)
+        if(method == "optim"){        
+            if(!remstimateList$fast){
+                remstimateList$optimum <- optim(par = rep(0,dim(stats)[1]),
+                         fn = nLoglik,
+                         stats = stats, #.GlobalEnv$stats, 
+                         event_binary = data$rehBinary, #.GlobalEnv$binaryREH, 
+                         interevent_time = data$intereventTime, #.GlobalEnv$intereventTime)  
+                         hessian = TRUE,
+                         ...)
+                return(remstimateList$optimum)         
+            }
+            else{
+                remstimateList$optimum <- optim(par = rep(0,dim(stats)[1]),
+                                    fn = remDerivativesFast,
+                                    times_r = remstimateList$times_r,
+                                    occurrencies_r = remstimateList$occurrencies_r,
+                                    unique_vectors_stats = remstimateList$unique_vectors_stats,
+                                    hessian = TRUE,
+                                    ...)
+            }
             #out$coef <- ott$par # MLE estimates
             #out$hessian <- ott$hessian # hessian matrix
             #out$llik <- -ott$value # loglikelihood value at MLE values (we take the '-value' because we minimized the '-loglik')
@@ -148,27 +178,27 @@ remstimate <- function(formula = NULL,
         }
 
         # ... [1.3] with  Gradient Descent (GD)
-        if(optimization == "DG"){
+        if(method == "DG"){
 
         }
     }
 
     if(approach == "Bayesian"){
-        # ... [0] check for optimization argument that has to be among these: BSIR, BPM, HMC
+        # ... [0] check for _method_ argument that has to be among these: BSIR, BPM, HMC
 
         # ... [1.1] Bayesian Sampling Importance Resampling
-        if(optimization == "BSIR"){
+        if(method == "BSIR"){
             # ...
         }
 
         # ... [1.2] Bayesian Posterior Mode
-        if(optimization == "BPM"){
+        if(method == "BPM"){
             # ...
         }
 
         # ... [1.1] Hamiltonian Monte Carlo
-        if(optimization == "HMC"){
-            # ...
+        if(method == "HMC"){
+            # ... waiting for Fabio codes
         }
     }
 

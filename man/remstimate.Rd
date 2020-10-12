@@ -7,35 +7,29 @@
 \usage{
 remstimate(
   formula = NULL,
-  edgelist,
-  riskset = replicate(NROW(edgelist), NaN, simplify = FALSE),
-  covariates = list(a = NULL),
-  stats = NULL,
-  method = c("MLE", "BSIR", "MCMC"),
-  optimization = c("trust", "optim", "GD", "SGD", "MBGD"),
+  data,
+  approach = c("MLE", "Bayesian"),
+  method = c("trust", "optim", "GD", "BSIR", "BPM", "HMC"),
   fast = FALSE,
   threshold = 0.5,
+  stats = NULL,
   ...
 )
 }
 \arguments{
 \item{formula}{formula object (see 'remstats' for now)}
 
-\item{edgelist}{a a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]}
+\item{data}{is a reh S3 object}
 
-\item{riskset}{is a list of length equal to the number of events, each object a matrix with unobserved dyads (using actors string names)}
+\item{approach}{estimation approach: MLE (Maximum Likelihood Estimates) or Bayesian}
 
-\item{covariates}{list of covariates to be provided according to the input structure working with 'remstats'}
-
-\item{stats}{an array of dimensions n_dyads*statistics*M (if stats is an array for relevent::rem then use aperm(a = stats, perm = c(2,3,1)) )}
-
-\item{method}{estimation method MLE (Maximum Likelihood Estimates), BSIR (Bayesian Sampling Importance Resampling), MCMC (Markov Chain Monte Carlo)}
-
-\item{optimization}{optimization method to be used (when MLE): trust/optim will use the corresponding functions, GD, SGD, MBGD.}
+\item{method}{optimization method to be used: trust/optim will use the corresponding functions, GD, BSIR, BPM, HMC}
 
 \item{fast}{FALSE/TRUE whether to use the fast calculation of loglikelihood/gradient/hessian values inside the optimization algorithm}
 
 \item{threshold}{percentage value indicating the minimum value for an actual improvment (in order to decide whether to use the fast approach for the likelihood or not).}
+
+\item{stats}{an array of dimensions n_dyads*statistics*M (if stats is an array for relevent::rem then use aperm(a = stats, perm = c(2,3,1)) )}
 }
 \value{
 object list (the function saves also the output of optim)

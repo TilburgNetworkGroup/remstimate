@@ -9,7 +9,7 @@ the argument actors and types allow to add actors and types not observed in the 
 getStats(
   formula,
   edgelist,
-  dat,
+  data,
   directed = TRUE,
   with_type = FALSE,
   start = NULL,
@@ -30,7 +30,7 @@ sender (or first actor) and the third column to the receiver (or second
 actor). The fourth column may refer to the type of the event, this column is 
 only used when \code{with_type = TRUE}.}
 
-\item{dat}{output of reh() (preprocessed edgelist)}
+\item{data}{reh S3 object}
 
 \item{directed}{Logical value. Indicates whether events in the edgelist are 
 directed (\code{directed = TRUE}, default) or undirected 
