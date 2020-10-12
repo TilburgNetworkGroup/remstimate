@@ -178,7 +178,7 @@ remstimate <- function(formula = NULL,
         }
 
         # ... [1.3] with  Gradient Descent (GD)
-        if(method == "DG"){
+        if(method == "GD"){
 
         }
     }
