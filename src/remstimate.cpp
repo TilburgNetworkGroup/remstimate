@@ -103,7 +103,7 @@ double nLoglik(const arma::vec &pars,const arma::cube &stats, const arma::mat &e
 //'
 //' @export
 // [[Rcpp::export]]
-Rcpp::List remDerivatives(const arma::vec &pars,const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time){
+Rcpp::List remDerivatives(const arma::vec &pars,const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time,bool gradient = true,bool hessian = true){
     arma::uword U = pars.n_elem; // number of parameters
     arma::uword D = event_binary.n_cols;
     arma::uword M = event_binary.n_rows; // number of events
@@ -126,18 +126,30 @@ Rcpp::List remDerivatives(const arma::vec &pars,const arma::cube &stats, const a
                     grad += stats_m.col(d);
                 }               
                 double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);
-                loglik -= dtelp;                
-                grad -= stats_m.col(d)*dtelp;               
-                for(k = 0; k < U; k++){
+                loglik -= dtelp; 
+                if(gradient){
+                    grad -= stats_m.col(d)*dtelp;
+                }               
+                if(hessian){
+                  for(k = 0; k < U; k++){
                     for (l = k; l < U; l++){
                         hess(k,l) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
                         hess(l,k) = hess(k,l);
                     }
-                }    
+                  }    
+                }      
+                
             }            
-        }        
+        }
     }
-    return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
+
+    if(gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
+    }else if(!gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik)
+    }else{
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
+    }
 }
 
 //' lpd (Log-Pointwise Density of REM - to rewrite according to the 0/1/-1 event vector)
