@@ -127,7 +127,9 @@ remstimate <- function(formula = NULL,
                                                        rmax = 100, 
                                                        stats = stats, #.GlobalEnv$stats, 
                                                        event_binary = data$rehBinary, #.GlobalEnv$binaryREH, 
-                                                       interevent_time = data$intereventTime) #.GlobalEnv$intereventTime)  
+                                                       interevent_time = data$intereventTime,
+                                                       gradient = TRUE,
+                                                       hessian = TRUE) #.GlobalEnv$intereventTime)  
                                                        return(remstimateList$optimum)         
             }
             else{

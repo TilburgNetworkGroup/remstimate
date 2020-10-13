@@ -98,6 +98,8 @@ double nLoglik(const arma::vec &pars,const arma::cube &stats, const arma::mat &e
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
 //'
 //' @return list of values: loglik, gradient, hessian
 //'
