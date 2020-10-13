@@ -146,7 +146,7 @@ Rcpp::List remDerivatives(const arma::vec &pars,const arma::cube &stats, const a
     if(gradient && !hessian){
       return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
     }else if(!gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik)
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
     }else{
       return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
     }
