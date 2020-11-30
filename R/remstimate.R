@@ -1,6 +1,6 @@
-#' reh  
+#' reh  (FUNCTION TO REMOVE)
 #'
-#' A function that returns a 'reh' S3 object 
+#' A function that returns a 'reh' S3 object  
 #'
 #' @param edgelist a a dataframe of relational events sorted by time: [time,sender,receiver,type,weight]
 #' @param riskset is a list of length equal to the number of events, each object a matrix with unobserved dyads (using actors string names)
@@ -46,7 +46,7 @@ remstimate <- function(formula = NULL,
                        threshold = 0.5,
                        stats = NULL,
                        ...){
-    # ... check on input _data_                      
+    # +                     
     # ... processing the input _formula_  and getting statistics (_stats_) 
     if(!is.null(formula)){
         stats <- getStats(formula = formula, edgelist = data$old_edgelist, data = data, directed = TRUE, with_type = TRUE, ...)
