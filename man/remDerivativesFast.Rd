@@ -2,9 +2,16 @@
 % Please edit documentation in R/RcppExports.R
 \name{remDerivativesFast}
 \alias{remDerivativesFast}
-\title{remDerivativesFast (a function that returns a list of 0th/1st/2nd order derivatives of loglikelihood evaluated in pars)}
+\title{remDerivativesFast}
 \usage{
-remDerivativesFast(pars, times_r, occurrencies_r, unique_vectors_stats)
+remDerivativesFast(
+  pars,
+  times_r,
+  occurrencies_r,
+  unique_vectors_stats,
+  gradient,
+  hessian
+)
 }
 \arguments{
 \item{pars}{vector of parameters}
@@ -14,6 +21,10 @@ remDerivativesFast(pars, times_r, occurrencies_r, unique_vectors_stats)
 \item{occurrencies_r}{former q}
 
 \item{unique_vectors_stats}{former U}
+
+\item{gradient}{boolean}
+
+\item{hessian}{boolean}
 }
 \value{
 list of value/gradient/hessian in pars

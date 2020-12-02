@@ -21,7 +21,7 @@ errorMessage <- function(cond) {
 #'
 #' A function to rearrange the cube of statistics into a matrix.
 #'
-#' @param stats cube structure of dimensions [M*D*U] filled with statistics values. 
+#' @param stats cube structure of dimensions [D*U*M] filled with statistics values. 
 #'
 #' @return matrix of dimensions [(M*D)*U]
 NULL
@@ -46,22 +46,6 @@ nLoglik <- function(pars, stats, event_binary, interevent_time) {
     .Call('_remstimate_nLoglik', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time)
 }
 
-#' remDerivatives
-#'
-#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#' 
-#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-#' @param interevent_time the time difference between the current time point and the previous event time.
-#'
-#' @return list of values: loglik, gradient, hessian
-#'
-#' @export
-remDerivatives <- function(pars, stats, event_binary, interevent_time) {
-    .Call('_remstimate_remDerivatives', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time)
-}
-
 #' lpd (Log-Pointwise Density of REM - to rewrite according to the 0/1/-1 event vector)
 #'
 #' @param pars is a vector of parameters (note: the order must be aligned witht the column order in 'stats')
@@ -76,11 +60,114 @@ lpd <- function(pars, stats, event, interevent_time) {
     .Call('_remstimate_lpd', PACKAGE = 'remstimate', pars, stats, event, interevent_time)
 }
 
+#' remDerivativesStandard
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+#' 
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
+#'
+#' @return list of values: loglik, gradient, hessian
+#'
+remDerivativesStandard <- function(pars, stats, event_binary, interevent_time, gradient = TRUE, hessian = TRUE) {
+    .Call('_remstimate_remDerivativesStandard', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, gradient, hessian)
+}
+
+#' remDerivativesFast
+#'
+#' description of the function here
+#'
+#' @param pars vector of parameters 
+#' @param times_r  former m
+#' @param occurrencies_r former q
+#' @param unique_vectors_stats former U
+#' @param gradient boolean
+#' @param hessian boolean
+#'
+#' @return list of value/gradient/hessian in pars
+#'
+remDerivativesFast <- function(pars, times_r, occurrencies_r, unique_vectors_stats, gradient, hessian) {
+    .Call('_remstimate_remDerivativesFast', PACKAGE = 'remstimate', pars, times_r, occurrencies_r, unique_vectors_stats, gradient, hessian)
+}
+
+#' remDerivatives
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+#' 
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param times_r used in the fast approach
+#' @param occurrencies_r used in the fast approach
+#' @param unique_vectors_stats used in the fast approach
+#' @param fast boolean true/false whether to run the fast approach or not                               
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
+#'
+#' @return list of values: loglik, gradient, hessian
+#'
+#' @export
+remDerivatives <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, gradient = TRUE, hessian = TRUE) {
+    .Call('_remstimate_remDerivatives', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, gradient, hessian)
+}
+
+#' GD
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+#' 
+#' @param pars parameters
+#' @param stats array of statistics
+#' @param event_binary rehBinary (inside the reh object)
+#' @param interevent_time vector of interevent times (inside the reh object)
+#' @param times_r used in the fast approach
+#' @param occurrencies_r used in the fast approach
+#' @param unique_vectors_stats used in the fast approach
+#' @param fast TRUE/FALSE whether to perform the fast approach or not
+#' @param epochs number of epochs
+#' @param learning_rate learning rate
+#' 
+#' @return
+#'
+#' @export
+GD <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.0001) {
+    .Call('_remstimate_GD', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, epochs, learning_rate)
+}
+
+#' GDADAM
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+#' 
+#' @param pars parameters
+#' @param stats array of statistics
+#' @param event_binary rehBinary (inside the reh object)
+#' @param interevent_time vector of interevent times (inside the reh object)
+#' @param times_r used in the fast approach
+#' @param occurrencies_r used in the fast approach
+#' @param unique_vectors_stats used in the fast approach
+#' @param fast TRUE/FALSE whether to perform the fast approach or not
+#' @param epochs number of epochs
+#' @param learning_rate learning rate
+#' @param beta1 hyperparameter beta1
+#' @param beta2 hyperparameter beta2
+#' @param eta hyperparameter eta
+#' 
+#' @return
+#'
+#' @export
+GDADAM <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.2, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
+    .Call('_remstimate_GDADAM', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, epochs, learning_rate, beta1, beta2, eta)
+}
+
 #' getUniqueVectors
 #'
 #' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 #'
-#' @param stats cube of statistics with dimensions [M*D*U]
+#' @param stats cube structure of dimensions [D*U*M] filled with statistics values.
 #'
 #' @return matrix with only unique vectors of statistics with dimensions [R*U]
 #'
@@ -109,8 +196,8 @@ computeTimes <- function(unique_vectors_stats, M, stats, intereventTime) {
 #'
 #' A function to compute how many times each of the unique vector of statistics returned by getUniqueVectors() occurred in the network (as in contributing to the hazard in the likelihood). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 #'
-#' @param edgelist is the preprocessed edgelist dataframe with information about [time,sender,receiver,type,weight] by row.
-#' @param risksetMatrix matrix object inside the output list of the preprocessed relational event history.
+#' @param edgelist is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.
+#' @param risksetCube array of index position fo dyads, with dimensions [N*N*C]
 #' @param M number of observed relational events.
 #' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
 #' @param stats array of statistics with dimensons [D*U*M]
@@ -118,23 +205,18 @@ computeTimes <- function(unique_vectors_stats, M, stats, intereventTime) {
 #' @return vector of q's
 #'
 #' @export
-computeOccurrencies <- function(edgelist, risksetMatrix, M, unique_vectors_stats, stats) {
-    .Call('_remstimate_computeOccurrencies', PACKAGE = 'remstimate', edgelist, risksetMatrix, M, unique_vectors_stats, stats)
+computeOccurrencies <- function(edgelist, risksetCube, M, unique_vectors_stats, stats) {
+    .Call('_remstimate_computeOccurrencies', PACKAGE = 'remstimate', edgelist, risksetCube, M, unique_vectors_stats, stats)
 }
 
-#' remDerivativesFast (a function that returns a list of 0th/1st/2nd order derivatives of loglikelihood evaluated in pars)
+#' tryFunction
 #'
-#' description of the function here
+#' @param stats cube
 #'
-#' @param pars vector of parameters 
-#' @param times_r  former m
-#' @param occurrencies_r former q
-#' @param unique_vectors_stats former U
-#'
-#' @return list of value/gradient/hessian in pars
+#' @return matrix
 #'
 #' @export
-remDerivativesFast <- function(pars, times_r, occurrencies_r, unique_vectors_stats) {
-    .Call('_remstimate_remDerivativesFast', PACKAGE = 'remstimate', pars, times_r, occurrencies_r, unique_vectors_stats)
+tryFunction <- function(stats) {
+    .Call('_remstimate_tryFunction', PACKAGE = 'remstimate', stats)
 }
 

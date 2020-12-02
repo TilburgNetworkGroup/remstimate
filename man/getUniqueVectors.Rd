@@ -7,7 +7,7 @@
 getUniqueVectors(stats)
 }
 \arguments{
-\item{stats}{cube of statistics with dimensions [M*D*U]}
+\item{stats}{cube structure of dimensions [D*U*M] filled with statistics values.}
 }
 \value{
 matrix with only unique vectors of statistics with dimensions [R*U]

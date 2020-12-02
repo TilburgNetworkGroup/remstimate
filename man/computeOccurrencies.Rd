@@ -4,12 +4,12 @@
 \alias{computeOccurrencies}
 \title{computeOccurrencies}
 \usage{
-computeOccurrencies(edgelist, risksetMatrix, M, unique_vectors_stats, stats)
+computeOccurrencies(edgelist, risksetCube, M, unique_vectors_stats, stats)
 }
 \arguments{
-\item{edgelist}{is the preprocessed edgelist dataframe with information about [time,sender,receiver,type,weight] by row.}
+\item{edgelist}{is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.}
 
-\item{risksetMatrix}{matrix object inside the output list of the preprocessed relational event history.}
+\item{risksetCube}{array of index position fo dyads, with dimensions [N*N*C]}
 
 \item{M}{number of observed relational events.}
 

@@ -7,7 +7,7 @@
 #include <map>
 #include <iterator>
 #include <string>
-#include <remstats.h>
+#include <remstats.h> // maybe to remove??
 
 
 // compute_statsCpp (description is the same as in remstats)
@@ -90,70 +90,6 @@ double nLoglik(const arma::vec &pars,const arma::cube &stats, const arma::mat &e
     return -loglik;
 }
 
-//' remDerivatives
-//'
-//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-//' 
-//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-//' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param gradient boolean true/false whether to return gradient value
-//' @param hessian boolean true/false whether to return hessian value
-//'
-//' @return list of values: loglik, gradient, hessian
-//'
-//' @export
-// [[Rcpp::export]]
-Rcpp::List remDerivatives(const arma::vec &pars,const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time,bool gradient = true,bool hessian = true){
-    arma::uword U = pars.n_elem; // number of parameters
-    arma::uword D = event_binary.n_cols;
-    arma::uword M = event_binary.n_rows; // number of events
-
-    arma::uword d,m,l,k;
-    arma::vec log_lambda(D,arma::fill::zeros) ;
-
-    double loglik = 0.0;
-    arma::mat hess(U,U,arma::fill::zeros);
-    arma::vec grad(U,arma::fill::zeros);
-    
-    for(m = 0; m < M; m++){
-        arma::mat stats_m = stats.slice(m); // dimensions : [D*U]
-        log_lambda = stats_m.t() * pars;
-        
-        for(d = 0; d < D; d++){
-            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
-                if(event_binary(m,d) == 1){ // if event occured
-                    loglik += log_lambda.at(d);
-                    grad += stats_m.col(d);
-                }               
-                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);
-                loglik -= dtelp; 
-                if(gradient){
-                    grad -= stats_m.col(d)*dtelp;
-                }               
-                if(hessian){
-                  for(k = 0; k < U; k++){
-                    for (l = k; l < U; l++){
-                        hess(k,l) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
-                        hess(l,k) = hess(k,l);
-                    }
-                  }    
-                }      
-                
-            }            
-        }
-    }
-
-    if(gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
-    }else if(!gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
-    }else{
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
-    }
-}
-
 //' lpd (Log-Pointwise Density of REM - to rewrite according to the 0/1/-1 event vector)
 //'
 //' @param pars is a vector of parameters (note: the order must be aligned witht the column order in 'stats')
@@ -181,24 +117,318 @@ double lpd(arma::vec pars, arma::mat stats, arma::uvec event, double interevent_
         return lpd;
     }
 
+
+//' remDerivativesStandard
+//'
+//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+//' 
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
+//'
+//' @return list of values: loglik, gradient, hessian
+//'
+// [[Rcpp::export]]
+Rcpp::List remDerivativesStandard(const arma::vec &pars, const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time,bool gradient = true,bool hessian = true){
+    arma::uword U = pars.n_elem; // number of parameters
+    arma::uword D = event_binary.n_cols;
+    arma::uword M = event_binary.n_rows; // number of events
+
+    arma::uword d,m,l,k;
+    arma::vec log_lambda(D,arma::fill::zeros) ;
+
+    double loglik = 0.0;
+    arma::mat hess(U,U,arma::fill::zeros);
+    arma::vec grad(U,arma::fill::zeros);
+   
+    for(m = 0; m < M; m++){
+        arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
+        log_lambda = stats_m.t() * pars;
+        for(d = 0; d < D; d++){
+            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
+                if(event_binary(m,d) == 1){ // if event occured
+                    loglik += log_lambda.at(d);
+                    grad += stats_m.col(d);
+                }               
+                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);  // change `dtelp` name to something else more understandable
+                loglik -= dtelp; 
+                if(gradient){
+                    grad -= stats_m.col(d)*dtelp;
+                }             
+                if(hessian){
+                  for(k = 0; k < U; k++){
+                    for (l = k; l < U; l++){
+                        hess(k,l) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
+                        hess(l,k) = hess(k,l);
+                    }
+                  }    
+                }      
+                
+            }            
+        }
+    
+    }
+
+    if(gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
+    }else if(!gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
+    }else{
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
+    }
+}
+
+
+
+//' remDerivativesFast
+//'
+//' description of the function here
+//'
+//' @param pars vector of parameters 
+//' @param times_r  former m
+//' @param occurrencies_r former q
+//' @param unique_vectors_stats former U
+//' @param gradient boolean
+//' @param hessian boolean
+//'
+//' @return list of value/gradient/hessian in pars
+//'
+// [[Rcpp::export]]
+Rcpp::List remDerivativesFast(const arma::vec& pars, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats, bool gradient, bool hessian){
+  
+  arma::uword U = pars.n_elem;
+  arma::uword u,k,l;
+
+  double loglik = sum(occurrencies_r.t()*unique_vectors_stats*pars - times_r.t() * exp(unique_vectors_stats*pars));
+  
+  arma::vec grad(U);
+  
+  for(u = 0; u < U; u++){
+    grad.row(u) =  sum(occurrencies_r % unique_vectors_stats.col(u) - times_r % exp(unique_vectors_stats * pars) % unique_vectors_stats.col(u));
+  }
+  
+  arma::mat hess(U, U);
+    
+  for(k = 0; k < U; k++){
+    for(l = 0; l < U; l++){
+      hess(k,l) = sum(- times_r % exp(unique_vectors_stats * pars) % unique_vectors_stats.col(l) % unique_vectors_stats.col(k));
+    }
+  }
+
+
+  if(gradient && !hessian){
+    return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
+  }else if(!gradient && !hessian){
+    return Rcpp::List::create(Rcpp::Named("value") = -loglik);
+  }else{
+    return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
+  }
+
+}
+
+
+//' remDerivatives
+//'
+//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+//' 
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param times_r used in the fast approach
+//' @param occurrencies_r used in the fast approach
+//' @param unique_vectors_stats used in the fast approach
+//' @param fast boolean true/false whether to run the fast approach or not                               
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
+//'
+//' @return list of values: loglik, gradient, hessian
+//'
+//' @export
+// [[Rcpp::export]]
+Rcpp::List remDerivatives(const arma::vec &pars, 
+                                  const arma::cube &stats, 
+                                  const arma::mat &event_binary, 
+                                  const arma::vec &interevent_time,
+                                  const arma::vec &times_r, 
+                                  const arma::vec &occurrencies_r, 
+                                  const arma::mat &unique_vectors_stats,
+                                  bool fast = false,
+                                  bool gradient = true,
+                                  bool hessian = true){
+  Rcpp::List out;
+
+  switch (fast)
+  {
+  case 1: { out = remDerivativesFast(pars,times_r,occurrencies_r,unique_vectors_stats,gradient,hessian);
+    break;}
+
+  case 0: { out = remDerivativesStandard(pars,stats,event_binary,interevent_time,gradient,hessian);
+    break;}
+  }
+
+  return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////////
+// ///////////(BEGIN)             Gradient Descent              (BEGIN)///////////// 
+// /////////////////////////////////////////////////////////////////////////////////
+
+//' GD
+//'
+//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+//' 
+//' @param pars parameters
+//' @param stats array of statistics
+//' @param event_binary rehBinary (inside the reh object)
+//' @param interevent_time vector of interevent times (inside the reh object)
+//' @param times_r used in the fast approach
+//' @param occurrencies_r used in the fast approach
+//' @param unique_vectors_stats used in the fast approach
+//' @param fast TRUE/FALSE whether to perform the fast approach or not
+//' @param epochs number of epochs
+//' @param learning_rate learning rate
+//' 
+//' @return
+//'
+//' @export
+// [[Rcpp::export]]
+Rcpp::List GD(const arma::vec &pars,
+              const arma::cube &stats, 
+              const arma::mat &event_binary,
+              const arma::vec &interevent_time,
+              const arma::vec &times_r, 
+              const arma::vec &occurrencies_r, 
+              const arma::mat &unique_vectors_stats,
+              bool fast = false,
+              int epochs = 200,
+              double learning_rate = 0.0001){
+    //if loss function oscillates in later epochs, then reduce learning rate for better convergence
+    // suggestions: (1) tuning of learning rate, (2) standardization of data 
+    // further implementation: parallelizing with multiple starting points
+    // stopping rule (gradient value/loglik difference/number of epochs)
+    arma::vec pars_prev = pars;
+    arma::vec pars_next;
+    arma::uword P = pars.n_elem;
+
+    //for output
+    arma::mat beta(P,epochs,arma::fill::zeros);
+    arma::vec loss(epochs,arma::fill::zeros);
+
+    for(int i =0; i<epochs;i++){
+        Rcpp::List derv = remDerivatives(pars_prev,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,true,false);
+        double loglik = derv["value"];
+        arma::vec grad = derv["gradient"];
+        pars_next = pars_prev - (learning_rate * grad);
+        beta.col(i) = pars_next;
+        loss(i) = loglik;
+        pars_prev = pars_next;
+    }
+    return Rcpp::List::create(Rcpp::Named("loss") = loss, Rcpp::Named("coef") = pars_next, Rcpp::Named("betas") = beta);
+}
+
+
+//' GDADAM
+//'
+//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+//' 
+//' @param pars parameters
+//' @param stats array of statistics
+//' @param event_binary rehBinary (inside the reh object)
+//' @param interevent_time vector of interevent times (inside the reh object)
+//' @param times_r used in the fast approach
+//' @param occurrencies_r used in the fast approach
+//' @param unique_vectors_stats used in the fast approach
+//' @param fast TRUE/FALSE whether to perform the fast approach or not
+//' @param epochs number of epochs
+//' @param learning_rate learning rate
+//' @param beta1 hyperparameter beta1
+//' @param beta2 hyperparameter beta2
+//' @param eta hyperparameter eta
+//' 
+//' @return
+//'
+//' @export
+// [[Rcpp::export]]
+Rcpp::List GDADAM(const arma::vec &pars,
+                   const arma::cube &stats, 
+                   const arma::mat &event_binary,
+                   const arma::vec &interevent_time,
+                   const arma::vec &times_r, 
+                   const arma::vec &occurrencies_r, 
+                   const arma::mat &unique_vectors_stats,
+                   bool fast = false,
+                   int epochs = 200,
+                   double learning_rate = 0.2,
+                   double beta1 = 0.9,
+                   double beta2 = 0.999,
+                   double eta = 0.00000001){
+
+// default values for hyper-parameters recommended in literature (https://arxiv.org/abs/1412.6980)
+// β1 =  0.9 for β2 =  0.999
+// eta = 10^-8
+    arma::uword P = pars.n_elem;
+    arma::vec pars_prev = pars;
+    arma::vec pars_next;
+
+
+    arma::vec moment1(P,arma::fill::zeros);
+    arma::vec moment2(P,arma::fill::zeros);
+
+    arma::vec moment1_est(P,arma::fill::zeros);
+    arma::vec moment2_est(P,arma::fill::zeros);
+
+    //for output
+    arma::mat beta(P,epochs,arma::fill::zeros);
+    arma::vec loss(epochs,arma::fill::zeros);
+
+    for(int i =0; i<epochs;i++){
+        Rcpp::List derv = remDerivatives(pars_prev,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,true,false);
+        double loglik = derv["value"];
+        
+        arma::vec grad = derv["gradient"];
+        moment1 = (beta1*moment1) + (1-beta1)*grad;
+        moment2 = (beta2 * moment2) + (1-beta2) * (grad%grad);
+        // bias-corrected first and second moment estimates:
+        moment1_est = moment1 / (1-pow(beta1,i+1));
+        moment2_est = moment2/  (1-pow(beta2,i+1));
+        pars_next = pars_prev - (learning_rate * moment1_est)/(sqrt(moment2_est)+eta);
+        
+        beta.col(i) = pars_next;
+        loss(i) = loglik;
+        
+        pars_prev = pars_next;
+    }
+    return Rcpp::List::create(Rcpp::Named("loss") = loss, Rcpp::Named("coef") = pars_next, Rcpp::Named("betas") = beta);
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////////
+// ///////////(END)               Gradient Descent                (END)/////////////
+// /////////////////////////////////////////////////////////////////////////////////
+
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(BEGIN)     remstimateFAST routine functions      (BEGIN)///////////// 
+// /////////// to calculate the objects needed for the fast approach   /////////////
 // /////////////////////////////////////////////////////////////////////////////////
 
 //' cube2matrix
 //'
 //' A function to rearrange the cube of statistics into a matrix.
 //'
-//' @param stats cube structure of dimensions [M*D*U] filled with statistics values. 
+//' @param stats cube structure of dimensions [D*U*M] filled with statistics values. 
 //'
 //' @return matrix of dimensions [(M*D)*U]
 arma::mat cube2matrix(arma::cube stats){
-  arma::uword u,m;
+  arma::uword m,d;
   arma::uword new_row = 0;
   arma::mat out(stats.n_rows*stats.n_slices, stats.n_cols, arma::fill::zeros); 
-  for(u = 0; u < stats.n_slices; u++){
-    for(m = 0; m < stats.n_rows; m++){
-      out.row(new_row) = stats.slice(u).row(m);
+  for(m = 0; m < stats.n_slices; m++){
+    for(d = 0; d < stats.n_rows; d++){
+      out.row(new_row) = stats.slice(m).row(d);
       new_row += 1;
     }
   }
@@ -209,7 +439,7 @@ arma::mat cube2matrix(arma::cube stats){
 //'
 //' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 //'
-//' @param stats cube of statistics with dimensions [M*D*U]
+//' @param stats cube structure of dimensions [D*U*M] filled with statistics values.
 //'
 //' @return matrix with only unique vectors of statistics with dimensions [R*U]
 //'
@@ -275,8 +505,8 @@ arma::vec computeTimes(const arma::mat& unique_vectors_stats, const arma::uword&
 //'
 //' A function to compute how many times each of the unique vector of statistics returned by getUniqueVectors() occurred in the network (as in contributing to the hazard in the likelihood). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 //'
-//' @param edgelist is the preprocessed edgelist dataframe with information about [time,sender,receiver,type,weight] by row.
-//' @param risksetMatrix matrix object inside the output list of the preprocessed relational event history.
+//' @param edgelist is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.
+//' @param risksetCube array of index position fo dyads, with dimensions [N*N*C]
 //' @param M number of observed relational events.
 //' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
 //' @param stats array of statistics with dimensons [D*U*M]
@@ -285,18 +515,19 @@ arma::vec computeTimes(const arma::mat& unique_vectors_stats, const arma::uword&
 //'
 //' @export
 // [[Rcpp::export]]
-arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::umat& risksetMatrix, const arma::uword& M, const arma::mat& unique_vectors_stats, const arma::cube& stats){
+arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::ucube& risksetCube, const arma::uword& M, const arma::mat& unique_vectors_stats, const arma::cube& stats){
 
   arma::uword r,m,d;
   arma::uword R = unique_vectors_stats.n_rows;
   arma::uword U = unique_vectors_stats.n_cols;
-  Rcpp::IntegerVector sender = edgelist["sender"];
-  Rcpp::IntegerVector receiver = edgelist["receiver"];
+  Rcpp::IntegerVector actor1 = edgelist["actor1"];
+  Rcpp::IntegerVector actor2 = edgelist["actor2"];
+  Rcpp::IntegerVector type = edgelist["type"];
   arma::rowvec stats_event_m(U,arma::fill::zeros);
   arma::vec out(R);
 
   for(m = 0; m < M; m++){
-    d = risksetMatrix(sender(m),receiver(m));
+    d = risksetCube(actor1(m),actor2(m),type(m));
     stats_event_m = stats.slice(m).row(d);
     for(r = 0; r < R; r++){
       if(arma::approx_equal(stats_event_m, unique_vectors_stats.row(r), "absdiff", 0.000001)){
@@ -304,50 +535,22 @@ arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::umat&
       }
     }
   }
-
   return out;
-}
-
-
-//' remDerivativesFast (a function that returns a list of 0th/1st/2nd order derivatives of loglikelihood evaluated in pars)
-//'
-//' description of the function here
-//'
-//' @param pars vector of parameters 
-//' @param times_r  former m
-//' @param occurrencies_r former q
-//' @param unique_vectors_stats former U
-//'
-//' @return list of value/gradient/hessian in pars
-//'
-//' @export
-// [[Rcpp::export]]
-Rcpp::List remDerivativesFast(const arma::vec& pars, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats){
-  
-  arma::uword U = pars.n_elem;
-  arma::uword u,k,l;
-
-  double loglik = sum(occurrencies_r.t()*U*pars - times_r.t() * exp(unique_vectors_stats*pars));
-  
-  arma::vec grad(U);
-  
-  for(u = 0; u < U; u++){
-    grad.row(u) =  sum(occurrencies_r % unique_vectors_stats.col(u) - times_r % exp(unique_vectors_stats * pars) % unique_vectors_stats.col(u));
-  }
-  
-  arma::mat hess(U, U);
-    
-  for(k = 0; k < U; k++){
-    for(l = 0; l < U; l++){
-      hess(k,l) = sum(- times_r % exp(unique_vectors_stats * pars) % unique_vectors_stats.col(l) % unique_vectors_stats.col(k));
-    }
-  }
-  
-  return (Rcpp::List::create(Rcpp::Named("value") = -loglik, 
-                             Rcpp::Named("gradient") = -grad,
-                             Rcpp::Named("hessian") = -hess));
 }
 
 // /////////////////////////////////////////////////////////////////////////////////
 // /////////////(END)     remstimateFAST routine functions      (END)/////////////// 
 // /////////////////////////////////////////////////////////////////////////////////
+
+//' tryFunction
+//'
+//' @param stats cube
+//'
+//' @return matrix
+//'
+//' @export
+// [[Rcpp::export]]
+arma::mat tryFunction(const arma::cube& stats){
+  arma::mat out = stats.slice(1);
+  return out;
+}

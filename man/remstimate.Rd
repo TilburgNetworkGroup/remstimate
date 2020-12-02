@@ -6,33 +6,48 @@
 \title{remstimate}
 \usage{
 remstimate(
-  formula = NULL,
-  data,
-  approach = c("MLE", "Bayesian"),
-  method = c("trust", "optim", "GD", "BSIR", "BPM", "HMC"),
-  fast = FALSE,
-  threshold = 0.5,
+  reh = NULL,
   stats = NULL,
+  method = c("MLE", "GD", "GDADAM", "BSIR", "BPM", "HMC"),
+  prior = NULL,
+  proposal = NULL,
+  n.chains = 2,
+  n.iter = 2000,
+  burnin = 1000,
+  parallel = FALSE,
+  nthreads = 1,
+  seed = sample(1:10000, n.chains),
+  silent = TRUE,
   ...
 )
 }
 \arguments{
-\item{formula}{formula object (see 'remstats' for now)}
+\item{reh}{a reh object (list of objects useful for the optimization)}
 
-\item{data}{is a reh S3 object}
+\item{stats}{a remstats object (array of statistics)}
 
-\item{approach}{estimation approach: MLE (Maximum Likelihood Estimates) or Bayesian}
+\item{method}{optimization method to be used: trust, optim, GD, BSIR, HMC, BPM(?)}
 
-\item{method}{optimization method to be used: trust/optim will use the corresponding functions, GD, BSIR, BPM, HMC}
+\item{prior}{prior distribution when using Bayesian methods}
 
-\item{fast}{FALSE/TRUE whether to use the fast calculation of loglikelihood/gradient/hessian values inside the optimization algorithm}
+\item{proposal}{proposal distribution when using BSIR}
 
-\item{threshold}{percentage value indicating the minimum value for an actual improvment (in order to decide whether to use the fast approach for the likelihood or not).}
+\item{n.chains}{number of chains to generate}
 
-\item{stats}{an array of dimensions n_dyads*statistics*M (if stats is an array for relevent::rem then use aperm(a = stats, perm = c(2,3,1)) )}
+\item{n.iter}{number of iterations in each chain}
+
+\item{burnin}{number of initial iterations to be added as burnin}
+
+\item{parallel}{parallelize (especially with bayesian methods)}
+
+\item{nthreads}{number of threads for the parallelization}
+
+\item{seed}{seed for reproducibility}
+
+\item{silent}{TRUE/FALSE if FALSE, progress of optimization status will be printed out}
 }
 \value{
-object list (the function saves also the output of optim)
+remstimate S3 object
 }
 \description{
 A function that returns maximum likelihood estimates of REM (interval timing only) by using the optim function
