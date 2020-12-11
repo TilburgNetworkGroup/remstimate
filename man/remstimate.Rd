@@ -11,11 +11,11 @@ remstimate(
   method = c("MLE", "GD", "GDADAM", "BSIR", "BPM", "HMC"),
   prior = NULL,
   proposal = NULL,
-  n.chains = 2,
-  n.iter = 2000,
-  burnin = 1000,
-  parallel = FALSE,
-  nthreads = 1,
+  n_chains = 4,
+  n_iters = 2000,
+  n_burnin = 1000,
+  n_thin = 1,
+  parallel = TRUE,
   seed = sample(1:10000, n.chains),
   silent = TRUE,
   ...
@@ -32,17 +32,17 @@ remstimate(
 
 \item{proposal}{proposal distribution when using BSIR}
 
-\item{n.chains}{number of chains to generate}
+\item{n_chains}{number of chains to generate}
 
-\item{n.iter}{number of iterations in each chain}
+\item{n_iters}{number of iterations in each chain}
 
-\item{burnin}{number of initial iterations to be added as burnin}
+\item{n_burnin}{number of initial iterations to be added as burnin}
 
-\item{parallel}{parallelize (especially with bayesian methods)}
+\item{n_thin}{number of steps to skip in the posterior draws of the HMC}
 
-\item{nthreads}{number of threads for the parallelization}
+\item{parallel}{TRUE/FALSE use parallelization}
 
-\item{seed}{seed for reproducibility}
+\item{seed}{seed for reproducibility (yet to be integrated in the code)}
 
 \item{silent}{TRUE/FALSE if FALSE, progress of optimization status will be printed out}
 }

@@ -26,38 +26,50 @@ errorMessage <- function(cond) {
 #' @return matrix of dimensions [(M*D)*U]
 NULL
 
-compute_statsCpp <- function(effects, edgelist, riskset, start, stop, values, scaling, memory_value, with_type, event_weights, equal_val) {
-    .Call('_remstimate_compute_statsCpp', PACKAGE = 'remstimate', effects, edgelist, riskset, start, stop, values, scaling, memory_value, with_type, event_weights, equal_val)
-}
-
-#' nLoglik
+#' getUniqueVectors
 #'
-#' function that returns the negative of the loglikelihood value at specific parameters' values
-#' 
-#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-#' @param interevent_time the time difference between the current time point and the previous event time.
+#' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 #'
-#' @return list of values: loglik, gradient, hessian
+#' @param stats cube structure of dimensions [D*U*M] filled with statistics values.
+#'
+#' @return matrix with only unique vectors of statistics with dimensions [R*U]
 #'
 #' @export
-nLoglik <- function(pars, stats, event_binary, interevent_time) {
-    .Call('_remstimate_nLoglik', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time)
+getUniqueVectors <- function(stats) {
+    .Call('_remstimate_getUniqueVectors', PACKAGE = 'remstimate', stats)
 }
 
-#' lpd (Log-Pointwise Density of REM - to rewrite according to the 0/1/-1 event vector)
+#' computeTimes 
 #'
-#' @param pars is a vector of parameters (note: the order must be aligned witht the column order in 'stats')
-#' @param stats is a matrix of dimensions n_dyads*variables with statistics of interest by column and dyads by row.
-#' @param event is a vector of 1/0 : 1 indicating the observed dyad and 0 the non observed dyads.
-#' @param interevent_time the time difference between the current time point and the previous event time.
+#' A function to compute the sum of interevent times for those vector of statistics that occurre more than once (output of getUniqueVectors()). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 #'
-#' @return log-pointwise density value of a specific time point
+#' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
+#' @param M number of observed relational events.
+#' @param stats array of statistics with dimensons [D*U*M].
+#' @param intereventTime vector of time differences between two subsequent time points (i.d., waiting time between t[m] and t[m-1]).
+#'
+#' @return vector of sum of interevent times per each unique_vector_stats element
 #'
 #' @export
-lpd <- function(pars, stats, event, interevent_time) {
-    .Call('_remstimate_lpd', PACKAGE = 'remstimate', pars, stats, event, interevent_time)
+computeTimes <- function(unique_vectors_stats, M, stats, intereventTime) {
+    .Call('_remstimate_computeTimes', PACKAGE = 'remstimate', unique_vectors_stats, M, stats, intereventTime)
+}
+
+#' computeOccurrencies
+#'
+#' A function to compute how many times each of the unique vector of statistics returned by getUniqueVectors() occurred in the network (as in contributing to the hazard in the likelihood). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
+#'
+#' @param edgelist is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.
+#' @param risksetCube array of index position fo dyads, with dimensions [N*N*C]
+#' @param M number of observed relational events.
+#' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
+#' @param stats array of statistics with dimensons [D*U*M]
+#'
+#' @return vector of q's
+#'
+#' @export
+computeOccurrencies <- function(edgelist, risksetCube, M, unique_vectors_stats, stats) {
+    .Call('_remstimate_computeOccurrencies', PACKAGE = 'remstimate', edgelist, risksetCube, M, unique_vectors_stats, stats)
 }
 
 #' remDerivativesStandard
@@ -163,60 +175,139 @@ GDADAM <- function(pars, stats, event_binary, interevent_time, times_r, occurren
     .Call('_remstimate_GDADAM', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, epochs, learning_rate, beta1, beta2, eta)
 }
 
-#' getUniqueVectors
+#' logPostHMC
 #'
-#' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
+#' This function calculates the value of the log-posterior density given the loglikelihood and the log-prior density
 #'
-#' @param stats cube structure of dimensions [D*U*M] filled with statistics values.
+#' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+#' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param times_r used in the fast approach
+#' @param occurrencies_r used in the fast approach
+#' @param unique_vectors_stats used in the fast approach
+#' @param fast boolean true/false whether to run the fast approach or not                               
 #'
-#' @return matrix with only unique vectors of statistics with dimensions [R*U]
+#' @return value of log-posterior density
 #'
-#' @export
-getUniqueVectors <- function(stats) {
-    .Call('_remstimate_getUniqueVectors', PACKAGE = 'remstimate', stats)
+logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast) {
+    .Call('_remstimate_logPostHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast)
 }
 
-#' computeTimes 
+#' logPostGradientHMC
 #'
-#' A function to compute the sum of interevent times for those vector of statistics that occurre more than once (output of getUniqueVectors()). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
+#' This function calculates the value of the gradient of the log-posterior density
 #'
-#' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
-#' @param M number of observed relational events.
-#' @param stats array of statistics with dimensons [D*U*M].
-#' @param intereventTime vector of time differences between two subsequent time points (i.d., waiting time between t[m] and t[m-1]).
+#' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+#' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param times_r used in the fast approach
+#' @param occurrencies_r used in the fast approach
+#' @param unique_vectors_stats used in the fast approach
+#' @param fast boolean true/false whether to run the fast approach or not                               
 #'
-#' @return vector of sum of interevent times per each unique_vector_stats element
+#' @return value of log-posterior gradient
 #'
-#' @export
-computeTimes <- function(unique_vectors_stats, M, stats, intereventTime) {
-    .Call('_remstimate_computeTimes', PACKAGE = 'remstimate', unique_vectors_stats, M, stats, intereventTime)
+logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast) {
+    .Call('_remstimate_logPostGradientHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast)
 }
 
-#' computeOccurrencies
+#' iterHMC
 #'
-#' A function to compute how many times each of the unique vector of statistics returned by getUniqueVectors() occurred in the network (as in contributing to the hazard in the likelihood). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
+#' This function does one iteration of the Hamiltonian Monte carlo
 #'
-#' @param edgelist is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.
-#' @param risksetCube array of index position fo dyads, with dimensions [N*N*C]
-#' @param M number of observed relational events.
-#' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
-#' @param stats array of statistics with dimensons [D*U*M]
+#' @param L number of leapfrogs. Default (and recommended) value is 100.
+#' @param epsilon size of the leapfrog. Default value is 1e-02.
+#' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+#' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param times_r used in the fast approach
+#' @param occurrencies_r used in the fast approach
+#' @param unique_vectors_stats used in the fast approach
+#' @param fast boolean true/false whether to run the fast approach or not                               
 #'
-#' @return vector of q's
-#'
-#' @export
-computeOccurrencies <- function(edgelist, risksetCube, M, unique_vectors_stats, stats) {
-    .Call('_remstimate_computeOccurrencies', PACKAGE = 'remstimate', edgelist, risksetCube, M, unique_vectors_stats, stats)
+iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast) {
+    .Call('_remstimate_iterHMC', PACKAGE = 'remstimate', L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast)
 }
 
-#' tryFunction
+#' burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)
 #'
-#' @param stats cube
+#' This function performs the burn-in and the thinning at the end of the HMC
+#'
+#' @param samples cube with final draws
+#' @param n_burnin is the number of draws to discard after running the chains
+#' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+#'                          
+#' @return cube with selected draws
+#'
+burninHMC <- function(samples, n_burnin, n_thin = 1L) {
+    .Call('_remstimate_burninHMC', PACKAGE = 'remstimate', samples, n_burnin, n_thin)
+}
+
+#' HMC 
+#'
+#' This function performs the Hamiltonian Monte Carlo
+#'
+#' @param pars_init is a matrix of dimensions U x n_chains where for each column (chain) a random vector of initial values for the parameter is supplied.
+#' @param n_iters is the number of samples from the posterior that have to be generated.
+#' @param n_chains number of chains of length n_iters
+#' @param n_burnin is the number of draws to discard after running the chains
+#' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+#' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param times_r used in the fast approach
+#' @param occurrencies_r used in the fast approach
+#' @param unique_vectors_stats used in the fast approach
+#' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE) 
+#' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+#' @param L number of leapfrogs. Default (and recommended) value is 100.
+#' @param epsilon size of the leapfrog. Default value is 1e-02.
+#' @param n_threads number of threads for parallel computing (default = 1)
+#'                          
+#' @return matrix with posterior draws
+#'
+HMC <- function(pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, n_thin = 1L, L = 100L, epsilon = 0.01, n_threads = 1L) {
+    .Call('_remstimate_HMC', PACKAGE = 'remstimate', pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, n_thin, L, epsilon, n_threads)
+}
+
+#' remDerivativesStandardParallel
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+#' 
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
+#' @param n_threads integer
+#'
+#' @return list of values: loglik, gradient, hessian
+#'
+#' @export
+remDerivativesStandardParallel <- function(pars, stats, event_binary, interevent_time, gradient = TRUE, hessian = TRUE, n_threads = 1L) {
+    .Call('_remstimate_remDerivativesStandardParallel', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, gradient, hessian, n_threads)
+}
+
+#' generate_mvt
+#'
+#' @param input
 #'
 #' @return matrix
 #'
 #' @export
-tryFunction <- function(stats) {
-    .Call('_remstimate_tryFunction', PACKAGE = 'remstimate', stats)
+tryFunction <- function(input) {
+    .Call('_remstimate_tryFunction', PACKAGE = 'remstimate', input)
 }
 

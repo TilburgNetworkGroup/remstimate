@@ -2,121 +2,147 @@
 #include <Rcpp.h>
 #include <iostream>
 #include <omp.h>
-#include <RcppArmadilloExtensions/sample.h>
+#include <RcppArmadilloExtensions/sample.h> // maybe this should be removed
 #include <typeinfo>
 #include <map>
 #include <iterator>
 #include <string>
-#include <remstats.h> // maybe to remove??
 
+// /////////////////////////////////////////////////////////////////////////////////
+// ///////////(BEGIN)     remstimateFAST routine functions      (BEGIN)///////////// 
+// /////////// to calculate the objects needed for the fast approach   /////////////
+// /////////////////////////////////////////////////////////////////////////////////
 
-// compute_statsCpp (description is the same as in remstats)
-//
-// Calls functions in compute_effects.h to compute statistics, scales 
-// statistics, and combines all computed statistics in an array. 
-// 
-//  effects: vector of length p with integers referring to effect types.
-//  edgelist: matrix [time, sender/actor1, receiver/actor2, (type), 
-// riskset position]
-//  riskset: matrix [sender/actor1, receiver/actor2, (type)]
-//  start: integer value referring to the first row + 1in the edgelist 
-// for which effects have to be computed
-//  stop: integer value referring to the last row + 1 in the edgelist 
-// for which effects have to be computed
-//  values: list of length p with matrices with exogenous information 
-// for the exogenous effects and NULL for all other effects
-//  scaling: vector of length p with integer values referring to the 
-// type of scaling method that has to be applied to the statistic.
-//  memory_value: vector of length p with numeric values referring to 
-// the length of the window in which past events are considered for endogenous 
-// effects
-//  with_type: vector of length p with logical values indicating whether 
-// effects have to be computed considering event types a dependent variable
-//  event_weights: matrix with p columns where each column refers to the 
-// weights of the events for a specific effect
-//  equal_val: vector of length p 
-//
-//  statistics: array [timepoint x riskset position x statistic]
-//
-//[[Rcpp::export]]
-arma::cube compute_statsCpp(const arma::vec& effects, const arma::mat& edgelist, 
-    const arma::mat& riskset, int start, int stop, 
-    const Rcpp::List& values, const arma::vec& scaling, 
-    const arma::vec& memory_value, const arma::vec& with_type, 
-    const arma::mat& event_weights, const arma::vec& equal_val) {
-
-arma::cube out = remstats::compute_stats(effects, edgelist, riskset, start, stop, 
-        values, scaling, memory_value, with_type, event_weights, equal_val);
-        return out;
-
-}
-
-//' nLoglik
+//' cube2matrix
 //'
-//' function that returns the negative of the loglikelihood value at specific parameters' values
-//' 
-//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-//' @param interevent_time the time difference between the current time point and the previous event time.
+//' A function to rearrange the cube of statistics into a matrix.
 //'
-//' @return list of values: loglik, gradient, hessian
+//' @param stats cube structure of dimensions [D*U*M] filled with statistics values. 
 //'
-//' @export
-// [[Rcpp::export]]
-double nLoglik(const arma::vec &pars,const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time){
-    arma::uword D = event_binary.n_cols;
-    arma::uword M = event_binary.n_rows; // number of events
-
-    arma::uword d,m; 
-    arma::vec log_lambda(D,arma::fill::zeros) ;
-
-    double loglik = 0.0;
-    
-    for(m = 0; m < M; m++){
-        arma::mat stats_m = stats.slice(m); // dimensions : [D*U]
-        log_lambda = stats_m.t() * pars;
-        
-        for(d = 0; d < D; d++){
-            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
-                if(event_binary(m,d) == 1){ // if event occured
-                    loglik += log_lambda.at(d);
-                }               
-                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);
-                loglik -= dtelp;                
-            }            
-        }        
+//' @return matrix of dimensions [(M*D)*U]
+arma::mat cube2matrix(arma::cube stats){
+  arma::uword m,d;
+  arma::uword new_row = 0;
+  arma::mat out(stats.n_rows*stats.n_slices, stats.n_cols, arma::fill::zeros); 
+  for(m = 0; m < stats.n_slices; m++){
+    for(d = 0; d < stats.n_rows; d++){
+      out.row(new_row) = stats.slice(m).row(d);
+      new_row += 1;
     }
-    return -loglik;
+  }
+  return out;
 }
 
-//' lpd (Log-Pointwise Density of REM - to rewrite according to the 0/1/-1 event vector)
+//' getUniqueVectors
 //'
-//' @param pars is a vector of parameters (note: the order must be aligned witht the column order in 'stats')
-//' @param stats is a matrix of dimensions n_dyads*variables with statistics of interest by column and dyads by row.
-//' @param event is a vector of 1/0 : 1 indicating the observed dyad and 0 the non observed dyads.
-//' @param interevent_time the time difference between the current time point and the previous event time.
+//' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 //'
-//' @return log-pointwise density value of a specific time point
+//' @param stats cube structure of dimensions [D*U*M] filled with statistics values.
+//'
+//' @return matrix with only unique vectors of statistics with dimensions [R*U]
 //'
 //' @export
 // [[Rcpp::export]]
-double lpd(arma::vec pars, arma::mat stats, arma::uvec event, double interevent_time){
-        arma::uword n_dyads = event.n_elem;
-        arma::uword i;
-        arma::vec log_lambda = stats * pars;
-        double lpd = 0.0;
-        for(i = 0; i < n_dyads; i++){
-            if(event(i) == 0){
-                lpd -= exp(log_lambda(i))*interevent_time;
-            }
-            else{
-                lpd += log_lambda(i)-exp(log_lambda(i))*interevent_time;
-            }
+arma::mat getUniqueVectors(arma::cube stats){
+
+  // transform the cube of statistics to matrix first
+  arma::mat A = cube2matrix(stats);
+  arma::uword a,a2compare; 
+  arma::uvec indices(A.n_rows, arma::fill::zeros);
+  
+  for(a = 0; a < (A.n_rows-1); a++){
+    for(a2compare = (a+1); a2compare < A.n_rows; a2compare++){
+      if(arma::approx_equal(A.row(a2compare), A.row(a), "absdiff", 0.000001)){
+         indices(a2compare) = 1;
+         break;
+      }
+    }
+  }
+
+  return A.rows(arma::find(indices == 0));
+}
+
+//' computeTimes 
+//'
+//' A function to compute the sum of interevent times for those vector of statistics that occurre more than once (output of getUniqueVectors()). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
+//'
+//' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
+//' @param M number of observed relational events.
+//' @param stats array of statistics with dimensons [D*U*M].
+//' @param intereventTime vector of time differences between two subsequent time points (i.d., waiting time between t[m] and t[m-1]).
+//'
+//' @return vector of sum of interevent times per each unique_vector_stats element
+//'
+//' @export
+// [[Rcpp::export]]
+arma::vec computeTimes(const arma::mat& unique_vectors_stats, const arma::uword& M, const arma::cube& stats, const arma::vec& intereventTime){
+ 
+  arma::uword R = unique_vectors_stats.n_rows; // number of unique vector of statistics
+  arma::uword D = stats.n_rows; // number of dyads
+
+  arma::uword m,r,d; 
+  arma::mat mat_counts(R, M, arma::fill::zeros);
+  arma::vec out(R, arma::fill::zeros);
+  
+  for(m = 0; m < M; m++){
+    for(r = 0; r < R; r++){
+      for(d = 0; d < D; d++){
+        if(arma::approx_equal(unique_vectors_stats.row(r), stats.slice(m).row(d), "absdiff", 0.000001)){
+          mat_counts(r,m) += 1;
         }
-        return lpd;
+      }
     }
+  }
 
+  out = mat_counts * intereventTime; // we could include this step inside the loop above 
+  
+  return out;
+}
+
+//' computeOccurrencies
+//'
+//' A function to compute how many times each of the unique vector of statistics returned by getUniqueVectors() occurred in the network (as in contributing to the hazard in the likelihood). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
+//'
+//' @param edgelist is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.
+//' @param risksetCube array of index position fo dyads, with dimensions [N*N*C]
+//' @param M number of observed relational events.
+//' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
+//' @param stats array of statistics with dimensons [D*U*M]
+//'
+//' @return vector of q's
+//'
+//' @export
+// [[Rcpp::export]]
+arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::ucube& risksetCube, const arma::uword& M, const arma::mat& unique_vectors_stats, const arma::cube& stats){
+
+  arma::uword r,m,d;
+  arma::uword R = unique_vectors_stats.n_rows;
+  arma::uword U = unique_vectors_stats.n_cols;
+  Rcpp::IntegerVector actor1 = edgelist["actor1"];
+  Rcpp::IntegerVector actor2 = edgelist["actor2"];
+  Rcpp::IntegerVector type = edgelist["type"];
+  arma::rowvec stats_event_m(U,arma::fill::zeros);
+  arma::vec out(R);
+
+  for(m = 0; m < M; m++){
+    d = risksetCube(actor1(m),actor2(m),type(m));
+    stats_event_m = stats.slice(m).row(d);
+    for(r = 0; r < R; r++){
+      if(arma::approx_equal(stats_event_m, unique_vectors_stats.row(r), "absdiff", 0.000001)){
+        out(r) += 1;
+      }
+    }
+  }
+  return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////////
+// /////////////(END)     remstimateFAST routine functions      (END)/////////////// 
+// /////////////////////////////////////////////////////////////////////////////////
+
+// /////////////////////////////////////////////////////////////////////////////////
+// ///////////(BEGIN)              remDerivatives               (BEGIN)///////////// 
+// /////////////////////////////////////////////////////////////////////////////////
 
 //' remDerivativesStandard
 //'
@@ -274,6 +300,10 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 }
 
 // /////////////////////////////////////////////////////////////////////////////////
+// ///////////(END)                remDerivatives                 (END)///////////// 
+// /////////////////////////////////////////////////////////////////////////////////
+
+// /////////////////////////////////////////////////////////////////////////////////
 // ///////////(BEGIN)             Gradient Descent              (BEGIN)///////////// 
 // /////////////////////////////////////////////////////////////////////////////////
 
@@ -410,147 +440,367 @@ Rcpp::List GDADAM(const arma::vec &pars,
 // ///////////(END)               Gradient Descent                (END)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
 
+
 // /////////////////////////////////////////////////////////////////////////////////
-// ///////////(BEGIN)     remstimateFAST routine functions      (BEGIN)///////////// 
-// /////////// to calculate the objects needed for the fast approach   /////////////
+// ///////////(START)          Hamiltonian Monte Carlo          (START)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
 
-//' cube2matrix
+//' logPostHMC
 //'
-//' A function to rearrange the cube of statistics into a matrix.
+//' This function calculates the value of the log-posterior density given the loglikelihood and the log-prior density
 //'
-//' @param stats cube structure of dimensions [D*U*M] filled with statistics values. 
+//' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+//' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param times_r used in the fast approach
+//' @param occurrencies_r used in the fast approach
+//' @param unique_vectors_stats used in the fast approach
+//' @param fast boolean true/false whether to run the fast approach or not                               
 //'
-//' @return matrix of dimensions [(M*D)*U]
-arma::mat cube2matrix(arma::cube stats){
-  arma::uword m,d;
-  arma::uword new_row = 0;
-  arma::mat out(stats.n_rows*stats.n_slices, stats.n_cols, arma::fill::zeros); 
-  for(m = 0; m < stats.n_slices; m++){
-    for(d = 0; d < stats.n_rows; d++){
-      out.row(new_row) = stats.slice(m).row(d);
-      new_row += 1;
-    }
-  }
-  return out;
-}
-
-//' getUniqueVectors
+//' @return value of log-posterior density
 //'
-//' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
-//'
-//' @param stats cube structure of dimensions [D*U*M] filled with statistics values.
-//'
-//' @return matrix with only unique vectors of statistics with dimensions [R*U]
-//'
-//' @export
 // [[Rcpp::export]]
-arma::mat getUniqueVectors(arma::cube stats){
-
-  // transform the cube of statistics to matrix first
-  arma::mat A = cube2matrix(stats);
-  arma::uword a,a2compare; 
-  arma::uvec indices(A.n_rows, arma::fill::zeros);
+double logPostHMC(const arma::vec &meanPrior, 
+                  const arma::mat &sigmaPrior,
+                  const arma::vec &pars, 
+                  const arma::cube &stats, 
+                  const arma::mat &event_binary, 
+                  const arma::vec &interevent_time,
+                  const arma::vec &times_r, 
+                  const arma::vec &occurrencies_r, 
+                  const arma::mat &unique_vectors_stats,
+                  bool fast){
   
-  for(a = 0; a < (A.n_rows-1); a++){
-    for(a2compare = (a+1); a2compare < A.n_rows; a2compare++){
-      if(arma::approx_equal(A.row(a2compare), A.row(a), "absdiff", 0.000001)){
-         indices(a2compare) = 1;
-         break;
-      }
-    }
-  }
+  Rcpp::List derv = remDerivatives(pars,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,false,false);
 
-  return A.rows(arma::find(indices == 0));
-}
-
-//' computeTimes 
-//'
-//' A function to compute the sum of interevent times for those vector of statistics that occurre more than once (output of getUniqueVectors()). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
-//'
-//' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
-//' @param M number of observed relational events.
-//' @param stats array of statistics with dimensons [D*U*M].
-//' @param intereventTime vector of time differences between two subsequent time points (i.d., waiting time between t[m] and t[m-1]).
-//'
-//' @return vector of sum of interevent times per each unique_vector_stats element
-//'
-//' @export
-// [[Rcpp::export]]
-arma::vec computeTimes(const arma::mat& unique_vectors_stats, const arma::uword& M, const arma::cube& stats, const arma::vec& intereventTime){
+  double prior = - sum(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
  
-  arma::uword R = unique_vectors_stats.n_rows; // number of unique vector of statistics
-  arma::uword D = stats.n_rows; // number of dyads
-
-  arma::uword m,r,d; 
-  arma::mat mat_counts(R, M, arma::fill::zeros);
-  arma::vec out(R, arma::fill::zeros);
-  
-  for(m = 0; m < M; m++){
-    for(r = 0; r < R; r++){
-      for(d = 0; d < D; d++){
-        if(arma::approx_equal(unique_vectors_stats.row(r), stats.slice(m).row(d), "absdiff", 0.000001)){
-          mat_counts(r,m) += 1;
-        }
-      }
-    }
-  }
-
-  out = mat_counts * intereventTime; // we could include this step inside the loop above 
-  
-  return out;
+  return -(prior + derv[0]);
 }
 
-//' computeOccurrencies
+
+//' logPostGradientHMC
 //'
-//' A function to compute how many times each of the unique vector of statistics returned by getUniqueVectors() occurred in the network (as in contributing to the hazard in the likelihood). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
+//' This function calculates the value of the gradient of the log-posterior density
 //'
-//' @param edgelist is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.
-//' @param risksetCube array of index position fo dyads, with dimensions [N*N*C]
-//' @param M number of observed relational events.
-//' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
-//' @param stats array of statistics with dimensons [D*U*M]
+//' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+//' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param times_r used in the fast approach
+//' @param occurrencies_r used in the fast approach
+//' @param unique_vectors_stats used in the fast approach
+//' @param fast boolean true/false whether to run the fast approach or not                               
 //'
-//' @return vector of q's
+//' @return value of log-posterior gradient
+//'
+// [[Rcpp::export]]
+arma::vec logPostGradientHMC(const arma::vec &meanPrior,
+                              const arma::mat &sigmaPrior, 
+                              const arma::vec &pars, 
+                              const arma::cube &stats, 
+                              const arma::mat &event_binary, 
+                              const arma::vec &interevent_time,
+                              const arma::vec &times_r, 
+                              const arma::vec &occurrencies_r, 
+                              const arma::mat &unique_vectors_stats,
+                              bool fast){
+  
+  Rcpp::List derv = remDerivatives(pars,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,true,false);
+  arma::vec gprior = - 0.5 * inv(sigmaPrior) * (pars - meanPrior);
+  arma::vec glp = derv[1];
+  
+  return (glp + gprior); 
+}
+
+
+
+//' iterHMC
+//'
+//' This function does one iteration of the Hamiltonian Monte carlo
+//'
+//' @param L number of leapfrogs. Default (and recommended) value is 100.
+//' @param epsilon size of the leapfrog. Default value is 1e-02.
+//' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+//' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param times_r used in the fast approach
+//' @param occurrencies_r used in the fast approach
+//' @param unique_vectors_stats used in the fast approach
+//' @param fast boolean true/false whether to run the fast approach or not                               
+//'
+// [[Rcpp::export]]
+arma::vec iterHMC(arma::uword L, 
+                  double epsilon, 
+                  const arma::vec &meanPrior,
+                  const arma::mat &sigmaPrior, 
+                  const arma::vec &pars, 
+                  const arma::cube &stats, 
+                  const arma::mat &event_binary, 
+                  const arma::vec &interevent_time,
+                  const arma::vec &times_r, 
+                  const arma::vec &occurrencies_r, 
+                  const arma::mat &unique_vectors_stats,
+                  bool fast){
+  
+  arma::vec accept; //vector to store sample
+  arma::uword N = pars.size(); //number of parameters
+  
+  arma::vec r = arma::randn(N); //Rcpp::rnorm(N, 0.0, 1.0); rv's to use in the hamiltonian equations
+  arma::vec betaC = pars;
+  arma::vec betaP = pars;
+  arma::vec rC = r;
+  
+  //leapfrog algorithm, updates via Hamiltonian equations
+  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  for(arma::uword i = 1; i <= L; i++){
+    betaP = betaP + r * epsilon;
+    if(i != L) r = r - epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  }
+  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  r = -r;
+  
+  //computes final quantities for the acceptance rate
+  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  double K = 0.5 * sum(rC.t() * rC);
+  double propK = 0.5 * sum(r.t() * r);
+  
+  //Accepting or rejection the proposal
+  arma::vec randomUnif = arma::randu(1);
+  if(randomUnif[0] < exp((-propU - propK)/(-U - K))){ //R::runif(0,1)
+    accept = betaP;
+  } else {
+    accept = betaC;
+  }
+  return accept;
+}       
+
+
+//' burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)
+//'
+//' This function performs the burn-in and the thinning at the end of the HMC
+//'
+//' @param samples cube with final draws
+//' @param n_burnin is the number of draws to discard after running the chains
+//' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+//'                          
+//' @return cube with selected draws
+//'
+// [[Rcpp::export]]
+arma::cube burninHMC(const arma::cube& samples, arma::uword n_burnin, arma::uword n_thin = 1){
+  
+  arma::uword rows = round((samples.n_rows - n_burnin)/n_thin); //number of rows of output
+  arma::cube final(rows, samples.n_cols, samples.n_slices); //output
+  
+  for(arma::uword i = 0; i < final.n_slices; i++){
+    
+    arma::uword num = n_burnin;
+    
+    for(arma::uword j = 0; j < final.n_rows; j++){
+      
+      final.slice(i).row(j) = samples.slice(i).row(num);
+      
+      num += n_thin;
+      
+    }
+    
+  }
+
+  return final;
+}
+
+
+
+//' HMC 
+//'
+//' This function performs the Hamiltonian Monte Carlo
+//'
+//' @param pars_init is a matrix of dimensions U x n_chains where for each column (chain) a random vector of initial values for the parameter is supplied.
+//' @param n_iters is the number of samples from the posterior that have to be generated.
+//' @param n_chains number of chains of length n_iters
+//' @param n_burnin is the number of draws to discard after running the chains
+//' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+//' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param times_r used in the fast approach
+//' @param occurrencies_r used in the fast approach
+//' @param unique_vectors_stats used in the fast approach
+//' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE) 
+//' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+//' @param L number of leapfrogs. Default (and recommended) value is 100.
+//' @param epsilon size of the leapfrog. Default value is 1e-02.
+//' @param n_threads number of threads for parallel computing (default = 1)
+//'                          
+//' @return matrix with posterior draws
+//'
+// [[Rcpp::export]]
+arma::mat HMC(arma::mat pars_init, 
+                arma::uword n_iters, 
+                arma::uword n_chains, 
+                arma::uword n_burnin, 
+                const arma::vec& meanPrior,
+                const arma::mat& sigmaPrior,
+                const arma::cube &stats, 
+                const arma::mat &event_binary, 
+                const arma::vec &interevent_time,
+                const arma::vec &times_r, 
+                const arma::vec &occurrencies_r, 
+                const arma::mat &unique_vectors_stats,
+                bool fast = false,
+                arma::uword n_thin = 1,
+                arma::uword L = 100, 
+                double epsilon = 0.01,
+                int n_threads = 1){
+  
+  arma::cube store(n_iters, pars_init.n_rows, n_chains); //output
+  arma::uword j,i;
+
+  //omp_set_dynamic(0);         // disabling dynamic teams
+  //omp_set_num_threads(n_threads); // number of threads for all consecutive parallel regions
+  //#pragma omp parallel for private(j,i) shared(n_iters,n_chains,meanPrior,sigmaPrior,fast,L,epsilon,store,pars_init,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats)
+  for(j = 0; j < n_chains; j++){ //looping through chains
+    
+    arma::mat aux(pars_init.n_rows, 1,arma::fill::zeros);
+    arma::mat chain_j(n_iters,pars_init.n_rows,arma::fill::zeros);
+
+    for(i = 0; i < n_iters; i++){ //looping through iterations of the MCMC
+      
+      if(i == 0){
+        
+        //this step only get the first sample out of the starting value
+        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+        
+        chain_j.row(i) = aux.col(0).t();
+        
+        continue;
+        
+      } else {
+        
+        //Then the next step will always be based on the previous one
+        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,aux.col(0),stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+        
+        chain_j.row(i) = aux.col(0).t();
+        
+      }
+    }
+    store.slice(j) = chain_j;
+    
+  }
+  
+  //this does the burn-in and thinning
+  arma::cube out_cube = burninHMC(store,n_burnin,n_thin);
+  arma::mat out_mat = cube2matrix(out_cube); 
+  
+  return out_mat;
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////////
+// ///////////(END)            Hamiltonian Monte Carlo            (END)/////////////
+// /////////////////////////////////////////////////////////////////////////////////
+
+
+
+//' remDerivativesStandardParallel
+//'
+//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+//' 
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
+//' @param n_threads integer
+//'
+//' @return list of values: loglik, gradient, hessian
 //'
 //' @export
 // [[Rcpp::export]]
-arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::ucube& risksetCube, const arma::uword& M, const arma::mat& unique_vectors_stats, const arma::cube& stats){
+Rcpp::List remDerivativesStandardParallel(const arma::vec &pars, const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time,bool gradient = true,bool hessian = true, int n_threads = 1){
+    arma::uword U = pars.n_elem; // number of parameters
+    arma::uword D = event_binary.n_cols;
+    arma::uword M = event_binary.n_rows; // number of events
 
-  arma::uword r,m,d;
-  arma::uword R = unique_vectors_stats.n_rows;
-  arma::uword U = unique_vectors_stats.n_cols;
-  Rcpp::IntegerVector actor1 = edgelist["actor1"];
-  Rcpp::IntegerVector actor2 = edgelist["actor2"];
-  Rcpp::IntegerVector type = edgelist["type"];
-  arma::rowvec stats_event_m(U,arma::fill::zeros);
-  arma::vec out(R);
+    arma::uword d,m,l,k;
+    arma::vec log_lambda(D,arma::fill::zeros) ;
 
-  for(m = 0; m < M; m++){
-    d = risksetCube(actor1(m),actor2(m),type(m));
-    stats_event_m = stats.slice(m).row(d);
-    for(r = 0; r < R; r++){
-      if(arma::approx_equal(stats_event_m, unique_vectors_stats.row(r), "absdiff", 0.000001)){
-        out(r) += 1;
-      }
+    arma::vec loglik(M,arma::fill::zeros);
+    arma::cube hess(U,U,M,arma::fill::zeros);
+    arma::mat grad(U,M,arma::fill::zeros);
+   
+    omp_set_dynamic(0);         // disabling dynamic teams
+    omp_set_num_threads(n_threads); // number of threads for all consecutive parallel regions
+    #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,event_binary,gradient,hessian,interevent_time)
+    for(m = 0; m < M; m++){
+        arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
+        log_lambda = stats_m.t() * pars;
+        for(d = 0; d < D; d++){
+            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
+                if(event_binary(m,d) == 1){ // if event occured
+                    loglik[m] += log_lambda.at(d);
+                    grad.col(m) += stats_m.col(d);
+                }               
+                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);  // change `dtelp` name to something else more understandable
+                loglik[m] -= dtelp; 
+                if(gradient){
+                    grad.col(m) -= stats_m.col(d)*dtelp;
+                }             
+                if(hessian){
+                  for(k = 0; k < U; k++){
+                    for (l = k; l < U; l++){
+                        hess(k,l,m) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
+                        hess(l,k,m) = hess(k,l,m);
+                    }
+                  }    
+                }      
+                
+            }            
+        }
+    
     }
-  }
-  return out;
+
+    if(gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1));
+    }else if(!gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik));
+    }else{
+      arma::cube H = -sum(hess,2);
+      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1), Rcpp::Named("hessian") = H.slice(0));
+    }
 }
 
-// /////////////////////////////////////////////////////////////////////////////////
-// /////////////(END)     remstimateFAST routine functions      (END)/////////////// 
-// /////////////////////////////////////////////////////////////////////////////////
 
-//' tryFunction
+
+
+//' generate_mvt
 //'
-//' @param stats cube
+//' @param input
 //'
 //' @return matrix
 //'
 //' @export
 // [[Rcpp::export]]
-arma::mat tryFunction(const arma::cube& stats){
-  arma::mat out = stats.slice(1);
-  return out;
+arma::mat tryFunction(arma::cube &input){
+  
+  // method 1: 
+  arma::uword rows_0 = input.n_rows*input.n_cols;
+input.reshape(rows_0, input.n_slices, 1);
+arma::mat C = input.slice(0);
+// method 2:
+//arma::mat C = arma::reshape( arma::mat(input.memptr(), input.n_elem, 1, false), 5*4, 3);
+//
+return C;
 }

@@ -2,16 +2,16 @@
 % Please edit documentation in R/RcppExports.R
 \name{tryFunction}
 \alias{tryFunction}
-\title{tryFunction}
+\title{generate_mvt}
 \usage{
-tryFunction(stats)
+tryFunction(input)
 }
 \arguments{
-\item{stats}{cube}
+\item{input}{}
 }
 \value{
 matrix
 }
 \description{
-tryFunction
+generate_mvt
 }
