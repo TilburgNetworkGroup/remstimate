@@ -275,7 +275,7 @@ burninHMC <- function(samples, n_burnin, n_thin = 1L) {
 #' @param epsilon size of the leapfrog. Default value is 1e-02.
 #' @param n_threads number of threads for parallel computing (default = 1)
 #'                          
-#' @return matrix with posterior draws
+#' @return posterior draws
 #'
 HMC <- function(pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, n_thin = 1L, L = 100L, epsilon = 0.01, n_threads = 1L) {
     .Call('_remstimate_HMC', PACKAGE = 'remstimate', pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, n_thin, L, epsilon, n_threads)

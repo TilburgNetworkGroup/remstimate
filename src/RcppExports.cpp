@@ -239,7 +239,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // HMC
-arma::mat HMC(arma::mat pars_init, arma::uword n_iters, arma::uword n_chains, arma::uword n_burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats, bool fast, arma::uword n_thin, arma::uword L, double epsilon, int n_threads);
+arma::cube HMC(arma::mat pars_init, arma::uword n_iters, arma::uword n_chains, arma::uword n_burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats, bool fast, arma::uword n_thin, arma::uword L, double epsilon, int n_threads);
 RcppExport SEXP _remstimate_HMC(SEXP pars_initSEXP, SEXP n_itersSEXP, SEXP n_chainsSEXP, SEXP n_burninSEXP, SEXP meanPriorSEXP, SEXP sigmaPriorSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP times_rSEXP, SEXP occurrencies_rSEXP, SEXP unique_vectors_statsSEXP, SEXP fastSEXP, SEXP n_thinSEXP, SEXP LSEXP, SEXP epsilonSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

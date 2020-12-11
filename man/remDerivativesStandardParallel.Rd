@@ -11,7 +11,7 @@ remDerivativesStandardParallel(
   interevent_time,
   gradient = TRUE,
   hessian = TRUE,
-  nthreads = 1L
+  n_threads = 1L
 )
 }
 \arguments{
@@ -27,7 +27,7 @@ remDerivativesStandardParallel(
 
 \item{hessian}{boolean true/false whether to return hessian value}
 
-\item{nthreads}{integer}
+\item{n_threads}{integer}
 }
 \value{
 list of values: loglik, gradient, hessian

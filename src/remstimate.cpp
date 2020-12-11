@@ -643,10 +643,10 @@ arma::cube burninHMC(const arma::cube& samples, arma::uword n_burnin, arma::uwor
 //' @param epsilon size of the leapfrog. Default value is 1e-02.
 //' @param n_threads number of threads for parallel computing (default = 1)
 //'                          
-//' @return matrix with posterior draws
+//' @return posterior draws
 //'
 // [[Rcpp::export]]
-arma::mat HMC(arma::mat pars_init, 
+arma::cube HMC(arma::mat pars_init, 
                 arma::uword n_iters, 
                 arma::uword n_chains, 
                 arma::uword n_burnin, 
@@ -701,9 +701,9 @@ arma::mat HMC(arma::mat pars_init,
   
   //this does the burn-in and thinning
   arma::cube out_cube = burninHMC(store,n_burnin,n_thin);
-  arma::mat out_mat = cube2matrix(out_cube); 
+  //arma::mat out_mat = cube2matrix(out_cube); 
   
-  return out_mat;
+  return out_cube;
 }
 
 

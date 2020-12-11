@@ -62,7 +62,7 @@ HMC(
 \item{pars}{is a vector of parameters (note: the order must be aligned with the column order in 'stats')}
 }
 \value{
-matrix with posterior draws
+posterior draws
 }
 \description{
 This function performs the Hamiltonian Monte Carlo
