@@ -1,4 +1,4 @@
-# NEWS (last update on September 4, 2020)
+# NEWS (last update on December 11, 2020)
 
 _20/04/2020_ :
 * created repository with first commit;
@@ -26,3 +26,5 @@ _04/09/2020_ :
 * _remstimate.cpp_ : contains `remDerivatives()` (which returns the value of loglikelihood, gradient, hessian at a specific parameter value), `lpd()` (log-pointwise density), utility functions for the fast method (`cube2matrix()`, `getUniqueVectors()`, `computeTimes()`, `computeOccurrencies()`) which is run with the function `remDerivativesFast()`;
 * Since `compute_stats()` is not an exported function in `remstats`, _getStats.R_ / _compute_stats.cpp_ / _compute_stats.h_ are temporary files so as to calculate statistics, run the estimation and compare estimates with `relevent::rem()`.  `getStats()` is the alias of `remstats::remstats()` with some modifications at the stage of the preprocessing of the network;
 
+_11/12/2020_ :
+* Methods working on `remstimate()` are: _MLE_, _GD_, _GDADAM_, _BSIR_, _HMC_. However the output lacks of a structure attributes and methods.
