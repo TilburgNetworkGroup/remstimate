@@ -1,6 +1,6 @@
 #' remstimate  
 #'
-#' A function that returns maximum likelihood estimates of REM (interval timing only) by using the optim function
+#' A function that optimizes the likelihood of a Relational Event Model  
 #'
 #' @param reh a reh object (list of objects useful for the optimization)
 #' @param stats a remstats object (array of statistics)
@@ -12,6 +12,9 @@
 #' @param n_burnin number of initial iterations to be added as burnin
 #' @param n_thin number of steps to skip in the posterior draws of the HMC
 #' @param parallel TRUE/FALSE use parallelization
+#' @param false TRUE/FALSE whether to apply a faster computation of the likelihood
+#' @param epochs 200 by defaut. It is the number of iteration used in the methods GD and GDADAM
+#' @param learning_rate 0.001 by default. It is the learning rate used in the methods GD and GDADAM
 #' @param seed seed for reproducibility (yet to be integrated in the code)
 #' @param silent TRUE/FALSE if FALSE, progress of optimization status will be printed out
 #'
@@ -27,6 +30,9 @@ remstimate <- function(reh = NULL,
                        n_burnin = 1e03,
                        n_thin = 1,
                        parallel = TRUE,
+                       fast = FALSE,
+                       epochs = 200,
+                       learning_rate = 0.001,
                        seed = sample(1:1e04,n.chains),
                        silent = TRUE,
                        ...){
@@ -59,55 +65,61 @@ remstimate <- function(reh = NULL,
 
     # ... creating  an empty lists
     remstimateList <- list()
-    out <- list()
-    remstimateList$fast <- FALSE
 
-    # ... checking whether the optimization can be speeded up (according to the method proposed by DuBois et al. 2013)
-    # ... evaluate if the algorithm is actually going to be faster than by using the standard computation
-    # getUniqueVectors() finds the R unique vector of statistics across time points and dyads
-    remstimateList$unique_vectors_stats <- getUniqueVectors(stats = stats) 
-    
-    # number of unique vectors in the array of statistics
-    R_obs <- dim(remstimateList$unique_vectors_stats)[1]
-    # R_star is the number of unique vectors needed in order to reduce of 25% the number of operations 
-    R_star <- round(((reh$M*(2*dim(stats)[2]+reh$D*(2*dim(stats)[2]+1)+2))/(4*(dim(stats)[2]+1)))*0.75) 
-
-    if(R_obs <= R_star) 
-    {
-        # ...[message]
-        remstimateList$fast <- askYesNo(paste("The estimation can be improved and become faster. Do you want to continue?"), default = FALSE, prompts = getOption("askYesNo", gettext(c("Yes", "No"))))
+    if(fast){
+        # ... checking whether the optimization can be speeded up (according to the method proposed by DuBois et al. 2013)
+        # ... evaluate if the algorithm is actually going to be faster than by using the standard computation
+        # getUniqueVectors() finds the R unique vector of statistics across time points and dyads
+        remstimateList$unique_vectors_stats <- getUniqueVectors(stats = stats) 
         
-        if(is.na(remstimateList$fast)){
-                tcltk::tkmessageBox(title = "Alert message",
-                message = "Neither 'Yes' nor 'No' was chosen. Therefore, the function stopped.", icon = "info", type = "ok")
-        }
-        
-        # ... IF fast == TRUE
-        if(remstimateList$fast){
-            # ... unique_vectors_stats is alread created and saved inside remstimateList
-            # ... compute times_r : given a unique vector of statistics is the sum for each time point (m=1,...,M) of the corresponding interevent (survival) time (t[m]-t[m-1]) multiplied by the number of dyads that have the same vector of statistics at t[m].
-            remstimateList$times_r <- computeTimes(unique_vectors_stats = remstimateList$unique_vectors_stats,
-                                                    M = reh$M,
-                                                    stats = stats, 
-                                                    intereventTime = reh$intereventTime)
+        # number of unique vectors in the array of statistics
 
-            # ... compute occurrencies_r : that is a vector of counts indicating how many times each of the unique vector (indexed by r) of statistics occurred in the network (as in contributing to the hazard in the likelihood).
-            remstimateList$occurrencies_r <- computeOccurrencies(edgelist = reh$edgelist, 
-                                                                    risksetCube = reh$risksetCube, 
-                                                                    M = reh$M, 
-                                                                    unique_vectors_stats = remstimateList$unique_vectors_stats, 
-                                                                    stats = stats)
-                                                                   
-        }
+        R_obs <- dim(remstimateList$unique_vectors_stats)[1]
+        # R_star is the number of unique vectors needed in order to reduce of 25% the number of operations 
+        R_star <- round(((reh$M*(2*dim(stats)[2]+reh$D*(2*dim(stats)[2]+1)+2))/(4*(dim(stats)[2]+1)))*0.75) 
 
-        # ... IF fast == FALSE
-        else{
-            remstimateList$unique_vectors_stats <- matrix(0,2,2) # freeing memory too
-            remstimateList$times_r <- 0
-            remstimateList$occurrencies_r <- 0
+        if(R_obs <= R_star) 
+        {
+            # ...[message]
+            remstimateList$fast <- askYesNo(paste("The estimation can be improved and become faster. Do you want to continue?"), default = FALSE, prompts = getOption("askYesNo", gettext(c("Yes", "No"))))
+            
+            if(is.na(remstimateList$fast)){
+                    tcltk::tkmessageBox(title = "Alert message",
+                    message = "Neither 'Yes' nor 'No' was chosen. Therefore, the function stopped.", icon = "info", type = "ok")
+            }
+            
+            # ... IF fast == TRUE
+            if(remstimateList$fast){
+                # ... unique_vectors_stats is alread created and saved inside remstimateList
+                # ... compute times_r : given a unique vector of statistics is the sum for each time point (m=1,...,M) of the corresponding interevent (survival) time (t[m]-t[m-1]) multiplied by the number of dyads that have the same vector of statistics at t[m].
+                remstimateList$times_r <- computeTimes(unique_vectors_stats = remstimateList$unique_vectors_stats,
+                                                        M = reh$M,
+                                                        stats = stats, 
+                                                        intereventTime = reh$intereventTime)
+
+                # ... compute occurrencies_r : that is a vector of counts indicating how many times each of the unique vector (indexed by r) of statistics occurred in the network (as in contributing to the hazard in the likelihood).
+                remstimateList$occurrencies_r <- computeOccurrencies(edgelist = reh$edgelist, 
+                                                                        risksetCube = reh$risksetCube, 
+                                                                        M = reh$M, 
+                                                                        unique_vectors_stats = remstimateList$unique_vectors_stats, 
+                                                                        stats = stats)
+                                                                    
+            }
+            # ... IF fast == FALSE
+            else{
+                remstimateList$unique_vectors_stats <- matrix(0,2,2) # freeing memory too
+                remstimateList$times_r <- 0
+                remstimateList$occurrencies_r <- 0
+            }
         }
     }
-
+    else{
+        remstimateList$fast <- fast
+        remstimateList$unique_vectors_stats <- matrix(0,2,2)
+        remstimateList$times_r <- 0
+        remstimateList$occurrencies_r <- 0        
+    }
+        
     # ... [1] with trust::trust()
     if(method == "MLE"){
         remstimateList$optimum <- trust::trust(objfun = remDerivatives, 
@@ -134,27 +146,31 @@ remstimate <- function(reh = NULL,
 
     # ... [2] with Gradient Descent (GD)
     if(method == "GD"){
-        remstimateList$optimum <- GD(pars = rep(0,dim(stats)[2]),
+        remstimateList$optimum <- GD(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
                                     stats = stats,  
                                     event_binary = reh$rehBinary, 
                                     interevent_time = reh$intereventTime,
                                     times_r = remstimateList$times_r,
                                     occurrencies_r = remstimateList$occurrencies_r,
                                     unique_vectors_stats = remstimateList$unique_vectors_stats,
-                                    fast = remstimateList$fast)
+                                    fast = remstimateList$fast,
+                                    epochs = epochs,
+                                    learning_rate = learning_rate)
         return(remstimateList$optimum)
     }
 
     # ... [3] with Gradient Descent ADAM (GDADAM)
     if(method == "GDADAM"){
-        remstimateList$optimum <- GDADAM(pars = rep(0,dim(stats)[2]),
+        remstimateList$optimum <- GDADAM(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
                                     stats = stats,  
                                     event_binary = reh$rehBinary, 
                                     interevent_time = reh$intereventTime,
                                     times_r = remstimateList$times_r,
                                     occurrencies_r = remstimateList$occurrencies_r,
                                     unique_vectors_stats = remstimateList$unique_vectors_stats,
-                                    fast = remstimateList$fast)
+                                    fast = remstimateList$fast,
+                                    epochs = epochs,
+                                    learning_rate = learning_rate)
         return(remstimateList$optimum)
     }
    
@@ -303,5 +319,5 @@ remstimate <- function(reh = NULL,
     # define attributes here
     
 
-    return(out)
+    return(remstimateList) #change this return
 }

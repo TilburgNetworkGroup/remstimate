@@ -335,7 +335,7 @@ Rcpp::List GD(const arma::vec &pars,
               const arma::mat &unique_vectors_stats,
               bool fast = false,
               int epochs = 200,
-              double learning_rate = 0.0001){
+              double learning_rate = 0.001){
     //if loss function oscillates in later epochs, then reduce learning rate for better convergence
     // suggestions: (1) tuning of learning rate, (2) standardization of data 
     // further implementation: parallelizing with multiple starting points
@@ -392,7 +392,7 @@ Rcpp::List GDADAM(const arma::vec &pars,
                    const arma::mat &unique_vectors_stats,
                    bool fast = false,
                    int epochs = 200,
-                   double learning_rate = 0.2,
+                   double learning_rate = 0.02,
                    double beta1 = 0.9,
                    double beta2 = 0.999,
                    double eta = 0.00000001){

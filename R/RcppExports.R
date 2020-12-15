@@ -146,7 +146,7 @@ remDerivatives <- function(pars, stats, event_binary, interevent_time, times_r, 
 #' @return
 #'
 #' @export
-GD <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.0001) {
+GD <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.001) {
     .Call('_remstimate_GD', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, epochs, learning_rate)
 }
 
@@ -171,7 +171,7 @@ GD <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies
 #' @return
 #'
 #' @export
-GDADAM <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.2, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
+GDADAM <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.02, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
     .Call('_remstimate_GDADAM', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, epochs, learning_rate, beta1, beta2, eta)
 }
 

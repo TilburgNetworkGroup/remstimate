@@ -14,7 +14,7 @@ GD(
   unique_vectors_stats,
   fast = FALSE,
   epochs = 200L,
-  learning_rate = 1e-04
+  learning_rate = 0.001
 )
 }
 \arguments{

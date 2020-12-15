@@ -14,7 +14,7 @@ GDADAM(
   unique_vectors_stats,
   fast = FALSE,
   epochs = 200L,
-  learning_rate = 0.2,
+  learning_rate = 0.02,
   beta1 = 0.9,
   beta2 = 0.999,
   eta = 1e-08

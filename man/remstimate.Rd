@@ -16,6 +16,9 @@ remstimate(
   n_burnin = 1000,
   n_thin = 1,
   parallel = TRUE,
+  fast = FALSE,
+  epochs = 200,
+  learning_rate = 0.001,
   seed = sample(1:10000, n.chains),
   silent = TRUE,
   ...
@@ -42,15 +45,21 @@ remstimate(
 
 \item{parallel}{TRUE/FALSE use parallelization}
 
+\item{epochs}{200 by defaut. It is the number of iteration used in the methods GD and GDADAM}
+
+\item{learning_rate}{0.001 by default. It is the learning rate used in the methods GD and GDADAM}
+
 \item{seed}{seed for reproducibility (yet to be integrated in the code)}
 
 \item{silent}{TRUE/FALSE if FALSE, progress of optimization status will be printed out}
+
+\item{false}{TRUE/FALSE whether to apply a faster computation of the likelihood}
 }
 \value{
 remstimate S3 object
 }
 \description{
-A function that returns maximum likelihood estimates of REM (interval timing only) by using the optim function
+A function that optimizes the likelihood of a Relational Event Model
 
 The remstimate package provides a set of algorithms for the optimization of the relational even model likelihood
 }
