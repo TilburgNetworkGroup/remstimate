@@ -13,6 +13,7 @@ remDerivatives(
   occurrencies_r,
   unique_vectors_stats,
   fast = FALSE,
+  n_threads = 1L,
   gradient = TRUE,
   hessian = TRUE
 )
@@ -33,6 +34,8 @@ remDerivatives(
 \item{unique_vectors_stats}{used in the fast approach}
 
 \item{fast}{boolean true/false whether to run the fast approach or not}
+
+\item{n_threads}{number of threads to use for the parallelization}
 
 \item{gradient}{boolean true/false whether to return gradient value}
 

@@ -28,6 +28,34 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// remDerivativesStandardParallel
+Rcpp::List remDerivativesStandardParallel(const arma::vec& pars, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, bool gradient, bool hessian, int n_threads);
+RcppExport SEXP _remstimate_remDerivativesStandardParallel(SEXP parsSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type event_binary(event_binarySEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
+    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
+    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivativesStandardParallel(pars, stats, event_binary, interevent_time, gradient, hessian, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// tryFunction
+arma::mat tryFunction(arma::cube& input);
+RcppExport SEXP _remstimate_tryFunction(SEXP inputSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::cube& >::type input(inputSEXP);
+    rcpp_result_gen = Rcpp::wrap(tryFunction(input));
+    return rcpp_result_gen;
+END_RCPP
+}
 // getUniqueVectors
 arma::mat getUniqueVectors(arma::cube stats);
 RcppExport SEXP _remstimate_getUniqueVectors(SEXP statsSEXP) {
@@ -101,8 +129,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // remDerivatives
-Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats, bool fast, bool gradient, bool hessian);
-RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP times_rSEXP, SEXP occurrencies_rSEXP, SEXP unique_vectors_statsSEXP, SEXP fastSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
+Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats, bool fast, int n_threads, bool gradient, bool hessian);
+RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP times_rSEXP, SEXP occurrencies_rSEXP, SEXP unique_vectors_statsSEXP, SEXP fastSEXP, SEXP n_threadsSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -114,9 +142,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type occurrencies_r(occurrencies_rSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type unique_vectors_stats(unique_vectors_statsSEXP);
     Rcpp::traits::input_parameter< bool >::type fast(fastSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
     Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
     Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivatives(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, gradient, hessian));
+    rcpp_result_gen = Rcpp::wrap(remDerivatives(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, n_threads, gradient, hessian));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -265,44 +294,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// remDerivativesStandardParallel
-Rcpp::List remDerivativesStandardParallel(const arma::vec& pars, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, bool gradient, bool hessian, int n_threads);
-RcppExport SEXP _remstimate_remDerivativesStandardParallel(SEXP parsSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP n_threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type event_binary(event_binarySEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
-    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
-    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
-    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivativesStandardParallel(pars, stats, event_binary, interevent_time, gradient, hessian, n_threads));
-    return rcpp_result_gen;
-END_RCPP
-}
-// tryFunction
-arma::mat tryFunction(arma::cube& input);
-RcppExport SEXP _remstimate_tryFunction(SEXP inputSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::cube& >::type input(inputSEXP);
-    rcpp_result_gen = Rcpp::wrap(tryFunction(input));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_warningMessage", (DL_FUNC) &_remstimate_warningMessage, 1},
     {"_remstimate_errorMessage", (DL_FUNC) &_remstimate_errorMessage, 1},
+    {"_remstimate_remDerivativesStandardParallel", (DL_FUNC) &_remstimate_remDerivativesStandardParallel, 7},
+    {"_remstimate_tryFunction", (DL_FUNC) &_remstimate_tryFunction, 1},
     {"_remstimate_getUniqueVectors", (DL_FUNC) &_remstimate_getUniqueVectors, 1},
     {"_remstimate_computeTimes", (DL_FUNC) &_remstimate_computeTimes, 4},
     {"_remstimate_computeOccurrencies", (DL_FUNC) &_remstimate_computeOccurrencies, 5},
     {"_remstimate_remDerivativesStandard", (DL_FUNC) &_remstimate_remDerivativesStandard, 6},
     {"_remstimate_remDerivativesFast", (DL_FUNC) &_remstimate_remDerivativesFast, 6},
-    {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 10},
+    {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 11},
     {"_remstimate_GD", (DL_FUNC) &_remstimate_GD, 10},
     {"_remstimate_GDADAM", (DL_FUNC) &_remstimate_GDADAM, 13},
     {"_remstimate_logPostHMC", (DL_FUNC) &_remstimate_logPostHMC, 10},
@@ -310,8 +313,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_iterHMC", (DL_FUNC) &_remstimate_iterHMC, 12},
     {"_remstimate_burninHMC", (DL_FUNC) &_remstimate_burninHMC, 3},
     {"_remstimate_HMC", (DL_FUNC) &_remstimate_HMC, 17},
-    {"_remstimate_remDerivativesStandardParallel", (DL_FUNC) &_remstimate_remDerivativesStandardParallel, 7},
-    {"_remstimate_tryFunction", (DL_FUNC) &_remstimate_tryFunction, 1},
     {NULL, NULL, 0}
 };
 

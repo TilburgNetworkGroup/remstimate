@@ -56,7 +56,8 @@ remstimate <- function(reh = NULL,
     n_threads <- 1
     if(parallel){
         n_cpu_cores <- parallel::detectCores(all.tests = TRUE)
-        if(!is.na(n_cpu_cores)) n_threads <- n_cpu_cores - 2
+        if(!is.na(n_cpu_cores) & n_cpu_cores != 2) n_threads <- n_cpu_cores - 2 
+        # else n_threads remains equal to 1
     }
 
 
@@ -133,6 +134,7 @@ remstimate <- function(reh = NULL,
                                                 occurrencies_r = remstimateList$occurrencies_r,
                                                 unique_vectors_stats = remstimateList$unique_vectors_stats,
                                                 fast = remstimateList$fast,
+                                                n_threads = n_threads,
                                                 gradient = TRUE,
                                                 hessian = TRUE) 
         return(remstimateList$optimum)         

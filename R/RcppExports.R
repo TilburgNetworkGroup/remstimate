@@ -26,6 +26,36 @@ errorMessage <- function(cond) {
 #' @return matrix of dimensions [(M*D)*U]
 NULL
 
+#' remDerivativesStandardParallel
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+#' 
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
+#' @param n_threads integer
+#'
+#' @return list of values: loglik, gradient, hessian
+#'
+#' @export
+remDerivativesStandardParallel <- function(pars, stats, event_binary, interevent_time, gradient = TRUE, hessian = TRUE, n_threads = 1L) {
+    .Call('_remstimate_remDerivativesStandardParallel', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, gradient, hessian, n_threads)
+}
+
+#' generate_mvt
+#'
+#' @param input
+#'
+#' @return matrix
+#'
+#' @export
+tryFunction <- function(input) {
+    .Call('_remstimate_tryFunction', PACKAGE = 'remstimate', input)
+}
+
 #' getUniqueVectors
 #'
 #' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
@@ -117,15 +147,16 @@ remDerivativesFast <- function(pars, times_r, occurrencies_r, unique_vectors_sta
 #' @param times_r used in the fast approach
 #' @param occurrencies_r used in the fast approach
 #' @param unique_vectors_stats used in the fast approach
-#' @param fast boolean true/false whether to run the fast approach or not                               
+#' @param fast boolean true/false whether to run the fast approach or not    
+#' @param n_threads number of threads to use for the parallelization                           
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
 #'
 #' @return list of values: loglik, gradient, hessian
 #'
 #' @export
-remDerivatives <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, gradient = TRUE, hessian = TRUE) {
-    .Call('_remstimate_remDerivatives', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, gradient, hessian)
+remDerivatives <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, n_threads = 1L, gradient = TRUE, hessian = TRUE) {
+    .Call('_remstimate_remDerivatives', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, n_threads, gradient, hessian)
 }
 
 #' GD
@@ -279,35 +310,5 @@ burninHMC <- function(samples, n_burnin, n_thin = 1L) {
 #'
 HMC <- function(pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, n_thin = 1L, L = 100L, epsilon = 0.01, n_threads = 1L) {
     .Call('_remstimate_HMC', PACKAGE = 'remstimate', pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, n_thin, L, epsilon, n_threads)
-}
-
-#' remDerivativesStandardParallel
-#'
-#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#' 
-#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-#' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param gradient boolean true/false whether to return gradient value
-#' @param hessian boolean true/false whether to return hessian value
-#' @param n_threads integer
-#'
-#' @return list of values: loglik, gradient, hessian
-#'
-#' @export
-remDerivativesStandardParallel <- function(pars, stats, event_binary, interevent_time, gradient = TRUE, hessian = TRUE, n_threads = 1L) {
-    .Call('_remstimate_remDerivativesStandardParallel', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, gradient, hessian, n_threads)
-}
-
-#' generate_mvt
-#'
-#' @param input
-#'
-#' @return matrix
-#'
-#' @export
-tryFunction <- function(input) {
-    .Call('_remstimate_tryFunction', PACKAGE = 'remstimate', input)
 }
 

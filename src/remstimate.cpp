@@ -8,6 +8,108 @@
 #include <iterator>
 #include <string>
 
+
+
+//' remDerivativesStandardParallel
+//'
+//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
+//' 
+//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
+//' @param n_threads integer
+//'
+//' @return list of values: loglik, gradient, hessian
+//'
+//' @export
+// [[Rcpp::export]]
+Rcpp::List remDerivativesStandardParallel(const arma::vec &pars, 
+                                          const arma::cube &stats,
+                                          const arma::mat &event_binary,
+                                          const arma::vec &interevent_time,
+                                          bool gradient = true,
+                                          bool hessian = true, 
+                                          int n_threads = 1){
+    arma::uword U = pars.n_elem; // number of parameters
+    arma::uword D = event_binary.n_cols;
+    arma::uword M = event_binary.n_rows; // number of events
+
+    arma::uword d,m,l,k;
+    arma::vec log_lambda(D,arma::fill::zeros) ;
+
+    arma::vec loglik(M,arma::fill::zeros);
+    arma::cube hess(U,U,M,arma::fill::zeros);
+    arma::mat grad(U,M,arma::fill::zeros);
+   
+    omp_set_dynamic(0);         // disabling dynamic teams
+    omp_set_num_threads(n_threads); // number of threads for all consecutive parallel regions
+    #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,event_binary,gradient,hessian,interevent_time)
+    for(m = 0; m < M; m++){
+        arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
+        log_lambda = stats_m.t() * pars;
+        for(d = 0; d < D; d++){
+            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
+                if(event_binary(m,d) == 1){ // if event occured
+                    loglik[m] += log_lambda.at(d);
+                    grad.col(m) += stats_m.col(d);
+                }               
+                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);  // change `dtelp` name to something else more understandable
+                loglik[m] -= dtelp; 
+                if(gradient){
+                    grad.col(m) -= stats_m.col(d)*dtelp;
+                }             
+                if(hessian){
+                  for(k = 0; k < U; k++){
+                    for (l = k; l < U; l++){
+                        hess(k,l,m) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
+                        hess(l,k,m) = hess(k,l,m);
+                    }
+                  }    
+                }      
+                
+            }            
+        }
+    
+    }
+
+    if(gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1));
+    }else if(!gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik));
+    }else{
+      arma::cube H = -sum(hess,2);
+      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1), Rcpp::Named("hessian") = H.slice(0));
+    }
+}
+
+
+
+
+//' generate_mvt
+//'
+//' @param input
+//'
+//' @return matrix
+//'
+//' @export
+// [[Rcpp::export]]
+arma::mat tryFunction(arma::cube &input){
+  
+  // method 1: 
+  arma::uword rows_0 = input.n_rows*input.n_cols;
+input.reshape(rows_0, input.n_slices, 1);
+arma::mat C = input.slice(0);
+// method 2:
+//arma::mat C = arma::reshape( arma::mat(input.memptr(), input.n_elem, 1, false), 5*4, 3);
+//
+return C;
+}
+
+
+
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(BEGIN)     remstimateFAST routine functions      (BEGIN)///////////// 
 // /////////// to calculate the objects needed for the fast approach   /////////////
@@ -267,7 +369,8 @@ Rcpp::List remDerivativesFast(const arma::vec& pars, const arma::vec& times_r, c
 //' @param times_r used in the fast approach
 //' @param occurrencies_r used in the fast approach
 //' @param unique_vectors_stats used in the fast approach
-//' @param fast boolean true/false whether to run the fast approach or not                               
+//' @param fast boolean true/false whether to run the fast approach or not    
+//' @param n_threads number of threads to use for the parallelization                           
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
 //'
@@ -283,6 +386,7 @@ Rcpp::List remDerivatives(const arma::vec &pars,
                                   const arma::vec &occurrencies_r, 
                                   const arma::mat &unique_vectors_stats,
                                   bool fast = false,
+                                  int n_threads = 1,
                                   bool gradient = true,
                                   bool hessian = true){
   Rcpp::List out;
@@ -292,7 +396,8 @@ Rcpp::List remDerivatives(const arma::vec &pars,
   case 1: { out = remDerivativesFast(pars,times_r,occurrencies_r,unique_vectors_stats,gradient,hessian);
     break;}
 
-  case 0: { out = remDerivativesStandard(pars,stats,event_binary,interevent_time,gradient,hessian);
+  case 0: { out = remDerivativesStandardParallel(pars,stats,event_binary,interevent_time,gradient,hessian,n_threads);
+  //remDerivativesStandard(pars,stats,event_binary,interevent_time,gradient,hessian);
     break;}
   }
 
@@ -711,96 +816,3 @@ arma::cube HMC(arma::mat pars_init,
 // ///////////(END)            Hamiltonian Monte Carlo            (END)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
 
-
-
-//' remDerivativesStandardParallel
-//'
-//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-//' 
-//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-//' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param gradient boolean true/false whether to return gradient value
-//' @param hessian boolean true/false whether to return hessian value
-//' @param n_threads integer
-//'
-//' @return list of values: loglik, gradient, hessian
-//'
-//' @export
-// [[Rcpp::export]]
-Rcpp::List remDerivativesStandardParallel(const arma::vec &pars, const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time,bool gradient = true,bool hessian = true, int n_threads = 1){
-    arma::uword U = pars.n_elem; // number of parameters
-    arma::uword D = event_binary.n_cols;
-    arma::uword M = event_binary.n_rows; // number of events
-
-    arma::uword d,m,l,k;
-    arma::vec log_lambda(D,arma::fill::zeros) ;
-
-    arma::vec loglik(M,arma::fill::zeros);
-    arma::cube hess(U,U,M,arma::fill::zeros);
-    arma::mat grad(U,M,arma::fill::zeros);
-   
-    omp_set_dynamic(0);         // disabling dynamic teams
-    omp_set_num_threads(n_threads); // number of threads for all consecutive parallel regions
-    #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,event_binary,gradient,hessian,interevent_time)
-    for(m = 0; m < M; m++){
-        arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
-        log_lambda = stats_m.t() * pars;
-        for(d = 0; d < D; d++){
-            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
-                if(event_binary(m,d) == 1){ // if event occured
-                    loglik[m] += log_lambda.at(d);
-                    grad.col(m) += stats_m.col(d);
-                }               
-                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);  // change `dtelp` name to something else more understandable
-                loglik[m] -= dtelp; 
-                if(gradient){
-                    grad.col(m) -= stats_m.col(d)*dtelp;
-                }             
-                if(hessian){
-                  for(k = 0; k < U; k++){
-                    for (l = k; l < U; l++){
-                        hess(k,l,m) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
-                        hess(l,k,m) = hess(k,l,m);
-                    }
-                  }    
-                }      
-                
-            }            
-        }
-    
-    }
-
-    if(gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1));
-    }else if(!gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik));
-    }else{
-      arma::cube H = -sum(hess,2);
-      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1), Rcpp::Named("hessian") = H.slice(0));
-    }
-}
-
-
-
-
-//' generate_mvt
-//'
-//' @param input
-//'
-//' @return matrix
-//'
-//' @export
-// [[Rcpp::export]]
-arma::mat tryFunction(arma::cube &input){
-  
-  // method 1: 
-  arma::uword rows_0 = input.n_rows*input.n_cols;
-input.reshape(rows_0, input.n_slices, 1);
-arma::mat C = input.slice(0);
-// method 2:
-//arma::mat C = arma::reshape( arma::mat(input.memptr(), input.n_elem, 1, false), 5*4, 3);
-//
-return C;
-}
