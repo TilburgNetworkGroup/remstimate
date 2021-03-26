@@ -19,42 +19,12 @@ errorMessage <- function(cond) {
 
 #' cube2matrix
 #'
-#' A function to rearrange the cube of statistics into a matrix.
+#' A function to rearrange a cube into a matrix where slices of the cube are concatenated by column one next to the other.
 #'
-#' @param stats cube structure of dimensions [D*U*M] filled with statistics values. 
+#' @param cube structure of dimensions [D*U*M]
 #'
 #' @return matrix of dimensions [(M*D)*U]
 NULL
-
-#' remDerivativesStandardParallel
-#'
-#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#' 
-#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-#' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param gradient boolean true/false whether to return gradient value
-#' @param hessian boolean true/false whether to return hessian value
-#' @param n_threads integer
-#'
-#' @return list of values: loglik, gradient, hessian
-#'
-#' @export
-remDerivativesStandardParallel <- function(pars, stats, event_binary, interevent_time, gradient = TRUE, hessian = TRUE, n_threads = 1L) {
-    .Call('_remstimate_remDerivativesStandardParallel', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, gradient, hessian, n_threads)
-}
-
-#' generate_mvt
-#'
-#' @param input
-#'
-#' @return matrix
-#'
-#' @export
-tryFunction <- function(input) {
-    .Call('_remstimate_tryFunction', PACKAGE = 'remstimate', input)
-}
 
 #' getUniqueVectors
 #'
@@ -110,13 +80,16 @@ computeOccurrencies <- function(edgelist, risksetCube, M, unique_vectors_stats, 
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 #' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param ordinal boolean that indicate whether to use the ordinal or interval timing likelihood
+#' @param ncores integer referring to the number of threads for the parallelization
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
 #'
 #' @return list of values: loglik, gradient, hessian
 #'
-remDerivativesStandard <- function(pars, stats, event_binary, interevent_time, gradient = TRUE, hessian = TRUE) {
-    .Call('_remstimate_remDerivativesStandard', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, gradient, hessian)
+#' @export
+remDerivativesStandard <- function(pars, stats, event_binary, interevent_time, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE) {
+    .Call('_remstimate_remDerivativesStandard', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, ordinal, ncores, gradient, hessian)
 }
 
 #' remDerivativesFast
@@ -132,7 +105,7 @@ remDerivativesStandard <- function(pars, stats, event_binary, interevent_time, g
 #'
 #' @return list of value/gradient/hessian in pars
 #'
-remDerivativesFast <- function(pars, times_r, occurrencies_r, unique_vectors_stats, gradient, hessian) {
+remDerivativesFast <- function(pars, times_r = as.numeric( c()), occurrencies_r = as.numeric( c()), unique_vectors_stats = matrix::create(), gradient = TRUE, hessian = TRUE) {
     .Call('_remstimate_remDerivativesFast', PACKAGE = 'remstimate', pars, times_r, occurrencies_r, unique_vectors_stats, gradient, hessian)
 }
 
@@ -144,19 +117,18 @@ remDerivativesFast <- function(pars, times_r, occurrencies_r, unique_vectors_sta
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 #' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param times_r used in the fast approach
-#' @param occurrencies_r used in the fast approach
-#' @param unique_vectors_stats used in the fast approach
-#' @param fast boolean true/false whether to run the fast approach or not    
-#' @param n_threads number of threads to use for the parallelization                           
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param model either "actor" or "tie" model
+#' @param ncores number of threads to use for the parallelization
+#' @param fast boolean true/false whether to run the fast approach or not                          
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
 #'
 #' @return list of values: loglik, gradient, hessian
 #'
 #' @export
-remDerivatives <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, n_threads = 1L, gradient = TRUE, hessian = TRUE) {
-    .Call('_remstimate_remDerivatives', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, n_threads, gradient, hessian)
+remDerivatives <- function(pars, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, gradient = TRUE, hessian = TRUE) {
+    .Call('_remstimate_remDerivatives', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, model, ordinal, ncores, fast, gradient, hessian)
 }
 
 #' GD
@@ -167,9 +139,9 @@ remDerivatives <- function(pars, stats, event_binary, interevent_time, times_r, 
 #' @param stats array of statistics
 #' @param event_binary rehBinary (inside the reh object)
 #' @param interevent_time vector of interevent times (inside the reh object)
-#' @param times_r used in the fast approach
-#' @param occurrencies_r used in the fast approach
-#' @param unique_vectors_stats used in the fast approach
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param model either "actor" or "tie" model
+#' @param ncores number of threads to use for the parallelization
 #' @param fast TRUE/FALSE whether to perform the fast approach or not
 #' @param epochs number of epochs
 #' @param learning_rate learning rate
@@ -177,8 +149,8 @@ remDerivatives <- function(pars, stats, event_binary, interevent_time, times_r, 
 #' @return
 #'
 #' @export
-GD <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.001) {
-    .Call('_remstimate_GD', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, epochs, learning_rate)
+GD <- function(pars, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, epochs = 200L, learning_rate = 0.001) {
+    .Call('_remstimate_GD', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate)
 }
 
 #' GDADAM
@@ -189,9 +161,9 @@ GD <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies
 #' @param stats array of statistics
 #' @param event_binary rehBinary (inside the reh object)
 #' @param interevent_time vector of interevent times (inside the reh object)
-#' @param times_r used in the fast approach
-#' @param occurrencies_r used in the fast approach
-#' @param unique_vectors_stats used in the fast approach
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param model either "actor" or "tie" model
+#' @param ncores number of threads to use for the parallelization
 #' @param fast TRUE/FALSE whether to perform the fast approach or not
 #' @param epochs number of epochs
 #' @param learning_rate learning rate
@@ -202,8 +174,8 @@ GD <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies
 #' @return
 #'
 #' @export
-GDADAM <- function(pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, epochs = 200L, learning_rate = 0.02, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
-    .Call('_remstimate_GDADAM', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, epochs, learning_rate, beta1, beta2, eta)
+GDADAM <- function(pars, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, epochs = 200L, learning_rate = 0.02, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
+    .Call('_remstimate_GDADAM', PACKAGE = 'remstimate', pars, stats, event_binary, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate, beta1, beta2, eta)
 }
 
 #' logPostHMC
@@ -216,15 +188,15 @@ GDADAM <- function(pars, stats, event_binary, interevent_time, times_r, occurren
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 #' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param times_r used in the fast approach
-#' @param occurrencies_r used in the fast approach
-#' @param unique_vectors_stats used in the fast approach
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param model either "actor" or "tie" model
+#' @param ncores number of threads to use for the parallelization
 #' @param fast boolean true/false whether to run the fast approach or not                               
 #'
 #' @return value of log-posterior density
 #'
-logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast) {
-    .Call('_remstimate_logPostHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast)
+logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
+    .Call('_remstimate_logPostHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal, ncores, fast)
 }
 
 #' logPostGradientHMC
@@ -237,15 +209,15 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interev
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 #' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param times_r used in the fast approach
-#' @param occurrencies_r used in the fast approach
-#' @param unique_vectors_stats used in the fast approach
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param model either "actor" or "tie" model
+#' @param ncores number of threads to use for the parallelization
 #' @param fast boolean true/false whether to run the fast approach or not                               
 #'
 #' @return value of log-posterior gradient
 #'
-logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast) {
-    .Call('_remstimate_logPostGradientHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast)
+logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
+    .Call('_remstimate_logPostGradientHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal, ncores, fast)
 }
 
 #' iterHMC
@@ -260,13 +232,13 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary,
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 #' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param times_r used in the fast approach
-#' @param occurrencies_r used in the fast approach
-#' @param unique_vectors_stats used in the fast approach
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param model either "actor" or "tie" model
+#' @param ncores number of threads to use for the parallelization
 #' @param fast boolean true/false whether to run the fast approach or not                               
 #'
-iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast) {
-    .Call('_remstimate_iterHMC', PACKAGE = 'remstimate', L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast)
+iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
+    .Call('_remstimate_iterHMC', PACKAGE = 'remstimate', L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal, ncores, fast)
 }
 
 #' burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)
@@ -274,41 +246,41 @@ iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary
 #' This function performs the burn-in and the thinning at the end of the HMC
 #'
 #' @param samples cube with final draws
-#' @param n_burnin is the number of draws to discard after running the chains
-#' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+#' @param burnin is the number of draws to discard after running the chains
+#' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 #'                          
 #' @return cube with selected draws
 #'
-burninHMC <- function(samples, n_burnin, n_thin = 1L) {
-    .Call('_remstimate_burninHMC', PACKAGE = 'remstimate', samples, n_burnin, n_thin)
+burninHMC <- function(samples, burnin, thin = 1L) {
+    .Call('_remstimate_burninHMC', PACKAGE = 'remstimate', samples, burnin, thin)
 }
 
 #' HMC 
 #'
 #' This function performs the Hamiltonian Monte Carlo
 #'
-#' @param pars_init is a matrix of dimensions U x n_chains where for each column (chain) a random vector of initial values for the parameter is supplied.
-#' @param n_iters is the number of samples from the posterior that have to be generated.
-#' @param n_chains number of chains of length n_iters
-#' @param n_burnin is the number of draws to discard after running the chains
+#' @param pars_init is a matrix of dimensions U x nchains where for each column (chain) a random vector of initial values for the parameter is supplied.
+#' @param nsim is the number of samples from the posterior that have to be generated.
+#' @param nchains number of chains of length nsim
+#' @param burnin is the number of draws to discard after running the chains
 #' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
 #' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 #' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param times_r used in the fast approach
-#' @param occurrencies_r used in the fast approach
-#' @param unique_vectors_stats used in the fast approach
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param model either "actor" or "tie" model
+#' @param ncores number of threads to use for the parallelization
 #' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE) 
-#' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+#' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 #' @param L number of leapfrogs. Default (and recommended) value is 100.
 #' @param epsilon size of the leapfrog. Default value is 1e-02.
-#' @param n_threads number of threads for parallel computing (default = 1)
+#' @param ncores number of threads for parallel computing (default = 1)
 #'                          
 #' @return posterior draws
 #'
-HMC <- function(pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast = FALSE, n_thin = 1L, L = 100L, epsilon = 0.01, n_threads = 1L) {
-    .Call('_remstimate_HMC', PACKAGE = 'remstimate', pars_init, n_iters, n_chains, n_burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, times_r, occurrencies_r, unique_vectors_stats, fast, n_thin, L, epsilon, n_threads)
+HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, thin = 1L, L = 100L, epsilon = 0.01) {
+    .Call('_remstimate_HMC', PACKAGE = 'remstimate', pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, model, ordinal, ncores, fast, thin, L, epsilon)
 }
 

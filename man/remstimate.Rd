@@ -8,19 +8,19 @@
 remstimate(
   reh = NULL,
   stats = NULL,
-  method = c("MLE", "GD", "GDADAM", "BSIR", "BPM", "HMC"),
+  method = c("MLE", "GD", "GDADAM", "BSIR", "HMC"),
+  model = c("actor", "tie"),
+  ncores = 1,
   prior = NULL,
-  proposal = NULL,
-  n_chains = 4,
-  n_iters = 2000,
-  n_burnin = 1000,
-  n_thin = 1,
-  parallel = TRUE,
-  fast = FALSE,
+  nsim = 1000,
+  nchains = 2,
+  burnin = 500,
+  thin = 10,
   epochs = 200,
   learning_rate = 0.001,
-  seed = sample(1:10000, n.chains),
+  fast = FALSE,
   silent = TRUE,
+  seed = sample(1:10000, nchains),
   ...
 )
 }
@@ -29,31 +29,31 @@ remstimate(
 
 \item{stats}{a remstats object (array of statistics)}
 
-\item{method}{optimization method to be used: trust, optim, GD, BSIR, HMC, BPM(?)}
+\item{method}{optimization method to be used: MLE, GD, GDADAM, BSIR, HMC}
+
+\item{model}{either actor or tie oriented}
+
+\item{ncores}{number of threads for the parallelization (default = 1, no parallelization)}
 
 \item{prior}{prior distribution when using Bayesian methods}
 
-\item{proposal}{proposal distribution when using BSIR}
+\item{nsim}{number of iterations in each chain}
 
-\item{n_chains}{number of chains to generate}
+\item{nchains}{number of chains to generate}
 
-\item{n_iters}{number of iterations in each chain}
+\item{burnin}{number of initial iterations to be added as burnin}
 
-\item{n_burnin}{number of initial iterations to be added as burnin}
-
-\item{n_thin}{number of steps to skip in the posterior draws of the HMC}
-
-\item{parallel}{TRUE/FALSE use parallelization}
+\item{thin}{number of steps to skip in the posterior draws of the HMC}
 
 \item{epochs}{200 by defaut. It is the number of iteration used in the methods GD and GDADAM}
 
 \item{learning_rate}{0.001 by default. It is the learning rate used in the methods GD and GDADAM}
 
-\item{seed}{seed for reproducibility (yet to be integrated in the code)}
+\item{fast}{TRUE/FALSE whether to apply a faster computation of the likelihood}
 
 \item{silent}{TRUE/FALSE if FALSE, progress of optimization status will be printed out}
 
-\item{false}{TRUE/FALSE whether to apply a faster computation of the likelihood}
+\item{seed}{seed for reproducibility (yet to be integrated in the code)}
 }
 \value{
 remstimate S3 object

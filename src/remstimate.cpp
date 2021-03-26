@@ -9,107 +9,6 @@
 #include <string>
 
 
-
-//' remDerivativesStandardParallel
-//'
-//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-//' 
-//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
-//' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param gradient boolean true/false whether to return gradient value
-//' @param hessian boolean true/false whether to return hessian value
-//' @param n_threads integer
-//'
-//' @return list of values: loglik, gradient, hessian
-//'
-//' @export
-// [[Rcpp::export]]
-Rcpp::List remDerivativesStandardParallel(const arma::vec &pars, 
-                                          const arma::cube &stats,
-                                          const arma::mat &event_binary,
-                                          const arma::vec &interevent_time,
-                                          bool gradient = true,
-                                          bool hessian = true, 
-                                          int n_threads = 1){
-    arma::uword U = pars.n_elem; // number of parameters
-    arma::uword D = event_binary.n_cols;
-    arma::uword M = event_binary.n_rows; // number of events
-
-    arma::uword d,m,l,k;
-    arma::vec log_lambda(D,arma::fill::zeros) ;
-
-    arma::vec loglik(M,arma::fill::zeros);
-    arma::cube hess(U,U,M,arma::fill::zeros);
-    arma::mat grad(U,M,arma::fill::zeros);
-   
-    omp_set_dynamic(0);         // disabling dynamic teams
-    omp_set_num_threads(n_threads); // number of threads for all consecutive parallel regions
-    #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,event_binary,gradient,hessian,interevent_time)
-    for(m = 0; m < M; m++){
-        arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
-        log_lambda = stats_m.t() * pars;
-        for(d = 0; d < D; d++){
-            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
-                if(event_binary(m,d) == 1){ // if event occured
-                    loglik[m] += log_lambda.at(d);
-                    grad.col(m) += stats_m.col(d);
-                }               
-                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);  // change `dtelp` name to something else more understandable
-                loglik[m] -= dtelp; 
-                if(gradient){
-                    grad.col(m) -= stats_m.col(d)*dtelp;
-                }             
-                if(hessian){
-                  for(k = 0; k < U; k++){
-                    for (l = k; l < U; l++){
-                        hess(k,l,m) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
-                        hess(l,k,m) = hess(k,l,m);
-                    }
-                  }    
-                }      
-                
-            }            
-        }
-    
-    }
-
-    if(gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1));
-    }else if(!gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik));
-    }else{
-      arma::cube H = -sum(hess,2);
-      return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1), Rcpp::Named("hessian") = H.slice(0));
-    }
-}
-
-
-
-
-//' generate_mvt
-//'
-//' @param input
-//'
-//' @return matrix
-//'
-//' @export
-// [[Rcpp::export]]
-arma::mat tryFunction(arma::cube &input){
-  
-  // method 1: 
-  arma::uword rows_0 = input.n_rows*input.n_cols;
-input.reshape(rows_0, input.n_slices, 1);
-arma::mat C = input.slice(0);
-// method 2:
-//arma::mat C = arma::reshape( arma::mat(input.memptr(), input.n_elem, 1, false), 5*4, 3);
-//
-return C;
-}
-
-
-
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(BEGIN)     remstimateFAST routine functions      (BEGIN)///////////// 
 // /////////// to calculate the objects needed for the fast approach   /////////////
@@ -117,22 +16,20 @@ return C;
 
 //' cube2matrix
 //'
-//' A function to rearrange the cube of statistics into a matrix.
+//' A function to rearrange a cube into a matrix where slices of the cube are concatenated by column one next to the other.
 //'
-//' @param stats cube structure of dimensions [D*U*M] filled with statistics values. 
+//' @param cube structure of dimensions [D*U*M]
 //'
 //' @return matrix of dimensions [(M*D)*U]
-arma::mat cube2matrix(arma::cube stats){
-  arma::uword m,d;
-  arma::uword new_row = 0;
-  arma::mat out(stats.n_rows*stats.n_slices, stats.n_cols, arma::fill::zeros); 
-  for(m = 0; m < stats.n_slices; m++){
-    for(d = 0; d < stats.n_rows; d++){
-      out.row(new_row) = stats.slice(m).row(d);
-      new_row += 1;
-    }
+arma::mat cube2matrix(arma::cube x){
+  arma::uword m;
+  arma::mat out_mat(x.n_rows*x.n_slices, x.n_cols, arma::fill::zeros); 
+  for(m = 0; m < x.n_slices; m++){
+      arma::uword lb = m*x.n_rows;
+      arma::uword ub = (m+1)*x.n_rows-1;
+      out_mat(arma::span(lb,ub),arma::span::all) = x.slice(m); 
   }
-  return out;
+  return out_mat;
 }
 
 //' getUniqueVectors
@@ -177,7 +74,10 @@ arma::mat getUniqueVectors(arma::cube stats){
 //'
 //' @export
 // [[Rcpp::export]]
-arma::vec computeTimes(const arma::mat& unique_vectors_stats, const arma::uword& M, const arma::cube& stats, const arma::vec& intereventTime){
+arma::vec computeTimes(const arma::mat& unique_vectors_stats, 
+                       const arma::uword& M, 
+                       const arma::cube& stats,
+                       const arma::vec& intereventTime){
  
   arma::uword R = unique_vectors_stats.n_rows; // number of unique vector of statistics
   arma::uword D = stats.n_rows; // number of dyads
@@ -215,7 +115,11 @@ arma::vec computeTimes(const arma::mat& unique_vectors_stats, const arma::uword&
 //'
 //' @export
 // [[Rcpp::export]]
-arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::ucube& risksetCube, const arma::uword& M, const arma::mat& unique_vectors_stats, const arma::cube& stats){
+arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, 
+                              const arma::ucube& risksetCube, 
+                              const arma::uword& M, 
+                              const arma::mat& unique_vectors_stats, 
+                              const arma::cube& stats){
 
   arma::uword r,m,d;
   arma::uword R = unique_vectors_stats.n_rows;
@@ -246,6 +150,7 @@ arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::ucube
 // ///////////(BEGIN)              remDerivatives               (BEGIN)///////////// 
 // /////////////////////////////////////////////////////////////////////////////////
 
+
 //' remDerivativesStandard
 //'
 //' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
@@ -254,13 +159,24 @@ arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist, const arma::ucube
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param ordinal boolean that indicate whether to use the ordinal or interval timing likelihood
+//' @param ncores integer referring to the number of threads for the parallelization
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
 //'
 //' @return list of values: loglik, gradient, hessian
 //'
+//' @export
 // [[Rcpp::export]]
-Rcpp::List remDerivativesStandard(const arma::vec &pars, const arma::cube &stats, const arma::mat &event_binary, const arma::vec &interevent_time,bool gradient = true,bool hessian = true){
+Rcpp::List remDerivativesStandard(const arma::vec &pars, 
+                                          const arma::cube &stats,
+                                          const arma::mat &event_binary,
+                                          const arma::vec &interevent_time,
+                                          bool ordinal = false,
+                                          int ncores = 1,
+                                          bool gradient = true,
+                                          bool hessian = true 
+                                          ){
     arma::uword U = pars.n_elem; // number of parameters
     arma::uword D = event_binary.n_cols;
     arma::uword M = event_binary.n_rows; // number of events
@@ -268,47 +184,103 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars, const arma::cube &stats
     arma::uword d,m,l,k;
     arma::vec log_lambda(D,arma::fill::zeros) ;
 
-    double loglik = 0.0;
-    arma::mat hess(U,U,arma::fill::zeros);
-    arma::vec grad(U,arma::fill::zeros);
+    arma::vec loglik(M,arma::fill::zeros);
+    arma::cube hess(U,U,M,arma::fill::zeros);
+    arma::mat grad(U,M,arma::fill::zeros);
+
+    if(ordinal & hessian) gradient = true; // because in the ordinal likelihood we want to avoid to double compute certain quantities
    
-    for(m = 0; m < M; m++){
-        arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
-        log_lambda = stats_m.t() * pars;
-        for(d = 0; d < D; d++){
-            if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
-                if(event_binary(m,d) == 1){ // if event occured
-                    loglik += log_lambda.at(d);
-                    grad += stats_m.col(d);
-                }               
-                double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);  // change `dtelp` name to something else more understandable
-                loglik -= dtelp; 
-                if(gradient){
-                    grad -= stats_m.col(d)*dtelp;
-                }             
-                if(hessian){
-                  for(k = 0; k < U; k++){
-                    for (l = k; l < U; l++){
-                        hess(k,l) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
-                        hess(l,k) = hess(k,l);
-                    }
+    if(!ordinal){ // interval likelihood
+      omp_set_dynamic(0);         // disabling dynamic teams
+      omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,event_binary,gradient,hessian,interevent_time)
+      for(m = 0; m < M; m++){
+          arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
+          log_lambda = stats_m.t() * pars;
+          for(d = 0; d < D; d++){
+              if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
+                  if(event_binary(m,d) == 1){ // if event occured
+                      loglik[m] += log_lambda.at(d);
+                      grad.col(m) += stats_m.col(d);
+                  }               
+                  double dtelp = exp(log_lambda.at(d))*interevent_time.at(m);  // change `dtelp` name to something else more understandable
+                  loglik[m] -= dtelp; 
+                  if(gradient){
+                      grad.col(m) -= stats_m.col(d)*dtelp;
+                  }             
+                  if(hessian){
+                    for(k = 0; k < U; k++){
+                      for (l = k; l < U; l++){
+                          hess(k,l,m) -= stats_m.at(l,d)*stats_m.at(k,d)*dtelp;
+                          hess(l,k,m) = hess(k,l,m);
+                      }
+                    }    
+                  }      
+                  
+              }            
+          }
+      
+      }
+    }
+    else{ // ordinal likelihood
+      omp_set_dynamic(0);         // disabling dynamic teams
+      omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,event_binary,gradient,hessian,interevent_time)
+      for(m = 0; m < M; m++){
+          arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
+          log_lambda = stats_m.t() * pars;
+          double surv = 0.0;
+          arma::vec grad_m(U,arma::fill::zeros);
+          arma::mat hess_m(U,U,arma::fill::zeros);
+          for(d = 0; d < D; d++){
+              if(event_binary(m,d)!=-1){ // ignoring impossible events that are not in risk set                
+                  if(event_binary(m,d) == 1){ // if event occured
+                      loglik[m] += log_lambda.at(d);
+                  }   
+                  double lambda_d = exp(log_lambda.at(d));            
+                  surv += lambda_d;  // change `dtelp` name to something else more understandable
+                  if(gradient){
+                    grad.col(m) += stats_m.col(d); // first component of the gradient
+                    grad_m += (lambda_d * stats_m.col(d)); // building up the second component of the gradient
+                  }
+                  if(hessian){
+                    for(k = 0; k < U; k++){
+                      for (l = k; l < U; l++){
+                        hess_m(k,l) -= stats_m.at(l,d)*stats_m.at(k,d)*lambda_d;
+                        hess_m(l,k) = hess_m(k,l);
+                      }
+                    }                     
                   }    
-                }      
-                
-            }            
-        }
-    
+              }            
+          }
+          loglik[m] -= log(surv);
+          if(gradient){
+            grad_m /= surv;
+            grad.col(m) -= grad_m;
+          }
+          if(hessian){
+            for(k = 0; k < U; k++){
+              for (l = k; l < U; l++){
+                hess_m(k,l) /= surv;
+                hess_m(k,l) += (grad_m(k) * grad_m(l));
+                hess_m(l,k) = hess_m(k,l);
+              }
+            } 
+            hess.slice(m) = hess_m;
+          }
+      
+      }
     }
 
     if(gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
-    }else if(!gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
-    }else{
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
-    }
+        return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1));
+      }else if(!gradient && !hessian){
+        return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik));
+      }else{
+        arma::cube H = -sum(hess,2);
+        return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1), Rcpp::Named("hessian") = H.slice(0));
+      }
 }
-
 
 
 //' remDerivativesFast
@@ -325,7 +297,12 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars, const arma::cube &stats
 //' @return list of value/gradient/hessian in pars
 //'
 // [[Rcpp::export]]
-Rcpp::List remDerivativesFast(const arma::vec& pars, const arma::vec& times_r, const arma::vec& occurrencies_r, const arma::mat& unique_vectors_stats, bool gradient, bool hessian){
+Rcpp::List remDerivativesFast(const arma::vec& pars, 
+                              const arma::vec &times_r = Rcpp::NumericVector::create(), 
+                              const arma::vec &occurrencies_r = Rcpp::NumericVector::create(), 
+                              const arma::mat &unique_vectors_stats = Rcpp::NumericMatrix::create(), 
+                              bool gradient = true, 
+                              bool hessian = true){
   
   arma::uword U = pars.n_elem;
   arma::uword u,k,l;
@@ -366,11 +343,10 @@ Rcpp::List remDerivativesFast(const arma::vec& pars, const arma::vec& times_r, c
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param times_r used in the fast approach
-//' @param occurrencies_r used in the fast approach
-//' @param unique_vectors_stats used in the fast approach
-//' @param fast boolean true/false whether to run the fast approach or not    
-//' @param n_threads number of threads to use for the parallelization                           
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param model either "actor" or "tie" model
+//' @param ncores number of threads to use for the parallelization
+//' @param fast boolean true/false whether to run the fast approach or not                          
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
 //'
@@ -382,23 +358,27 @@ Rcpp::List remDerivatives(const arma::vec &pars,
                                   const arma::cube &stats, 
                                   const arma::mat &event_binary, 
                                   const arma::vec &interevent_time,
-                                  const arma::vec &times_r, 
-                                  const arma::vec &occurrencies_r, 
-                                  const arma::mat &unique_vectors_stats,
+                                  std::string model,
+                                  bool ordinal = false,
+                                  int ncores = 1,
                                   bool fast = false,
-                                  int n_threads = 1,
                                   bool gradient = true,
                                   bool hessian = true){
   Rcpp::List out;
+  // each routine should include a parameter 'fast' if the fast version can be useb
+  std::vector<std::string> models = {"tie","actor"};
 
-  switch (fast)
+  std::vector<std::string>::iterator itr = std::find(models.begin(), models.end(), model);
+  auto which_model = std::distance(models.begin(), itr);
+
+  switch (which_model)
   {
-  case 1: { out = remDerivativesFast(pars,times_r,occurrencies_r,unique_vectors_stats,gradient,hessian);
+  case 0: { out = remDerivativesStandard(pars,stats,event_binary,interevent_time,ordinal,ncores,gradient,hessian);
     break;}
 
-  case 0: { out = remDerivativesStandardParallel(pars,stats,event_binary,interevent_time,gradient,hessian,n_threads);
-  //remDerivativesStandard(pars,stats,event_binary,interevent_time,gradient,hessian);
+  case 1: { out = Rcpp::List::create(Rcpp::Named("actor") = model); // substitute here with likelihood for the actor oriented model
     break;}
+  
   }
 
   return out;
@@ -420,9 +400,9 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 //' @param stats array of statistics
 //' @param event_binary rehBinary (inside the reh object)
 //' @param interevent_time vector of interevent times (inside the reh object)
-//' @param times_r used in the fast approach
-//' @param occurrencies_r used in the fast approach
-//' @param unique_vectors_stats used in the fast approach
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param model either "actor" or "tie" model
+//' @param ncores number of threads to use for the parallelization
 //' @param fast TRUE/FALSE whether to perform the fast approach or not
 //' @param epochs number of epochs
 //' @param learning_rate learning rate
@@ -435,9 +415,9 @@ Rcpp::List GD(const arma::vec &pars,
               const arma::cube &stats, 
               const arma::mat &event_binary,
               const arma::vec &interevent_time,
-              const arma::vec &times_r, 
-              const arma::vec &occurrencies_r, 
-              const arma::mat &unique_vectors_stats,
+              std::string model,
+              bool ordinal = false,
+              int ncores = 1,
               bool fast = false,
               int epochs = 200,
               double learning_rate = 0.001){
@@ -454,7 +434,7 @@ Rcpp::List GD(const arma::vec &pars,
     arma::vec loss(epochs,arma::fill::zeros);
 
     for(int i =0; i<epochs;i++){
-        Rcpp::List derv = remDerivatives(pars_prev,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,true,false);
+        Rcpp::List derv = remDerivatives(pars_prev,stats,event_binary,interevent_time,model,ordinal,ncores,fast,true,false);
         double loglik = derv["value"];
         arma::vec grad = derv["gradient"];
         pars_next = pars_prev - (learning_rate * grad);
@@ -474,9 +454,9 @@ Rcpp::List GD(const arma::vec &pars,
 //' @param stats array of statistics
 //' @param event_binary rehBinary (inside the reh object)
 //' @param interevent_time vector of interevent times (inside the reh object)
-//' @param times_r used in the fast approach
-//' @param occurrencies_r used in the fast approach
-//' @param unique_vectors_stats used in the fast approach
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param model either "actor" or "tie" model
+//' @param ncores number of threads to use for the parallelization
 //' @param fast TRUE/FALSE whether to perform the fast approach or not
 //' @param epochs number of epochs
 //' @param learning_rate learning rate
@@ -492,9 +472,9 @@ Rcpp::List GDADAM(const arma::vec &pars,
                    const arma::cube &stats, 
                    const arma::mat &event_binary,
                    const arma::vec &interevent_time,
-                   const arma::vec &times_r, 
-                   const arma::vec &occurrencies_r, 
-                   const arma::mat &unique_vectors_stats,
+                   std::string model,
+                   bool ordinal = false,
+                   int ncores = 1,
                    bool fast = false,
                    int epochs = 200,
                    double learning_rate = 0.02,
@@ -521,7 +501,7 @@ Rcpp::List GDADAM(const arma::vec &pars,
     arma::vec loss(epochs,arma::fill::zeros);
 
     for(int i =0; i<epochs;i++){
-        Rcpp::List derv = remDerivatives(pars_prev,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,true,false);
+        Rcpp::List derv = remDerivatives(pars_prev,stats,event_binary,interevent_time,model,ordinal,ncores,fast,true,false);
         double loglik = derv["value"];
         
         arma::vec grad = derv["gradient"];
@@ -560,9 +540,9 @@ Rcpp::List GDADAM(const arma::vec &pars,
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param times_r used in the fast approach
-//' @param occurrencies_r used in the fast approach
-//' @param unique_vectors_stats used in the fast approach
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param model either "actor" or "tie" model
+//' @param ncores number of threads to use for the parallelization
 //' @param fast boolean true/false whether to run the fast approach or not                               
 //'
 //' @return value of log-posterior density
@@ -574,12 +554,12 @@ double logPostHMC(const arma::vec &meanPrior,
                   const arma::cube &stats, 
                   const arma::mat &event_binary, 
                   const arma::vec &interevent_time,
-                  const arma::vec &times_r, 
-                  const arma::vec &occurrencies_r, 
-                  const arma::mat &unique_vectors_stats,
-                  bool fast){
+                  std::string model,
+                  bool ordinal = false,
+                  int ncores = 1,
+                  bool fast = false){
   
-  Rcpp::List derv = remDerivatives(pars,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,false,false);
+  Rcpp::List derv = remDerivatives(pars,stats,event_binary,interevent_time,model,ordinal,ncores,fast,false,false);
 
   double prior = - sum(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
  
@@ -597,9 +577,9 @@ double logPostHMC(const arma::vec &meanPrior,
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param times_r used in the fast approach
-//' @param occurrencies_r used in the fast approach
-//' @param unique_vectors_stats used in the fast approach
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param model either "actor" or "tie" model
+//' @param ncores number of threads to use for the parallelization
 //' @param fast boolean true/false whether to run the fast approach or not                               
 //'
 //' @return value of log-posterior gradient
@@ -611,12 +591,12 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               const arma::cube &stats, 
                               const arma::mat &event_binary, 
                               const arma::vec &interevent_time,
-                              const arma::vec &times_r, 
-                              const arma::vec &occurrencies_r, 
-                              const arma::mat &unique_vectors_stats,
-                              bool fast){
+                              std::string model,
+                              bool ordinal = false,
+                              int ncores = 1,
+                              bool fast = false){
   
-  Rcpp::List derv = remDerivatives(pars,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast,true,false);
+  Rcpp::List derv = remDerivatives(pars,stats,event_binary,interevent_time,model,ordinal,ncores,fast,true,false);
   arma::vec gprior = - 0.5 * inv(sigmaPrior) * (pars - meanPrior);
   arma::vec glp = derv[1];
   
@@ -637,9 +617,9 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param times_r used in the fast approach
-//' @param occurrencies_r used in the fast approach
-//' @param unique_vectors_stats used in the fast approach
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param model either "actor" or "tie" model
+//' @param ncores number of threads to use for the parallelization
 //' @param fast boolean true/false whether to run the fast approach or not                               
 //'
 // [[Rcpp::export]]
@@ -651,10 +631,10 @@ arma::vec iterHMC(arma::uword L,
                   const arma::cube &stats, 
                   const arma::mat &event_binary, 
                   const arma::vec &interevent_time,
-                  const arma::vec &times_r, 
-                  const arma::vec &occurrencies_r, 
-                  const arma::mat &unique_vectors_stats,
-                  bool fast){
+                  std::string model,
+                  bool ordinal = false,
+                  int ncores = 1,
+                  bool fast = false){
   
   arma::vec accept; //vector to store sample
   arma::uword N = pars.size(); //number of parameters
@@ -665,17 +645,17 @@ arma::vec iterHMC(arma::uword L,
   arma::vec rC = r;
   
   //leapfrog algorithm, updates via Hamiltonian equations
-  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,model,ordinal,ncores,fast);
   for(arma::uword i = 1; i <= L; i++){
     betaP = betaP + r * epsilon;
-    if(i != L) r = r - epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+    if(i != L) r = r - epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,model,ordinal,ncores,fast);
   }
-  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,model,ordinal,ncores,fast);
   r = -r;
   
   //computes final quantities for the acceptance rate
-  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
-  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,event_binary,interevent_time,model,ordinal,ncores,fast);
+  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,event_binary,interevent_time,model,ordinal,ncores,fast);
   double K = 0.5 * sum(rC.t() * rC);
   double propK = 0.5 * sum(r.t() * r);
   
@@ -695,32 +675,31 @@ arma::vec iterHMC(arma::uword L,
 //' This function performs the burn-in and the thinning at the end of the HMC
 //'
 //' @param samples cube with final draws
-//' @param n_burnin is the number of draws to discard after running the chains
-//' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+//' @param burnin is the number of draws to discard after running the chains
+//' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 //'                          
 //' @return cube with selected draws
 //'
 // [[Rcpp::export]]
-arma::cube burninHMC(const arma::cube& samples, arma::uword n_burnin, arma::uword n_thin = 1){
+arma::cube burninHMC(const arma::cube& samples, arma::uword burnin, arma::uword thin = 1){
   
-  arma::uword rows = round((samples.n_rows - n_burnin)/n_thin); //number of rows of output
-  arma::cube final(rows, samples.n_cols, samples.n_slices); //output
+  arma::uword rows = round((samples.n_rows - burnin)/thin); //number of rows of output
+  arma::cube out_cube(rows, samples.n_cols, samples.n_slices); //output
   
-  for(arma::uword i = 0; i < final.n_slices; i++){
+  for(arma::uword i = 0; i < out_cube.n_slices; i++){
     
-    arma::uword num = n_burnin;
+    arma::uword num = burnin;
     
-    for(arma::uword j = 0; j < final.n_rows; j++){
+    for(arma::uword j = 0; j < out_cube.n_rows; j++){
       
-      final.slice(i).row(j) = samples.slice(i).row(num);
+      out_cube.slice(i).row(j) = samples.slice(i).row(num);
       
-      num += n_thin;
+      num += thin;
       
     }
     
   }
-
-  return final;
+  return out_cube;
 }
 
 
@@ -729,63 +708,59 @@ arma::cube burninHMC(const arma::cube& samples, arma::uword n_burnin, arma::uwor
 //'
 //' This function performs the Hamiltonian Monte Carlo
 //'
-//' @param pars_init is a matrix of dimensions U x n_chains where for each column (chain) a random vector of initial values for the parameter is supplied.
-//' @param n_iters is the number of samples from the posterior that have to be generated.
-//' @param n_chains number of chains of length n_iters
-//' @param n_burnin is the number of draws to discard after running the chains
+//' @param pars_init is a matrix of dimensions U x nchains where for each column (chain) a random vector of initial values for the parameter is supplied.
+//' @param nsim is the number of samples from the posterior that have to be generated.
+//' @param nchains number of chains of length nsim
+//' @param burnin is the number of draws to discard after running the chains
 //' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
 //' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param times_r used in the fast approach
-//' @param occurrencies_r used in the fast approach
-//' @param unique_vectors_stats used in the fast approach
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param model either "actor" or "tie" model
+//' @param ncores number of threads to use for the parallelization
 //' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE) 
-//' @param n_thin is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
+//' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 //' @param L number of leapfrogs. Default (and recommended) value is 100.
 //' @param epsilon size of the leapfrog. Default value is 1e-02.
-//' @param n_threads number of threads for parallel computing (default = 1)
+//' @param ncores number of threads for parallel computing (default = 1)
 //'                          
 //' @return posterior draws
 //'
 // [[Rcpp::export]]
-arma::cube HMC(arma::mat pars_init, 
-                arma::uword n_iters, 
-                arma::uword n_chains, 
-                arma::uword n_burnin, 
+arma::mat HMC(arma::mat pars_init, 
+                arma::uword nsim, 
+                arma::uword nchains, 
+                arma::uword burnin, 
                 const arma::vec& meanPrior,
                 const arma::mat& sigmaPrior,
                 const arma::cube &stats, 
                 const arma::mat &event_binary, 
                 const arma::vec &interevent_time,
-                const arma::vec &times_r, 
-                const arma::vec &occurrencies_r, 
-                const arma::mat &unique_vectors_stats,
+                std::string model,
+                bool ordinal = false,
+                int ncores = 1,
                 bool fast = false,
-                arma::uword n_thin = 1,
+                arma::uword thin = 1,
                 arma::uword L = 100, 
-                double epsilon = 0.01,
-                int n_threads = 1){
+                double epsilon = 0.01){
   
-  arma::cube store(n_iters, pars_init.n_rows, n_chains); //output
+  arma::cube store(nsim, pars_init.n_rows, nchains); //output
   arma::uword j,i;
 
-  //omp_set_dynamic(0);         // disabling dynamic teams
-  //omp_set_num_threads(n_threads); // number of threads for all consecutive parallel regions
-  //#pragma omp parallel for private(j,i) shared(n_iters,n_chains,meanPrior,sigmaPrior,fast,L,epsilon,store,pars_init,stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats)
-  for(j = 0; j < n_chains; j++){ //looping through chains
+  for(j = 0; j < nchains; j++){ //looping through chains
     
     arma::mat aux(pars_init.n_rows, 1,arma::fill::zeros);
-    arma::mat chain_j(n_iters,pars_init.n_rows,arma::fill::zeros);
+    arma::mat chain_j(nsim,pars_init.n_rows,arma::fill::zeros);
 
-    for(i = 0; i < n_iters; i++){ //looping through iterations of the MCMC
+    for(i = 0; i < nsim; i++){ //looping through iterations of the MCMC
       
       if(i == 0){
         
         //this step only get the first sample out of the starting value
-        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,event_binary,interevent_time,model,ordinal,ncores,fast);
         
         chain_j.row(i) = aux.col(0).t();
         
@@ -794,7 +769,7 @@ arma::cube HMC(arma::mat pars_init,
       } else {
         
         //Then the next step will always be based on the previous one
-        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,aux.col(0),stats,event_binary,interevent_time,times_r,occurrencies_r,unique_vectors_stats,fast);
+        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,aux.col(0),stats,event_binary,interevent_time,model,ordinal,ncores,fast);
         
         chain_j.row(i) = aux.col(0).t();
         
@@ -805,10 +780,10 @@ arma::cube HMC(arma::mat pars_init,
   }
   
   //this does the burn-in and thinning
-  arma::cube out_cube = burninHMC(store,n_burnin,n_thin);
-  //arma::mat out_mat = cube2matrix(out_cube); 
+  arma::cube draws_cube = burninHMC(store,burnin,thin); // it would be ideal to make burninHMC return a matrix
+  arma::mat out_mat = cube2matrix(draws_cube);
   
-  return out_cube;
+  return out_mat;
 }
 
 

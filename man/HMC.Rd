@@ -6,32 +6,31 @@
 \usage{
 HMC(
   pars_init,
-  n_iters,
-  n_chains,
-  n_burnin,
+  nsim,
+  nchains,
+  burnin,
   meanPrior,
   sigmaPrior,
   stats,
   event_binary,
   interevent_time,
-  times_r,
-  occurrencies_r,
-  unique_vectors_stats,
+  model,
+  ordinal = FALSE,
+  ncores = 1L,
   fast = FALSE,
-  n_thin = 1L,
+  thin = 1L,
   L = 100L,
-  epsilon = 0.01,
-  n_threads = 1L
+  epsilon = 0.01
 )
 }
 \arguments{
-\item{pars_init}{is a matrix of dimensions U x n_chains where for each column (chain) a random vector of initial values for the parameter is supplied.}
+\item{pars_init}{is a matrix of dimensions U x nchains where for each column (chain) a random vector of initial values for the parameter is supplied.}
 
-\item{n_iters}{is the number of samples from the posterior that have to be generated.}
+\item{nsim}{is the number of samples from the posterior that have to be generated.}
 
-\item{n_chains}{number of chains of length n_iters}
+\item{nchains}{number of chains of length nsim}
 
-\item{n_burnin}{is the number of draws to discard after running the chains}
+\item{burnin}{is the number of draws to discard after running the chains}
 
 \item{meanPrior}{is a vector of prior means with the same dimension as the vector of parameters}
 
@@ -43,21 +42,19 @@ HMC(
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
-\item{times_r}{used in the fast approach}
+\item{model}{either "actor" or "tie" model}
 
-\item{occurrencies_r}{used in the fast approach}
+\item{ordinal}{whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood}
 
-\item{unique_vectors_stats}{used in the fast approach}
+\item{ncores}{number of threads for parallel computing (default = 1)}
 
 \item{fast}{boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE)}
 
-\item{n_thin}{is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...}
+\item{thin}{is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...}
 
 \item{L}{number of leapfrogs. Default (and recommended) value is 100.}
 
 \item{epsilon}{size of the leapfrog. Default value is 1e-02.}
-
-\item{n_threads}{number of threads for parallel computing (default = 1)}
 
 \item{pars}{is a vector of parameters (note: the order must be aligned with the column order in 'stats')}
 }

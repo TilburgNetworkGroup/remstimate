@@ -9,11 +9,10 @@ remDerivatives(
   stats,
   event_binary,
   interevent_time,
-  times_r,
-  occurrencies_r,
-  unique_vectors_stats,
+  model,
+  ordinal = FALSE,
+  ncores = 1L,
   fast = FALSE,
-  n_threads = 1L,
   gradient = TRUE,
   hessian = TRUE
 )
@@ -27,15 +26,13 @@ remDerivatives(
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
-\item{times_r}{used in the fast approach}
+\item{model}{either "actor" or "tie" model}
 
-\item{occurrencies_r}{used in the fast approach}
+\item{ordinal}{whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood}
 
-\item{unique_vectors_stats}{used in the fast approach}
+\item{ncores}{number of threads to use for the parallelization}
 
 \item{fast}{boolean true/false whether to run the fast approach or not}
-
-\item{n_threads}{number of threads to use for the parallelization}
 
 \item{gradient}{boolean true/false whether to return gradient value}
 

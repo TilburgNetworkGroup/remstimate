@@ -9,6 +9,8 @@ remDerivativesStandard(
   stats,
   event_binary,
   interevent_time,
+  ordinal = FALSE,
+  ncores = 1L,
   gradient = TRUE,
   hessian = TRUE
 )
@@ -21,6 +23,10 @@ remDerivativesStandard(
 \item{event_binary}{is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.}
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
+
+\item{ordinal}{boolean that indicate whether to use the ordinal or interval timing likelihood}
+
+\item{ncores}{integer referring to the number of threads for the parallelization}
 
 \item{gradient}{boolean true/false whether to return gradient value}
 

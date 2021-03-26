@@ -6,11 +6,11 @@
 \usage{
 remDerivativesFast(
   pars,
-  times_r,
-  occurrencies_r,
-  unique_vectors_stats,
-  gradient,
-  hessian
+  times_r = as.numeric(c()),
+  occurrencies_r = as.numeric(c()),
+  unique_vectors_stats = matrix::create(),
+  gradient = TRUE,
+  hessian = TRUE
 )
 }
 \arguments{

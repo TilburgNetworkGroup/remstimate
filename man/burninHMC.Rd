@@ -4,14 +4,14 @@
 \alias{burninHMC}
 \title{burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)}
 \usage{
-burninHMC(samples, n_burnin, n_thin = 1L)
+burninHMC(samples, burnin, thin = 1L)
 }
 \arguments{
 \item{samples}{cube with final draws}
 
-\item{n_burnin}{is the number of draws to discard after running the chains}
+\item{burnin}{is the number of draws to discard after running the chains}
 
-\item{n_thin}{is the number of draws to be skipped. For instance, if n_thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...}
+\item{thin}{is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...}
 }
 \value{
 cube with selected draws
