@@ -6,14 +6,17 @@ using namespace std;
 //'
 //' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
 //'
-//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-//' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param pars_d is a vector of parameters for the dyadic statistics (note: the order must be aligned with the column order in 'stats')
+//' @param pars_s is a vector of parameters for the sender statistics (note: the order must be aligned with the column order in 'stats')
+//' @param stats_d is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+//' @param stats_s is cube of M slices. Each slice is a matrix of dimensions N*U with statistics of interest by column and senders by row.
+//' @param risksetCube 
 //' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param gradient boolean true/false whether to return gradient value
-//' @param hessian boolean true/false whether to return hessian value
+//'@param edgelist, output from remify, (note: indices of the actors must start from 0)
+//' 
 //'
-//' @return list of values: loglik, gradient, hessian
+//' @return list of values: loglik, grad_d, fisher_d, grad_s , fisher_s
 //'
 // [[Rcpp::export]]
 Rcpp::List remDerivativesActor(
@@ -32,9 +35,7 @@ Rcpp::List remDerivativesActor(
     arma::uword M = edgelist.n_rows; // number of events
     arma::uword N = stats_s.n_rows;//Number of actors
 
-    cout <<"M"<<M<<"D:"<<D<<"N:"<<N<<"P_d:"<<P_d<<"P_s:"<<P_s<<endl;
-
-
+    
 	// variables for internal computation
     arma::vec lambda_d(D) ;
     arma::vec lambda_s(N) ;
@@ -42,8 +43,9 @@ Rcpp::List remDerivativesActor(
 	arma::vec expected_stat_current_event(P_d);
 	arma::mat fisher_current_event_s(P_s,P_s);
 	arma::mat fisher_current_event_d(P_d,P_d);
-	arma::uword dyad =0; //dyad
+	arma::uword dyad =0;
 	double denom = 0;
+
 	//output
     double loglik = 0.0;
     arma::mat fisher_d(P_d,P_d,arma::fill::zeros);
@@ -51,23 +53,15 @@ Rcpp::List remDerivativesActor(
     arma::vec grad_d(P_d,arma::fill::zeros);
     arma::vec grad_s(P_s,arma::fill::zeros);
 
-	//return Rcpp::List::create(Rcpp::Named("value") = loglik, Rcpp::Named("gradient_d") = grad_d, Rcpp::Named("fisher_d") = fisher_d,Rcpp::Named("gradient_s") = grad_s, Rcpp::Named("fisher_s") = fisher_s);
-
+	
 	//loop through all events
-    //for(arma::uword m = 0; m < M; m++){
-        int m = 5;
-        cout<<"event:"<<m<<endl;
+    for(arma::uword m = 0; m < M; m++){
         arma::mat stats_d_m = stats_d.slice(m).t(); // dimensions : [P_d*D] we want to access dyads by column
         arma::mat stats_s_m = stats_s.slice(m).t(); // dimensions: [P_s * N]
-
-		//std::cout <<"1"<<std::endl;
 
 		//this is exp(beta^T X) dot product
         lambda_d = arma::exp(stats_d_m.t() * pars_d);
         lambda_s = arma::exp(stats_s_m.t() * pars_s);
-
-		std::cout <<"2"<<std::endl;
-        cout << size(edgelist)<<endl;
 
 		//actors in remify edgelist are 0 indexed hence no -1
 		int sender = edgelist(m,1);
@@ -80,8 +74,6 @@ Rcpp::List remDerivativesActor(
 		denom = 0;
 
 		//loop thought all actors
-		cout << "sender: "<<sender <<" receiver: "<<receiver<<endl;
-
 		for(int i = 0;i<N; i++){
 		    dyad = risksetCube(sender,i,0);
 			if(i!=sender && event_binary(m,dyad)!= -1){
@@ -107,40 +99,15 @@ Rcpp::List remDerivativesActor(
 		grad_s -= interevent_time(m) * weighted_sum_current_event; //(6)
 
 		grad_d += stats_d_m.col(dyad); //(7)
-		//expected_stat_current_event = stats_d_m * lambda_d;//exp(param_d*X_sender_i)*X_sender_i
 		expected_stat_current_event /= denom; //(8)
 		grad_d -= expected_stat_current_event;
 
-		//cout << "(7):"<<stats_d_m(0,dyad)<< "-"<<stats_d_m(1,dyad)<<endl;
-		//cout <<"expected stat (8)"<<-expected_stat_current_event(0)<<" -  "<<-expected_stat_current_event(1)<<endl;
-
 		fisher_s += interevent_time(m) * fisher_current_event_s;
-
-		//arma::mat temp = expected_stat_current_event * expected_stat_current_event.t();
-
+		
 		fisher_current_event_d /= denom;
-
-		//cout <<"fisher d"<<fisher_current_event_d(0,0)<<" - "<<fisher_current_event_d(0,1)<<" - "<<fisher_current_event_d(1,0)<<" - "<<fisher_current_event_d(1,1)<<endl;
-
 		fisher_current_event_d -= (expected_stat_current_event * expected_stat_current_event.t());
-		//cout <<"temp d"<<temp(0,0)<<" - "<<temp(0,1)<<" - "<<temp(1,0)<<" - "<<temp(1,1)<<endl;
 		fisher_d += fisher_current_event_d;
-    //}
+    }
 
     return Rcpp::List::create(Rcpp::Named("value") = loglik, Rcpp::Named("gradient_d") = grad_d, Rcpp::Named("fisher_d") = fisher_d,Rcpp::Named("gradient_s") = grad_s, Rcpp::Named("fisher_s") = fisher_s);
 }
-
-/***R
-
-out <- remDerivativesActor(
-    pars_d,
-    pars_s,
-    stats_d,
-    stats_s,
-    rsCube,
-    reh.out$rehBinary,
-    reh.out$intereventTime,
-    as.matrix(reh.out$edgelist)
-)
-
- */
