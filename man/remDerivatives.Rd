@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{remDerivatives}
 \alias{remDerivatives}
-\title{remDerivatives}
+\title{remDerivatives ( [OLD/NOT USED] function originally useful to switch between normal and fast routine for computing the likelihood)}
 \usage{
 remDerivatives(
   pars,

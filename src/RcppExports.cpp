@@ -102,6 +102,39 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// remDerivativesSenderRates
+Rcpp::List remDerivativesSenderRates(const arma::vec& pars, const arma::cube& stats, const arma::cube& risksetCube, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::mat& edgelist);
+RcppExport SEXP _remstimate_remDerivativesSenderRates(SEXP parsSEXP, SEXP statsSEXP, SEXP risksetCubeSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP edgelistSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type risksetCube(risksetCubeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type event_binary(event_binarySEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivativesSenderRates(pars, stats, risksetCube, event_binary, interevent_time, edgelist));
+    return rcpp_result_gen;
+END_RCPP
+}
+// remDerivativesReceiverChoice
+Rcpp::List remDerivativesReceiverChoice(const arma::vec& pars, const arma::cube& stats, const arma::cube& risksetCube, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::mat& edgelist, int N);
+RcppExport SEXP _remstimate_remDerivativesReceiverChoice(SEXP parsSEXP, SEXP statsSEXP, SEXP risksetCubeSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP edgelistSEXP, SEXP NSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type risksetCube(risksetCubeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type event_binary(event_binarySEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
+    Rcpp::traits::input_parameter< int >::type N(NSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivativesReceiverChoice(pars, stats, risksetCube, event_binary, interevent_time, edgelist, N));
+    return rcpp_result_gen;
+END_RCPP
+}
 // remDerivatives
 Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool fast, bool gradient, bool hessian);
 RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP fastSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
@@ -241,7 +274,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // HMC
-arma::mat HMC(arma::mat pars_init, arma::uword nsim, arma::uword nchains, arma::uword burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool fast, arma::uword thin, arma::uword L, double epsilon);
+arma::cube HMC(arma::mat pars_init, arma::uword nsim, arma::uword nchains, arma::uword burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const arma::mat& event_binary, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool fast, arma::uword thin, arma::uword L, double epsilon);
 RcppExport SEXP _remstimate_HMC(SEXP pars_initSEXP, SEXP nsimSEXP, SEXP nchainsSEXP, SEXP burninSEXP, SEXP meanPriorSEXP, SEXP sigmaPriorSEXP, SEXP statsSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP fastSEXP, SEXP thinSEXP, SEXP LSEXP, SEXP epsilonSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -275,6 +308,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_computeOccurrencies", (DL_FUNC) &_remstimate_computeOccurrencies, 5},
     {"_remstimate_remDerivativesStandard", (DL_FUNC) &_remstimate_remDerivativesStandard, 8},
     {"_remstimate_remDerivativesFast", (DL_FUNC) &_remstimate_remDerivativesFast, 6},
+    {"_remstimate_remDerivativesSenderRates", (DL_FUNC) &_remstimate_remDerivativesSenderRates, 6},
+    {"_remstimate_remDerivativesReceiverChoice", (DL_FUNC) &_remstimate_remDerivativesReceiverChoice, 7},
     {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 10},
     {"_remstimate_GD", (DL_FUNC) &_remstimate_GD, 10},
     {"_remstimate_GDADAM", (DL_FUNC) &_remstimate_GDADAM, 13},

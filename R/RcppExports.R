@@ -109,7 +109,44 @@ remDerivativesFast <- function(pars, times_r = as.numeric( c()), occurrencies_r 
     .Call('_remstimate_remDerivativesFast', PACKAGE = 'remstimate', pars, times_r, occurrencies_r, unique_vectors_stats, gradient, hessian)
 }
 
-#' remDerivatives
+#' remDerivativesSenderRates
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values for estimating the sender rate parameters for the actor oriented model
+#'
+#' @param pars is a vector of parameters
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions N*U with statistics of interest by column and senders by row.
+#' @param risksetCube
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param edgelist, output from remify, (note: indices of the actors must start from 0)
+#'
+#'
+#' @return list of values: loglik, grad, fisher
+#'
+remDerivativesSenderRates <- function(pars, stats, risksetCube, event_binary, interevent_time, edgelist) {
+    .Call('_remstimate_remDerivativesSenderRates', PACKAGE = 'remstimate', pars, stats, risksetCube, event_binary, interevent_time, edgelist)
+}
+
+#' remDerivativesReceiverChoice
+#'
+#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values for estimating the receiver choice parameters for the actor oriented model
+#'
+#' @param pars is a vector of parameters
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param risksetCube
+#' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param edgelist, output from remify, (note: indices of the actors must start from 0)
+#' @param N, the number of actors
+#'
+#'
+#' @return list of values: loglik, grad, fisher
+#'
+remDerivativesReceiverChoice <- function(pars, stats, risksetCube, event_binary, interevent_time, edgelist, N) {
+    .Call('_remstimate_remDerivativesReceiverChoice', PACKAGE = 'remstimate', pars, stats, risksetCube, event_binary, interevent_time, edgelist, N)
+}
+
+#' remDerivatives ( [OLD/NOT USED] function originally useful to switch between normal and fast routine for computing the likelihood)
 #'
 #' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
 #' 

@@ -1,22 +1,24 @@
 #' remstimate  
 #'
-#' A function that optimizes the likelihood of a Relational Event Model  
+#' A function for the optimization of tie-oriented (Relational Event Model) or actor-oriented (DyNAM) likelihoods
 #'
-#' @param reh a reh object (list of objects useful for the optimization)
-#' @param stats a remstats object (array of statistics)
-#' @param method optimization method to be used: MLE, GD, GDADAM, BSIR, HMC
-#' @param model either actor or tie oriented
-#' @param ncores number of threads for the parallelization (default = 1, no parallelization)
+#' @param reh an \code{reh} object (output object of the function \code{remify::reh})
+#' @param stats a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate} receivers in the array \code{choice})
+#' @param method optimization method to be used: \code{MLE}, \code{GD}, \code{GDADAM}, \code{BSIR}, \code{HMC}
+#' @param model either \code{"actor"} or \code{"tie"} oriented. \code{"tie"} is the default value (literature ref. here to DyNAM and to REM?)
+#' @param ncores number of threads for the parallelization (\code{default = 1}, no parallelization)
 #' @param prior prior distribution when using Bayesian methods
 #' @param nsim number of iterations in each chain
+#' @param bsir.samples number of samples from the proposal distribution when method is \code{"BSIR"}. When is left \code{NULL}, it is set to \code{nsim*3}
 #' @param nchains number of chains to generate
 #' @param burnin number of initial iterations to be added as burnin
 #' @param thin number of steps to skip in the posterior draws of the HMC
-#' @param epochs 200 by defaut. It is the number of iteration used in the methods GD and GDADAM
-#' @param learning_rate 0.001 by default. It is the learning rate used in the methods GD and GDADAM
+#' @param init matrix of initial values for \code{"HMC"}
+#' @param epochs 200 by defaut. It is the number of iteration used in the methods \code{"GD"} and \code{"GDADAM"}
+#' @param learning_rate 0.001 by default. It is the learning rate used in the methods \code{"GD"} and \code{"GDADAM"}
 #' @param seed seed for reproducibility (yet to be integrated in the code)
-#' @param fast TRUE/FALSE whether to apply a faster computation of the likelihood
-#' @param silent TRUE/FALSE if FALSE, progress of optimization status will be printed out
+#' @param fast \code{TRUE/FALSE} whether to apply a faster computation of the likelihood
+#' @param silent \code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out
 #' @param seed seed for reproducibility (yet to be integrated in the code)
 #'
 #' @return  remstimate S3 object
@@ -28,9 +30,11 @@ remstimate <- function(reh = NULL,
                        ncores = 1,
                        prior = NULL,
                        nsim = 1000,
+                       bsir.samples = NULL,
                        nchains = 2,
                        burnin = 500,
-                       thin = 10,                   
+                       thin = 10,  
+                       init = NULL,                 
                        epochs = 200,
                        learning_rate = 0.001,
                        fast = FALSE,
@@ -52,9 +56,6 @@ remstimate <- function(reh = NULL,
             }
         }
     }
-    # ... stats 
-    # check if 'stats' is an object of class 'remstats'
-    stats <- aperm(stats, perm = c(2,3,1)) # stats reshaped in [D*U*M] (this might change in the future)
 
     # ... model :
     if(is.null(model)) {
@@ -69,6 +70,17 @@ remstimate <- function(reh = NULL,
 
     # ... type of likelihood
     ordinal <- attr(reh,"ordinal")
+
+    # ... stats 
+    # check if 'stats' is an object of class 'remstats'
+    if(model == "tie")
+    {
+        stats <- aperm(stats, perm = c(2,3,1)) # stats reshaped in [D*U*M] (this might change in the future)
+    }
+    if(model == "actor") # Add controls over list object names 
+    {
+        stats <- list(rate = aperm(stats$rate, perm = c(2,3,1)), choice = aperm(stats$choice, perm = c(2,3,1))) # stats reshaped in [D*U*M] (this might change in the future)
+    }
 
     # ... prior
     log <- TRUE
@@ -150,49 +162,111 @@ remstimate <- function(reh = NULL,
         
     # ... [1] with trust::trust()
     if(method == "MLE"){
-        optimum_obj <- trust::trust(objfun = remDerivatives, 
-                                    parinit = rep(0,dim(stats)[2]), 
-                                    rinit = 1, 
-                                    rmax = 100, 
-                                    stats = stats,  
-                                    event_binary = reh$rehBinary, 
-                                    interevent_time = reh$intereventTime,
-                                    model = model,
-                                    ordinal = ordinal,
-                                    ncores = ncores,
-                                    gradient = TRUE,
-                                    hessian = TRUE)                         
-        remstimateList$coefficients <- optimum_obj$argument 
-        names(remstimateList$coefficients) <- dimnames(stats)[[2]]
-        remstimateList$loglik <- -optimum_obj$value # loglikelihood value at MLE values (we take the '-value' because we minimized the '-loglik')        
-        remstimateList$gradient <-optimum_obj$gradient
-        remstimateList$hessian <- optimum_obj$hessian # hessian matrix relative
-        remstimateList$vcov <- qr.solve(optimum_obj$hessian) # matrix of variances and covariances
-        rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- dimnames(stats)[[2]]
-        remstimateList$se <- diag(remstimateList$vcov)**0.5 # standard errors
-        names(remstimateList$se) <- dimnames(stats)[[2]]
-        remstimateList$residual.deviance <- -2*remstimateList$loglik
-        remstimateList$null.deviance <- 2*(trust::trust(objfun = remDerivatives, 
-                                    parinit = c(0), 
-                                    rinit = 1, 
-                                    rmax = 100, 
-                                    stats = array(1,dim=c(reh$D,1,reh$M)),  
-                                    event_binary = reh$rehBinary, 
-                                    interevent_time = reh$intereventTime,
-                                    model = model,
-                                    ordinal = ordinal,
-                                    ncores = ncores,
-                                    gradient = TRUE,
-                                    hessian = TRUE)$value)
-        remstimateList$model.deviance <- remstimateList$null.deviance -  remstimateList$residual.deviance                     
-        remstimateList$df.null <- reh$M
-        remstimateList$df.model <- dim(stats)[2]
+        if(model == "tie"){ # Relational Event Model (REM)
+            optimum_obj <- trust::trust(objfun = remDerivativesStandard, 
+                                        parinit = rep(0,dim(stats)[2]), 
+                                        rinit = 1, 
+                                        rmax = 100, 
+                                        stats = stats,  
+                                        event_binary = reh$rehBinary, 
+                                        interevent_time = reh$intereventTime,
+                                        ordinal = ordinal,
+                                        ncores = ncores)    
+            remstimateList$coefficients <- optimum_obj$argument 
+            remstimateList$loglik <- -optimum_obj$value # loglikelihood value at MLE values (we take the '-value' because we minimized the '-loglik')        
+            remstimateList$gradient <-optimum_obj$gradient
+            remstimateList$hessian <- optimum_obj$hessian # hessian matrix relative
+            remstimateList$vcov <- qr.solve(optimum_obj$hessian) # matrix of variances and covariances
+            remstimateList$se <- diag(remstimateList$vcov)**0.5 # standard errors
+            names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- dimnames(stats)[[2]]
+            remstimateList$residual.deviance <- -2*remstimateList$loglik
+            remstimateList$null.deviance <- 2*(trust::trust(objfun = remDerivatives, 
+                                        parinit = c(0), 
+                                        rinit = 1, 
+                                        rmax = 100, 
+                                        stats = array(1,dim=c(reh$D,1,reh$M)),  
+                                        event_binary = reh$rehBinary, 
+                                        interevent_time = reh$intereventTime,
+                                        model = model,
+                                        ordinal = ordinal,
+                                        ncores = ncores,
+                                        gradient = TRUE,
+                                        hessian = TRUE)$value)
+            remstimateList$model.deviance <- remstimateList$null.deviance -  remstimateList$residual.deviance                     
+            remstimateList$df.null <- reh$M
+            remstimateList$df.model <- dim(stats)[2]
 
-        remstimateList$AIC <- 2*length(remstimateList$coef) - 2*remstimateList$loglik # AIC
-        remstimateList$AICC <- remstimateList$AIC + 2*length(remstimateList$coef)*(length(remstimateList$coef)+1)/(reh$M-length(remstimateList$coef)-1)
-        remstimateList$BIC <- length(remstimateList$coef)*log(reh$M) - 2*remstimateList$loglik # BIC
-        remstimateList$converged <- optimum_obj$converged
-        remstimateList$iterations <- optimum_obj$iteration
+            remstimateList$AIC <- 2*length(remstimateList$coef) - 2*remstimateList$loglik # AIC
+            remstimateList$AICC <- remstimateList$AIC + 2*length(remstimateList$coef)*(length(remstimateList$coef)+1)/(reh$M-length(remstimateList$coef)-1)
+            remstimateList$BIC <- length(remstimateList$coef)*log(reh$M) - 2*remstimateList$loglik # BIC
+            remstimateList$converged <- optimum_obj$converged
+            remstimateList$iterations <- optimum_obj$iteration                                    
+        }
+        if(model == "actor" ){ # Actor Oriented Model 
+            optimum_sender_rate <- trust::trust(objfun = remDerivativesSenderRates, 
+                                parinit = rep(0,dim(stats$rate)[2]), 
+                                rinit = 1, 
+                                rmax = 100, 
+                                stats = stats$rate, 
+                                risksetCube = reh$risksetCube, 
+                                event_binary = reh$rehBinary, 
+                                interevent_time = reh$intereventTime,
+                                edgelist = data.matrix(reh$edgelist))
+                                return(optimum_sender_rate)
+            optimum_receiver_choice <- trust::trust(objfun = remDerivativesReceiverChoice, 
+                                parinit = rep(0,dim(stats$choice)[2]), 
+                                rinit = 1, 
+                                rmax = 100, 
+                                stats = stats$choice, 
+                                risksetCube = reh$risksetCube, 
+                                event_binary = reh$rehBinary, 
+                                interevent_time = reh$intereventTime,
+                                edgelist = data.matrix(reh$edgelist),
+                                N  = reh$N)
+                    return(list(rate = ,choice=))            
+            remstimateList$coefficients <- c(optimum_sender_rate$argument, optimum_receiver_choice$argument)
+            remstimateList$loglik <- -(optimum_sender_rate$value+optimum_receiver_choice$value) # log(L_sender) + log(L_choice)       
+            remstimateList$gradient <- rbind(optimum_sender_rate$gradient, optimum_receiver_choice$gradient)
+            remstimateList$hessian <- matrix(0,nrow=(dim(stats$rate)[2]+dim(stats$choice)[2]),ncol=(dim(stats$rate)[2]+dim(stats$choice)[2]))
+            remstimateList$hessian[1:dim(stats$rate)[2],1:dim(stats$rate)[2]] <- optimum_sender_rate$hessian # hessian matrix for sender rate model
+            remstimateList$hessian[-c(1:dim(stats$rate)[2]),-c(1:dim(stats$rate)[2])] <- optimum_receiver_choice$hessian # hessian matrix for choice model
+            remstimateList$vcov <- qr.solve(remstimateList$hessian) # matrix of variances and covariances
+            remstimateList$se <- diag(remstimateList$vcov)**0.5 # standard errors
+            names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- colnames(remstimateList$hessian) <- rownames(remstimateList$hessian) <- c(dimnames(stats$rate)[[2]],dimnames(stats$choice)[[2]])
+            remstimateList$residual.deviance <- -2*remstimateList$loglik
+            remstimateList$null.deviance.sender <- 2*(trust::trust(objfun = remDerivativesSenderRates, 
+                                                                    parinit = c(0), 
+                                                                    rinit = 1, 
+                                                                    rmax = 100, 
+                                                                    stats = array(1,dim=c(dim(stats$rate)[1],1,reh$M)),  
+                                                                    risksetCube = reh$risksetCube, 
+                                                                    event_binary = reh$rehBinary, 
+                                                                    interevent_time = reh$intereventTime,
+                                                                    edgelist = data.matrix(reh$edgelist))$value)
+            remstimateList$null.deviance.choice <- -2*log(1/(reh$N-1))
+            #(trust::trust(objfun = remDerivativesReceiverChoice, 
+            #                                                        parinit = c(0), 
+            #                                                        rinit = 1, 
+            #                                                        rmax = 100, 
+            #                                                        stats = array(1,dim=c(reh$D,1,reh$M)),  
+            #                                                        risksetCube = reh$risksetCube, 
+            #                                                        event_binary = reh$rehBinary, 
+            #                                                        interevent_time = reh$intereventTime,
+            #                                                        edgelist = data.matrix(reh$edgelist),
+            #                                                        N  = reh$N)$value)
+            remstimateList$null.deviance <- remstimateList$null.deviance.choice + remstimateList$null.deviance.choice                       
+            remstimateList$model.deviance <- remstimateList$null.deviance -  remstimateList$residual.deviance                     
+            remstimateList$df.null <- reh$M
+            remstimateList$df.model <- dim(stats$rate)[2] + dim(stats$choice)[2]
+
+            remstimateList$AIC <- 2*length(remstimateList$coefficients) - 2*remstimateList$loglik # AIC
+            remstimateList$AICC <- remstimateList$AIC + 2*length(remstimateList$coefficients)*(length(remstimateList$coefficients)+1)/(reh$M-length(remstimateList$coefficients)-1)
+            remstimateList$BIC <- length(remstimateList$coefficients)*log(reh$M) - 2*remstimateList$loglik # BIC
+            remstimateList$converged <- c("rate" = optimum_sender_rate$converged, "choice" = optimum_receiver_choice$converged)
+            remstimateList$iterations <- c("rate" = optimum_sender_rate$iteration, "choice" = optimum_receiver_choice$iteration)
+        }
+                       
+
         # ...
         # in future : if(WAIC) and if(ELPD){if(PSIS)} for predictive power of models
     }
@@ -223,7 +297,9 @@ remstimate <- function(reh = NULL,
     if(method == "BSIR"){
         # (0) create list of objects usefule to perform the bsir
         bsir <- list()
-        bsir$log_posterior <- rep(0,nsim*3) 
+        if(is.null(bsir.samples))  bsir.samples <- nsim*3
+        if(bsir.samples < nsim) stop("'bsir.samples' must be greather or equal to 'nsim'")
+        bsir$log_posterior <- rep(0,bsir.samples)  # bsir.samples
         bsir$draws <- list()
 
         # (1) generate from the proposal (importance distribution)
@@ -244,8 +320,8 @@ remstimate <- function(reh = NULL,
         bsir$mle <- mle_optimum$argument
         bsir$vcov <- qr.solve(mle_optimum$hessian)
         
-        # proposal distribution (default proposal is a multivariate Student t): simulating 3 times the 'nsim' (afterwards the algorithm will draw 'nsim' samples from '3*nsim' draws)
-        bsir$draws[[1]] <- mvnfast::rmvt(n = nsim*3, 
+        # proposal distribution (default proposal is a multivariate Student t): simulating 'expand' times the 'nsim' (afterwards the algorithm will draw 'nsim' samples from '3*nsim' draws)
+        bsir$draws[[1]] <- mvnfast::rmvt(n = bsir.samples, 
                                         mu = bsir$mle, 
                                         sigma = bsir$vcov,
                                         df = 4,
@@ -293,7 +369,7 @@ remstimate <- function(reh = NULL,
         bsir$post.mode <- bsir$draws[[1]][which.max(bsir$log_posterior),]
         bsir$post.mean <- colMeans(bsir$draws[[1]])
         bsir$vcov <- cov(bsir$draws[[1]])
-        bsir$sd <- diag(bsir$vcov)**2
+        bsir$sd <- diag(bsir$vcov)**0.5
         names(bsir$post.mode) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- dimnames(stats)[[2]]
         
         remstimateList <- bsir
@@ -302,6 +378,14 @@ remstimate <- function(reh = NULL,
     # ... [5] Hamiltonian Monte Carlo (HMC)
     if(method == "HMC"){
         hmc <- list()
+        # remove mles as initial values 
+
+        if(is.null(init)){
+            init <- matrix(runif(dim(stats)[2]*nchains,-1,1),nrow=dim(stats)[2],ncol=nchains) # runif was in (-0.1,0.1)
+        }
+        else{
+          #  if()
+        }
         mle_optimum <- trust::trust(objfun = remDerivatives, 
                                 parinit = rep(0,dim(stats)[2]), 
                                 rinit = 1, 
@@ -314,11 +398,11 @@ remstimate <- function(reh = NULL,
                                 ncores = ncores,
                                 gradient = TRUE,
                                 hessian = TRUE)
-        pars_mle <- matrix(rep(mle_optimum$argument,nchains),nrow=length(mle_optimum$argument),ncol=nchains)
-        pars_init <- pars_mle + matrix(runif(length(mle_optimum$argument)*nchains,-0.1,0.1),nrow=length(mle_optimum$argument),ncol=nchains)
+        #pars_mle <- matrix(rep(mle_optimum$argument,nchains),nrow=length(mle_optimum$argument),ncol=nchains)
+        #init <- pars_mle + matrix(runif(length(mle_optimum$argument)*nchains,-0.1,0.1),nrow=length(mle_optimum$argument),ncol=nchains)
 
-        hmc_out <- HMC(pars_init = pars_init, 
-                    nsim = nsim, 
+        hmc_out <- HMC(pars_init = init, 
+                    nsim = (burnin+nsim), 
                     nchains = nchains, 
                     burnin = burnin, 
                     meanPrior = rep(0,dim(stats)[2]),
@@ -332,7 +416,7 @@ remstimate <- function(reh = NULL,
                     epsilon = 0.01,
                     ncores = ncores)
                     # needs to have a model argument (tie or actor string)
-
+        return(hmc_out)
         #remstimateList$hmc <- hmc # output such that one can run gelman plots and statistics // define methods like remstimate.traceplot() remstimate.
                                     # A. Gelman, Carlin, et al. (2013, 267)
                                     # Stan Development Team (2016 Ch 28.) for how Stan calculates Hat, autocorrelations, and ESS.
@@ -341,7 +425,7 @@ remstimate <- function(reh = NULL,
         hmc$post.mode <- hmc_out$draws[which.max(hmc_out$log_posterior),]
         hmc$post.mean <- colMeans(hmc_out$draws)
         hmc$vcov <- cov(hmc_out$draws)
-        hmc$sd <- diag(hmc$vcov)**2
+        hmc$sd <- diag(hmc$vcov)**0.5
         names(hmc$post.mode) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- dimnames(stats)[[2]]
         remstimateList <- c(hmc_out,hmc)
     }
@@ -406,11 +490,11 @@ print.remstimate<-function(remstimate, ...){
     cat("Relational Event Model",paste("(",attr(remstimate,"model")," oriented)",sep=""),"\n")
     if(attr(remstimate,"approach") == "Frequentist"){
         cat("\nCoefficients:\n\n")
-        cat(remstimate$coefficients,"\n")
+        print(remstimate$coefficients)
     }
     else{ # Bayesian
         cat("\nPosterior Modes:\n\n")
-        cat(remstimate$post.mode,"\n")
+        print(remstimate$post.mode)
     }
     
 
