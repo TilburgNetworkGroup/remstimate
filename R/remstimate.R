@@ -212,7 +212,7 @@ remstimate <- function(reh = NULL,
                                 event_binary = reh$rehBinary, 
                                 interevent_time = reh$intereventTime,
                                 edgelist = data.matrix(reh$edgelist))
-                                return(optimum_sender_rate)
+                            
             optimum_receiver_choice <- trust::trust(objfun = remDerivativesReceiverChoice, 
                                 parinit = rep(0,dim(stats$choice)[2]), 
                                 rinit = 1, 
@@ -223,7 +223,7 @@ remstimate <- function(reh = NULL,
                                 interevent_time = reh$intereventTime,
                                 edgelist = data.matrix(reh$edgelist),
                                 N  = reh$N)
-                    return(list(rate = ,choice=))            
+                            
             remstimateList$coefficients <- c(optimum_sender_rate$argument, optimum_receiver_choice$argument)
             remstimateList$loglik <- -(optimum_sender_rate$value+optimum_receiver_choice$value) # log(L_sender) + log(L_choice)       
             remstimateList$gradient <- rbind(optimum_sender_rate$gradient, optimum_receiver_choice$gradient)

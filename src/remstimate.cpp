@@ -368,7 +368,6 @@ Rcpp::List remDerivativesSenderRates(
 	arma::vec weighted_sum_current_event(P_s);
 	arma::mat fisher_current_event_s(P_s,P_s);
 	arma::uword dyad =0;
-	double denom = 0;
 	
 	//output
 	double loglik = 0.0;
@@ -389,7 +388,6 @@ Rcpp::List remDerivativesSenderRates(
 		
 		//reset internal variables
 		fisher_current_event_s.zeros();
-		denom = 0;
 		
 		//loop thought all actors
 		for(int i = 0;i<N; i++){
@@ -409,7 +407,7 @@ Rcpp::List remDerivativesSenderRates(
 	grad_s += stats_m(sender); //(5)
 	weighted_sum_current_event = stats_m * lambda_s; //exp(params_s * X_i)*X_i
 	grad_s -= interevent_time(m) * weighted_sum_current_event; //(6)
-	fisher_s += interevent_time(m) * fisher_current_event_s;
+	fisher_s -= interevent_time(m) * fisher_current_event_s;
   }
 	return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad_s, Rcpp::Named("hessian") = -fisher_s);
 }
