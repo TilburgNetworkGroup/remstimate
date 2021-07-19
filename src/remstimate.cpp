@@ -262,7 +262,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
             for(k = 0; k < U; k++){
               for (l = k; l < U; l++){
                 hess_m(k,l) /= surv;
-                hess_m(k,l) += (grad_m(k) * grad_m(l));
+                hess_m(k,l) += (grad_m(k) * grad_m(l))/(std::pow(surv,2));
                 hess_m(l,k) = hess_m(k,l);
               }
             } 

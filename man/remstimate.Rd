@@ -33,7 +33,7 @@ remstimate(
 
 \item{method}{optimization method to be used: \code{MLE}, \code{GD}, \code{GDADAM}, \code{BSIR}, \code{HMC}}
 
-\item{model}{either \code{"actor"} or \code{"tie"} oriented (literature ref. here to DyNAM and to REM?)}
+\item{model}{either \code{"actor"} or \code{"tie"} oriented. \code{"tie"} is the default value (literature ref. here to DyNAM and to REM?)}
 
 \item{ncores}{number of threads for the parallelization (\code{default = 1}, no parallelization)}
 
