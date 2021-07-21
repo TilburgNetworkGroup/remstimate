@@ -391,7 +391,7 @@ Rcpp::List remDerivativesSenderRates(
         expected_stat_m.zeros();
 
         //loop thought all actors
-        for(int i = 0;i<N; i++){
+        for(arma::uword i = 0;i<N; i++){
             dyad = risksetCube(sender,i,0);
             if(i!=sender && event_binary(m,dyad)!= -1){
                 dyad = risksetCube(sender,i,0);

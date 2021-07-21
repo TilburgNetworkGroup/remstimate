@@ -103,8 +103,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // remDerivativesSenderRates
-Rcpp::List remDerivativesSenderRates(const arma::vec& pars, const arma::cube& stats, const arma::cube& risksetCube, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::mat& edgelist);
-RcppExport SEXP _remstimate_remDerivativesSenderRates(SEXP parsSEXP, SEXP statsSEXP, SEXP risksetCubeSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP edgelistSEXP) {
+Rcpp::List remDerivativesSenderRates(const arma::vec& pars, const arma::cube& stats, const arma::cube& risksetCube, const arma::mat& event_binary, const arma::vec& interevent_time, const arma::mat& edgelist, bool ordinal);
+RcppExport SEXP _remstimate_remDerivativesSenderRates(SEXP parsSEXP, SEXP statsSEXP, SEXP risksetCubeSEXP, SEXP event_binarySEXP, SEXP interevent_timeSEXP, SEXP edgelistSEXP, SEXP ordinalSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -114,7 +114,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type event_binary(event_binarySEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type edgelist(edgelistSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivativesSenderRates(pars, stats, risksetCube, event_binary, interevent_time, edgelist));
+    Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivativesSenderRates(pars, stats, risksetCube, event_binary, interevent_time, edgelist, ordinal));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -308,7 +309,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_computeOccurrencies", (DL_FUNC) &_remstimate_computeOccurrencies, 5},
     {"_remstimate_remDerivativesStandard", (DL_FUNC) &_remstimate_remDerivativesStandard, 8},
     {"_remstimate_remDerivativesFast", (DL_FUNC) &_remstimate_remDerivativesFast, 6},
-    {"_remstimate_remDerivativesSenderRates", (DL_FUNC) &_remstimate_remDerivativesSenderRates, 6},
+    {"_remstimate_remDerivativesSenderRates", (DL_FUNC) &_remstimate_remDerivativesSenderRates, 7},
     {"_remstimate_remDerivativesReceiverChoice", (DL_FUNC) &_remstimate_remDerivativesReceiverChoice, 7},
     {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 10},
     {"_remstimate_GD", (DL_FUNC) &_remstimate_GD, 10},

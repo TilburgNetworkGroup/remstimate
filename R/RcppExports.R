@@ -39,7 +39,7 @@ getUniqueVectors <- function(stats) {
     .Call('_remstimate_getUniqueVectors', PACKAGE = 'remstimate', stats)
 }
 
-#' computeTimes 
+#' computeTimes
 #'
 #' A function to compute the sum of interevent times for those vector of statistics that occurre more than once (output of getUniqueVectors()). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
 #'
@@ -75,7 +75,7 @@ computeOccurrencies <- function(edgelist, risksetCube, M, unique_vectors_stats, 
 #' remDerivativesStandard
 #'
 #' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#' 
+#'
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
@@ -96,7 +96,7 @@ remDerivativesStandard <- function(pars, stats, event_binary, interevent_time, o
 #'
 #' description of the function here
 #'
-#' @param pars vector of parameters 
+#' @param pars vector of parameters
 #' @param times_r  former m
 #' @param occurrencies_r former q
 #' @param unique_vectors_stats former U
@@ -123,8 +123,8 @@ remDerivativesFast <- function(pars, times_r = as.numeric( c()), occurrencies_r 
 #'
 #' @return list of values: loglik, grad, fisher
 #'
-remDerivativesSenderRates <- function(pars, stats, risksetCube, event_binary, interevent_time, edgelist) {
-    .Call('_remstimate_remDerivativesSenderRates', PACKAGE = 'remstimate', pars, stats, risksetCube, event_binary, interevent_time, edgelist)
+remDerivativesSenderRates <- function(pars, stats, risksetCube, event_binary, interevent_time, edgelist, ordinal = FALSE) {
+    .Call('_remstimate_remDerivativesSenderRates', PACKAGE = 'remstimate', pars, stats, risksetCube, event_binary, interevent_time, edgelist, ordinal)
 }
 
 #' remDerivativesReceiverChoice
@@ -149,7 +149,7 @@ remDerivativesReceiverChoice <- function(pars, stats, risksetCube, event_binary,
 #' remDerivatives ( [OLD/NOT USED] function originally useful to switch between normal and fast routine for computing the likelihood)
 #'
 #' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#' 
+#'
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param event_binary is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.
@@ -157,7 +157,7 @@ remDerivativesReceiverChoice <- function(pars, stats, risksetCube, event_binary,
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not                          
+#' @param fast boolean true/false whether to run the fast approach or not
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
 #'
@@ -171,7 +171,7 @@ remDerivatives <- function(pars, stats, event_binary, interevent_time, model, or
 #' GD
 #'
 #' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#' 
+#'
 #' @param pars parameters
 #' @param stats array of statistics
 #' @param event_binary rehBinary (inside the reh object)
@@ -182,7 +182,7 @@ remDerivatives <- function(pars, stats, event_binary, interevent_time, model, or
 #' @param fast TRUE/FALSE whether to perform the fast approach or not
 #' @param epochs number of epochs
 #' @param learning_rate learning rate
-#' 
+#'
 #' @return
 #'
 #' @export
@@ -193,7 +193,7 @@ GD <- function(pars, stats, event_binary, interevent_time, model, ordinal = FALS
 #' GDADAM
 #'
 #' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#' 
+#'
 #' @param pars parameters
 #' @param stats array of statistics
 #' @param event_binary rehBinary (inside the reh object)
@@ -207,7 +207,7 @@ GD <- function(pars, stats, event_binary, interevent_time, model, ordinal = FALS
 #' @param beta1 hyperparameter beta1
 #' @param beta2 hyperparameter beta2
 #' @param eta hyperparameter eta
-#' 
+#'
 #' @return
 #'
 #' @export
@@ -228,7 +228,7 @@ GDADAM <- function(pars, stats, event_binary, interevent_time, model, ordinal = 
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not                               
+#' @param fast boolean true/false whether to run the fast approach or not
 #'
 #' @return value of log-posterior density
 #'
@@ -249,7 +249,7 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary, interev
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not                               
+#' @param fast boolean true/false whether to run the fast approach or not
 #'
 #' @return value of log-posterior gradient
 #'
@@ -272,7 +272,7 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, event_binary,
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not                               
+#' @param fast boolean true/false whether to run the fast approach or not
 #'
 iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
     .Call('_remstimate_iterHMC', PACKAGE = 'remstimate', L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary, interevent_time, model, ordinal, ncores, fast)
@@ -285,14 +285,14 @@ iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, event_binary
 #' @param samples cube with final draws
 #' @param burnin is the number of draws to discard after running the chains
 #' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
-#'                          
+#'
 #' @return cube with selected draws
 #'
 burninHMC <- function(samples, burnin, thin = 1L) {
     .Call('_remstimate_burninHMC', PACKAGE = 'remstimate', samples, burnin, thin)
 }
 
-#' HMC 
+#' HMC
 #'
 #' This function performs the Hamiltonian Monte Carlo
 #'
@@ -309,12 +309,12 @@ burninHMC <- function(samples, burnin, thin = 1L) {
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE) 
+#' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE)
 #' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 #' @param L number of leapfrogs. Default (and recommended) value is 100.
 #' @param epsilon size of the leapfrog. Default value is 1e-02.
 #' @param ncores number of threads for parallel computing (default = 1)
-#'                          
+#'
 #' @return posterior draws
 #'
 HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, event_binary, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, thin = 1L, L = 100L, epsilon = 0.01) {
