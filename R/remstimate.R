@@ -163,15 +163,17 @@ remstimate <- function(reh = NULL,
     # ... [1] with trust::trust()
     if(method == "MLE"){
         if(model == "tie"){ # Relational Event Model (REM)
-            optimum_obj <- trust::trust(objfun = remDerivativesStandard, 
+            optimum_obj <- trust::trust(objfun = remDerivatives, 
                                         parinit = rep(0,dim(stats)[2]), 
                                         rinit = 1, 
                                         rmax = 100, 
                                         stats = stats,  
-                                        event_binary = reh$rehBinary, 
+                                        edgelist = reh$edgelist,
+                                        omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
+                                        model = model,
                                         ordinal = ordinal,
-                                        ncores = ncores)    
+                                        ncores = ncores)                               
             remstimateList$coefficients <- optimum_obj$argument 
             remstimateList$loglik <- -optimum_obj$value # loglikelihood value at MLE values (we take the '-value' because we minimized the '-loglik')        
             remstimateList$gradient <-optimum_obj$gradient
@@ -185,13 +187,12 @@ remstimate <- function(reh = NULL,
                                         rinit = 1, 
                                         rmax = 100, 
                                         stats = array(1,dim=c(reh$D,1,reh$M)),  
-                                        event_binary = reh$rehBinary, 
+                                        edgelist = reh$edgelist,
+                                        omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
                                         model = model,
                                         ordinal = ordinal,
-                                        ncores = ncores,
-                                        gradient = TRUE,
-                                        hessian = TRUE)$value)
+                                        ncores = ncores)$value)
             remstimateList$model.deviance <- remstimateList$null.deviance -  remstimateList$residual.deviance                     
             remstimateList$df.null <- reh$M
             remstimateList$df.model <- dim(stats)[2]
@@ -203,26 +204,33 @@ remstimate <- function(reh = NULL,
             remstimateList$iterations <- optimum_obj$iteration                                    
         }
         if(model == "actor" ){ # Actor Oriented Model 
-            optimum_sender_rate <- trust::trust(objfun = remDerivativesSenderRates, 
+            optimum_sender_rate <- trust::trust(objfun = remDerivatives, 
                                 parinit = rep(0,dim(stats$rate)[2]), 
                                 rinit = 1, 
                                 rmax = 100, 
                                 stats = stats$rate, 
-                                risksetCube = reh$risksetCube, 
-                                event_binary = reh$rehBinary, 
+                                edgelist = reh$edgelist,
+                                omit_dyad = reh$omit_dyad,
                                 interevent_time = reh$intereventTime,
-                                edgelist = data.matrix(reh$edgelist))
+                                model = model,
+                                C = reh$C,
+                                D = reh$D,
+                                ordinal = ordinal,
+                                senderRate = TRUE)
             print(optimum_sender_rate)              
-            optimum_receiver_choice <- trust::trust(objfun = remDerivativesReceiverChoice, 
+            optimum_receiver_choice <- trust::trust(objfun = remDerivatives, 
                                 parinit = rep(0,dim(stats$choice)[2]), 
                                 rinit = 1, 
                                 rmax = 100, 
                                 stats = stats$choice, 
-                                risksetCube = reh$risksetCube, 
-                                event_binary = reh$rehBinary, 
+                                edgelist = reh$edgelist,
+                                omit_dyad = reh$omit_dyad, 
                                 interevent_time = reh$intereventTime,
-                                edgelist = data.matrix(reh$edgelist),
-                                N  = reh$N)
+                                model = model,
+                                senderRate = FALSE,
+                                N = reh$N,
+                                C = reh$C,
+                                D = reh$D)
             print(optimum_receiver_choice)                
             remstimateList$coefficients <- c(optimum_sender_rate$argument, optimum_receiver_choice$argument)
             remstimateList$loglik <- -(optimum_sender_rate$value+optimum_receiver_choice$value) # log(L_sender) + log(L_choice)       
@@ -234,26 +242,34 @@ remstimate <- function(reh = NULL,
             remstimateList$se <- diag(remstimateList$vcov)**0.5 # standard errors
             names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- colnames(remstimateList$hessian) <- rownames(remstimateList$hessian) <- c(dimnames(stats$rate)[[2]],dimnames(stats$choice)[[2]])
             remstimateList$residual.deviance <- -2*remstimateList$loglik
-            remstimateList$null.deviance.sender <- 2*(trust::trust(objfun = remDerivativesSenderRates, 
+            remstimateList$null.deviance.sender <- 2*(trust::trust(objfun = remDerivatives, 
                                                                     parinit = c(0), 
                                                                     rinit = 1, 
                                                                     rmax = 100, 
                                                                     stats = array(1,dim=c(dim(stats$rate)[1],1,reh$M)),  
-                                                                    risksetCube = reh$risksetCube, 
-                                                                    event_binary = reh$rehBinary, 
+                                                                    edgelist = reh$edgelist,
+                                                                    omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
-                                                                    edgelist = data.matrix(reh$edgelist))$value)
-            remstimateList$null.deviance.choice <- -2*log(1/(reh$N-1))
-            #(trust::trust(objfun = remDerivativesReceiverChoice, 
-            #                                                        parinit = c(0), 
-            #                                                        rinit = 1, 
-            #                                                        rmax = 100, 
-            #                                                        stats = array(1,dim=c(reh$D,1,reh$M)),  
-            #                                                        risksetCube = reh$risksetCube, 
-            #                                                        event_binary = reh$rehBinary, 
-            #                                                        interevent_time = reh$intereventTime,
-            #                                                        edgelist = data.matrix(reh$edgelist),
-            #                                                        N  = reh$N)$value)
+                                                                    model = model,
+                                                                    C = reh$C,
+                                                                    D = reh$D,
+                                                                    ordinal = ordinal,
+                                                                    senderRate = TRUE)$value)
+                                                     
+            remstimateList$null.deviance.choice <- ifelse(length(omit_dyad)>0,2*(trust::trust(objfun = remDerivatives, 
+                                                                parinit = c(0), 
+                                                                rinit = 1, 
+                                                                rmax = 100, 
+                                                                stats = array(1,dim=c(dim(stats$choice)[1],1,reh$M)), 
+                                                                edgelist = reh$edgelist,
+                                                                omit_dyad = reh$omit_dyad, 
+                                                                interevent_time = reh$intereventTime,
+                                                                model = model,
+                                                                senderRate = FALSE,
+                                                                N = reh$N,
+                                                                C = reh$C,
+                                                                D = reh$D)$value),-2*log(1/(reh$N-1)))
+            # null.deviance.choice is -2*log(1/(reh$N-1)) when the riskset is always (all the time points) the same
             remstimateList$null.deviance <- remstimateList$null.deviance.choice + remstimateList$null.deviance.choice                       
             remstimateList$model.deviance <- remstimateList$null.deviance -  remstimateList$residual.deviance                     
             remstimateList$df.null <- reh$M
@@ -314,9 +330,7 @@ remstimate <- function(reh = NULL,
                                 interevent_time = reh$intereventTime,
                                 model = model,
                                 ordinal = ordinal,
-                                ncores = ncores,
-                                gradient = TRUE,
-                                hessian = TRUE)
+                                ncores = ncores)
         bsir$mle <- mle_optimum$argument
         bsir$vcov <- qr.solve(mle_optimum$hessian)
         
@@ -395,9 +409,7 @@ remstimate <- function(reh = NULL,
                                 interevent_time = reh$intereventTime,
                                 model = model,
                                 ordinal = ordinal,
-                                ncores = ncores,
-                                gradient = TRUE,
-                                hessian = TRUE)
+                                ncores = ncores)
         #pars_mle <- matrix(rep(mle_optimum$argument,nchains),nrow=length(mle_optimum$argument),ncol=nchains)
         #init <- pars_mle + matrix(runif(length(mle_optimum$argument)*nchains,-0.1,0.1),nrow=length(mle_optimum$argument),ncol=nchains)
 

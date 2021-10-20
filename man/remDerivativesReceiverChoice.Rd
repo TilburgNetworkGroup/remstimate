@@ -7,11 +7,13 @@
 remDerivativesReceiverChoice(
   pars,
   stats,
-  risksetCube,
-  event_binary,
-  interevent_time,
   edgelist,
-  N
+  omit_dyad,
+  interevent_time,
+  directed,
+  N,
+  C,
+  D
 )
 }
 \arguments{
@@ -19,13 +21,17 @@ remDerivativesReceiverChoice(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.}
 
-\item{event_binary}{is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.}
+\item{edgelist, }{output from remify, (note: indices of the actors must start from 0)}
+
+\item{omit_dyad, }{list object that takes care of the dynamic rikset (if defined)}
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
-\item{edgelist, }{output from remify, (note: indices of the actors must start from 0)}
+\item{directed, }{boolean TRUE/FALSE if the network is directed or not}
 
 \item{N, }{the number of actors}
+
+\item{C, }{number of event types}
 }
 \value{
 list of values: loglik, grad, fisher

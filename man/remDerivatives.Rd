@@ -2,19 +2,24 @@
 % Please edit documentation in R/RcppExports.R
 \name{remDerivatives}
 \alias{remDerivatives}
-\title{remDerivatives ( [OLD/NOT USED] function originally useful to switch between normal and fast routine for computing the likelihood)}
+\title{remDerivatives}
 \usage{
 remDerivatives(
   pars,
   stats,
-  event_binary,
+  edgelist,
+  omit_dyad,
   interevent_time,
   model,
   ordinal = FALSE,
   ncores = 1L,
   fast = FALSE,
   gradient = TRUE,
-  hessian = TRUE
+  hessian = TRUE,
+  senderRate = TRUE,
+  N = NULL,
+  C = NULL,
+  D = NULL
 )
 }
 \arguments{
@@ -22,7 +27,9 @@ remDerivatives(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.}
 
-\item{event_binary}{is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.}
+\item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
+
+\item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined}
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
@@ -37,6 +44,10 @@ remDerivatives(
 \item{gradient}{boolean true/false whether to return gradient value}
 
 \item{hessian}{boolean true/false whether to return hessian value}
+
+\item{senderRate}{boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)}
+
+\item{N}{number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")}
 }
 \value{
 list of values: loglik, gradient, hessian

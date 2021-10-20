@@ -11,7 +11,8 @@ iterHMC(
   sigmaPrior,
   pars,
   stats,
-  event_binary,
+  edgelist,
+  omit_dyad,
   interevent_time,
   model,
   ordinal = FALSE,
@@ -32,9 +33,9 @@ iterHMC(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.}
 
-\item{event_binary}{is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.}
+\item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
 
-\item{interevent_time}{the time difference between the current time point and the previous event time.}
+\item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param interevent_time the time difference between the current time point and the previous event time.}
 
 \item{model}{either "actor" or "tie" model}
 

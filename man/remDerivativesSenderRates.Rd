@@ -7,10 +7,12 @@
 remDerivativesSenderRates(
   pars,
   stats,
-  risksetCube,
-  event_binary,
+  edgelist,
+  omit_dyad,
   interevent_time,
-  edgelist
+  C,
+  D,
+  ordinal = FALSE
 )
 }
 \arguments{
@@ -18,14 +20,16 @@ remDerivativesSenderRates(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions N*U with statistics of interest by column and senders by row.}
 
-\item{event_binary}{is a matrix [M*D] of 1/0/-1 : 1 indicating the observed dyad and 0 (-1) the non observed dyads that could have (have not) occurred.}
+\item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
+
+\item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined}
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
-\item{edgelist, }{output from remify, (note: indices of the actors must start from 0)}
+\item{ordinal}{boolean, true if the likelihood to use is the ordinal one, interval otherwise}
 }
 \value{
-list of values: loglik, grad, fisher
+list of values: loglik, grad, fisher information
 }
 \description{
 function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values for estimating the sender rate parameters for the actor oriented model

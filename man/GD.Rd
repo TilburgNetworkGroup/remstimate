@@ -7,7 +7,8 @@
 GD(
   pars,
   stats,
-  event_binary,
+  edgelist,
+  omit_dyad,
   interevent_time,
   model,
   ordinal = FALSE,
@@ -22,7 +23,9 @@ GD(
 
 \item{stats}{array of statistics}
 
-\item{event_binary}{rehBinary (inside the reh object)}
+\item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
+
+\item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined}
 
 \item{interevent_time}{vector of interevent times (inside the reh object)}
 
