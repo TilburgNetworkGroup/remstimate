@@ -289,24 +289,24 @@ remstimate <- function(reh = NULL,
 
     # ... [2] with Gradient Descent (GD)
     if(method == "GD"){
-        #remstimateList$optimum <- GD(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
-        #                            stats = stats,  
-        #                            event_binary = reh$rehBinary, 
-        #                            interevent_time = reh$intereventTime,
-        #                            epochs = epochs,
-        #                            learning_rate = learning_rate)
-        #return(remstimateList$optimum)
+        remstimateList$optimum <- GD(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
+                                    stats = stats,  
+                                    event_binary = reh$rehBinary, 
+                                    interevent_time = reh$intereventTime,
+                                    epochs = epochs,
+                                    learning_rate = learning_rate)
+        return(remstimateList$optimum)
     }
 
     # ... [3] with Gradient Descent ADAM (GDADAM)
     if(method == "GDADAM"){
-        #remstimateList$optimum <- GDADAM(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
-        #                            stats = stats,  
-        #                            event_binary = reh$rehBinary, 
-        #                            interevent_time = reh$intereventTime,
-        #                            epochs = epochs,
-        #                            learning_rate = learning_rate)
-        #return(remstimateList$optimum)
+        remstimateList$optimum <- GDADAM(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
+                                    stats = stats,  
+                                    event_binary = reh$rehBinary, 
+                                    interevent_time = reh$intereventTime,
+                                    epochs = epochs,
+                                    learning_rate = learning_rate)
+        return(remstimateList$optimum)
     }
    
     # ... [4] with Bayesian Sampling Importance Resampling (BSIR)
