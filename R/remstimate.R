@@ -498,7 +498,7 @@ print.remstimate<-function(remstimate, ...){
     if (is.null(attr(remstimate,"call"))) 
         stop("invalid 'remstimate' object:  no 'call' attribute")
     if (!inherits(remstimate, "remstimate")) 
-        warning("calling summary.lm(<fake-remstimate-object>) ...")
+        warning("calling summary.lm(<fake-remstimate-object>) ...") # check this warning "summary.lm" or "print.lm"
     cat("Relational Event Model",paste("(",attr(remstimate,"model")," oriented)",sep=""),"\n")
     if(attr(remstimate,"approach") == "Frequentist"){
         cat("\nCoefficients:\n\n")

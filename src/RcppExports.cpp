@@ -320,52 +320,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// remDerivativesStandard_lambdas
-arma::mat remDerivativesStandard_lambdas(const arma::vec& pars, const arma::cube& stats, const arma::uvec& edgelist, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, bool ordinal, int ncores, bool gradient, bool hessian);
-RcppExport SEXP _remstimate_remDerivativesStandard_lambdas(SEXP parsSEXP, SEXP statsSEXP, SEXP edgelistSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type edgelist(edgelistSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
-    Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
-    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivativesStandard_lambdas(pars, stats, edgelist, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian));
-    return rcpp_result_gen;
-END_RCPP
-}
-// posteriorRank
-Rcpp::List posteriorRank(const arma::vec& betas, const arma::mat& vcov, const arma::uword& S, const arma::cube& stats, const arma::uvec& edgelist, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool fast, bool gradient, bool hessian, bool senderRate, Rcpp::Nullable<int> N, Rcpp::Nullable<int> C, Rcpp::Nullable<int> D);
-RcppExport SEXP _remstimate_posteriorRank(SEXP betasSEXP, SEXP vcovSEXP, SEXP SSEXP, SEXP statsSEXP, SEXP edgelistSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP fastSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP senderRateSEXP, SEXP NSEXP, SEXP CSEXP, SEXP DSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type betas(betasSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type vcov(vcovSEXP);
-    Rcpp::traits::input_parameter< const arma::uword& >::type S(SSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type edgelist(edgelistSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
-    Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< bool >::type fast(fastSEXP);
-    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
-    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
-    Rcpp::traits::input_parameter< bool >::type senderRate(senderRateSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<int> >::type N(NSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<int> >::type C(CSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<int> >::type D(DSEXP);
-    rcpp_result_gen = Rcpp::wrap(posteriorRank(betas, vcov, S, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, gradient, hessian, senderRate, N, C, D));
-    return rcpp_result_gen;
-END_RCPP
-}
 // convtoASCII
 Rcpp::List convtoASCII(Rcpp::List rehBinary);
 RcppExport SEXP _remstimate_convtoASCII(SEXP rehBinarySEXP) {
@@ -419,8 +373,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_iterHMC", (DL_FUNC) &_remstimate_iterHMC, 13},
     {"_remstimate_burninHMC", (DL_FUNC) &_remstimate_burninHMC, 3},
     {"_remstimate_HMC", (DL_FUNC) &_remstimate_HMC, 17},
-    {"_remstimate_remDerivativesStandard_lambdas", (DL_FUNC) &_remstimate_remDerivativesStandard_lambdas, 9},
-    {"_remstimate_posteriorRank", (DL_FUNC) &_remstimate_posteriorRank, 17},
     {"_remstimate_convtoASCII", (DL_FUNC) &_remstimate_convtoASCII, 1},
     {"_remstimate_toChar", (DL_FUNC) &_remstimate_toChar, 1},
     {"_remstimate_experimental", (DL_FUNC) &_remstimate_experimental, 2},

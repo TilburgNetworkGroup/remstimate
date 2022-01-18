@@ -320,52 +320,6 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
     .Call('_remstimate_HMC', PACKAGE = 'remstimate', pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, thin, L, epsilon)
 }
 
-#' remDerivatives_lambdas
-#'
-#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#'
-#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
-#' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param ordinal boolean that indicate whether to use the ordinal or interval timing likelihood
-#' @param ncores integer referring to the number of threads for the parallelization
-#' @param gradient boolean true/false whether to return gradient value
-#' @param hessian boolean true/false whether to return hessian value
-#'
-#' @return list of values: loglik, gradient, hessian
-#'
-#' @export
-remDerivativesStandard_lambdas <- function(pars, stats, edgelist, omit_dyad, interevent_time, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE) {
-    .Call('_remstimate_remDerivativesStandard_lambdas', PACKAGE = 'remstimate', pars, stats, edgelist, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
-}
-
-#' posteriorRank
-#'
-#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#'
-#' @param betas is a vector of parameters (note: the order must be aligned with the column order in 'stats')
-#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
-#' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
-#' @param model either "actor" or "tie" model
-#' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not
-#' @param gradient boolean true/false whether to return gradient value
-#' @param hessian boolean true/false whether to return hessian value
-#' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
-#' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-#'
-#' @return list of values: loglik, gradient, hessian
-#'
-#' @export
-posteriorRank <- function(betas, vcov, S, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, gradient = TRUE, hessian = FALSE, senderRate = FALSE, N = NULL, C = NULL, D = NULL) {
-    .Call('_remstimate_posteriorRank', PACKAGE = 'remstimate', betas, vcov, S, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, gradient, hessian, senderRate, N, C, D)
-}
-
 #' convtoASCII
 #'
 #' converting rehBinary to characters using 8bit and 
