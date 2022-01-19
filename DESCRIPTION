@@ -1,57 +1,65 @@
-Package: remstimate
 Type: Package
+Package: remstimate
 Title: Optimization Tools for Relational Event Model
 Version: 1.0
-Date: 2020-04-20
+Date: 2022-01-19
 Authors@R: 
-    c(
-        person(
-            given = "Giuseppe",
-            family = "Arena",
-            role = c("aut","cre"),
-            email = "g.arena@tilburguniversity.edu"),
-        person(
-            given = "Rumana",
-            family = "Lakdawala",
-            role = "aut",
-            email = "r.j.lakdawala@tilburguniversity.edu"),
-        person(
-            given = "Marlyne",
-            family = "Meijerink-Bosman",
-            role = c("aut"),
-            email = "m.l.meijerink@tilburguniversity.edu"),
-        person(
-            given = "Diana",
-            family = "Karimova",
-            role = "aut",
-            email = "d.karimova@tilburguniversity.edu"),
-        person(
-            given = "Mahdi",
-            family = "Shafiee Kamalabad",
-            role = "aut",
-            email = "m.shafiee@tilburguniversity.edu"),
-        person(
-            given = "Fabio",
-            family = "Generoso Vieira",
-            role = "aut",
-            email = "f.v.generosovieira@tilburguniversity.edu"),
-        person(
-            given = "Roger",
-            family = "Leenders",
-            role = "ctb",
-            email = "r.t.a.j.leenders@tilburguniversity.edu"),
-        person(
-            given = "Joris",
-            family = "Mulder",
-            role = "ctb",
-            email = "j.mulder3@tilburguniversity.edu")
-    )
+    c(person(given = "Giuseppe",
+             family = "Arena",
+             role = c("aut", "cre"),
+             email = "g.arena@tilburguniversity.edu"),
+      person(given = "Rumana",
+             family = "Lakdawala",
+             role = "aut",
+             email = "r.j.lakdawala@tilburguniversity.edu"),
+      person(given = "Marlyne",
+             family = "Meijerink-Bosman",
+             role = "aut",
+             email = "m.l.meijerink@tilburguniversity.edu"),
+      person(given = "Diana",
+             family = "Karimova",
+             role = "aut",
+             email = "d.karimova@tilburguniversity.edu"),
+      person(given = "Mahdi",
+             family = "Shafiee Kamalabad",
+             role = "aut",
+             email = "m.shafiee@tilburguniversity.edu"),
+      person(given = "Fabio",
+             family = "Generoso Vieira",
+             role = "aut",
+             email = "f.v.generosovieira@tilburguniversity.edu"),
+      person(given = "Roger",
+             family = "Leenders",
+             role = "ctb",
+             email = "r.t.a.j.leenders@tilburguniversity.edu"),
+      person(given = "Joris",
+             family = "Mulder",
+             role = "ctb",
+             email = "j.mulder3@tilburguniversity.edu"))
 Maintainer: Giuseppe Arena <g.arena@tilburguniversity.edu>
-Description: This package offers a set of tools for the optimization of the likelihood in a relational event modeling framework (initial objective: to compare time performance with relevent::rem function and to improve them).
+Description: This package offers a set of tools for the optimization of
+    the likelihood in a relational event modeling framework (initial
+    objective: to compare time performance with relevent::rem function and
+    to improve them).
+License: MIT + file LICENSE
+URL: https://github.com/TilburgNetworkGroup/remstimate
+BugReports: https://github.com/TilburgNetworkGroup/remstimate/issues
+Depends: 
+    R (>= 2.10)
+Imports: 
+    mvnfast,
+    Rcpp,
+    RcppProgress,
+    remify,
+    tcltk,
+    trust
+LinkingTo: 
+    mvnfast,
+    Rcpp,
+    RcppArmadillo,
+    RcppProgress,
+    remify
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
-Depends: R (>= 2.10)
-Imports: Rcpp, trust, tcltk, RcppProgress, mvnfast, remify
-LinkingTo: Rcpp, RcppArmadillo, RcppProgress, mvnfast, remify
 SystemRequirements: GNU make
