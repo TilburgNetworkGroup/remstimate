@@ -4,8 +4,7 @@
 \name{remstimate-package}
 \alias{remstimate}
 \alias{remstimate-package}
-\title{remstimate: optimization tools for tie-oriented and actor-oriented relational
-    event models}
+\title{remstimate: optimization tools for tie-oriented and actor-oriented relational event models}
 \description{
 This package offers a set of tools for the optimization of
     the likelihood in a relational event modeling framework (initial
@@ -26,10 +25,10 @@ Useful links:
 Authors:
 \itemize{
   \item Rumana Lakdawala \email{r.j.lakdawala@tilburguniversity.edu}
-  \item Fabio Generoso Vieira \email{f.v.generosovieira@tilburguniversity.edu}
   \item Marlyne Meijerink-Bosman \email{m.l.meijerink@tilburguniversity.edu}
   \item Diana Karimova \email{d.karimova@tilburguniversity.edu}
   \item Mahdi Shafiee Kamalabad \email{m.shafiee@tilburguniversity.edu}
+  \item Fabio Generoso Vieira \email{f.v.generosovieira@tilburguniversity.edu}
 }
 
 Other contributors:

@@ -1,9 +1,8 @@
 Type: Package
 Package: remstimate
-Title: optimization tools for tie-oriented and actor-oriented relational
-    event models
+Title: optimization tools for tie-oriented and actor-oriented relational event models
 Version: 1.0
-Date: 2022-01-19
+Date: 2022-01-19 
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
@@ -13,10 +12,6 @@ Authors@R:
              family = "Lakdawala",
              role = "aut",
              email = "r.j.lakdawala@tilburguniversity.edu"),
-      person(given = "Fabio",
-             family = "Generoso Vieira",
-             role = "aut",
-             email = "f.v.generosovieira@tilburguniversity.edu"),
       person(given = "Marlyne",
              family = "Meijerink-Bosman",
              role = "aut",
@@ -29,6 +24,10 @@ Authors@R:
              family = "Shafiee Kamalabad",
              role = "aut",
              email = "m.shafiee@tilburguniversity.edu"),
+      person(given = "Fabio",
+             family = "Generoso Vieira",
+             role = "aut",
+             email = "f.v.generosovieira@tilburguniversity.edu"),
       person(given = "Roger",
              family = "Leenders",
              role = "ctb",
