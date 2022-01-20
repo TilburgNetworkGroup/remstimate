@@ -6,7 +6,7 @@
 #' @param cond  it is the warning number
 #'
 warningMessage <- function(cond) {
-    .Call('_remstimate_warningMessage', PACKAGE = 'remstimate', cond)
+    .Call(`_remstimate_warningMessage`, cond)
 }
 
 #' errorMessage
@@ -14,7 +14,7 @@ warningMessage <- function(cond) {
 #' @param cond  it is the error number
 #'
 errorMessage <- function(cond) {
-    .Call('_remstimate_errorMessage', PACKAGE = 'remstimate', cond)
+    .Call(`_remstimate_errorMessage`, cond)
 }
 
 #' getUniqueVectors
@@ -27,7 +27,7 @@ errorMessage <- function(cond) {
 #'
 #' @export
 getUniqueVectors <- function(stats) {
-    .Call('_remstimate_getUniqueVectors', PACKAGE = 'remstimate', stats)
+    .Call(`_remstimate_getUniqueVectors`, stats)
 }
 
 #' computeTimes
@@ -43,7 +43,7 @@ getUniqueVectors <- function(stats) {
 #'
 #' @export
 computeTimes <- function(unique_vectors_stats, M, stats, intereventTime) {
-    .Call('_remstimate_computeTimes', PACKAGE = 'remstimate', unique_vectors_stats, M, stats, intereventTime)
+    .Call(`_remstimate_computeTimes`, unique_vectors_stats, M, stats, intereventTime)
 }
 
 #' computeOccurrencies
@@ -60,7 +60,7 @@ computeTimes <- function(unique_vectors_stats, M, stats, intereventTime) {
 #'
 #' @export
 computeOccurrencies <- function(edgelist, risksetCube, M, unique_vectors_stats, stats) {
-    .Call('_remstimate_computeOccurrencies', PACKAGE = 'remstimate', edgelist, risksetCube, M, unique_vectors_stats, stats)
+    .Call(`_remstimate_computeOccurrencies`, edgelist, risksetCube, M, unique_vectors_stats, stats)
 }
 
 #' remDerivativesFast
@@ -77,7 +77,7 @@ computeOccurrencies <- function(edgelist, risksetCube, M, unique_vectors_stats, 
 #' @return list of value/gradient/hessian in pars
 #'
 remDerivativesFast <- function(pars, times_r = as.numeric( c()), occurrencies_r = as.numeric( c()), unique_vectors_stats = matrix::create(), gradient = TRUE, hessian = TRUE) {
-    .Call('_remstimate_remDerivativesFast', PACKAGE = 'remstimate', pars, times_r, occurrencies_r, unique_vectors_stats, gradient, hessian)
+    .Call(`_remstimate_remDerivativesFast`, pars, times_r, occurrencies_r, unique_vectors_stats, gradient, hessian)
 }
 
 #' remDerivativesStandard
@@ -98,7 +98,7 @@ remDerivativesFast <- function(pars, times_r = as.numeric( c()), occurrencies_r 
 #'
 #' @export
 remDerivativesStandard <- function(pars, stats, edgelist, omit_dyad, interevent_time, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE) {
-    .Call('_remstimate_remDerivativesStandard', PACKAGE = 'remstimate', pars, stats, edgelist, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
+    .Call(`_remstimate_remDerivativesStandard`, pars, stats, edgelist, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
 }
 
 #' remDerivativesSenderRates
@@ -116,7 +116,7 @@ remDerivativesStandard <- function(pars, stats, edgelist, omit_dyad, interevent_
 #' @return list of values: loglik, grad, fisher information
 #'
 remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal = FALSE) {
-    .Call('_remstimate_remDerivativesSenderRates', PACKAGE = 'remstimate', pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal)
+    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal)
 }
 
 #' remDerivativesReceiverChoice
@@ -136,7 +136,7 @@ remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, intereve
 #' @return list of values: loglik, grad, fisher
 #'
 remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, interevent_time, directed, N, C, D) {
-    .Call('_remstimate_remDerivativesReceiverChoice', PACKAGE = 'remstimate', pars, stats, edgelist, omit_dyad, interevent_time, directed, N, C, D)
+    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, edgelist, omit_dyad, interevent_time, directed, N, C, D)
 }
 
 #' remDerivatives 
@@ -161,7 +161,7 @@ remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, inter
 #'
 #' @export
 remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, gradient = TRUE, hessian = TRUE, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
-    .Call('_remstimate_remDerivatives', PACKAGE = 'remstimate', pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, gradient, hessian, senderRate, N, C, D)
+    .Call(`_remstimate_remDerivatives`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, gradient, hessian, senderRate, N, C, D)
 }
 
 #' GD
@@ -184,7 +184,7 @@ remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, mo
 #'
 #' @export
 GD <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, epochs = 200L, learning_rate = 0.001) {
-    .Call('_remstimate_GD', PACKAGE = 'remstimate', pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate)
+    .Call(`_remstimate_GD`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate)
 }
 
 #' GDADAM
@@ -210,7 +210,7 @@ GD <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal
 #'
 #' @export
 GDADAM <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, epochs = 200L, learning_rate = 0.02, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
-    .Call('_remstimate_GDADAM', PACKAGE = 'remstimate', pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate, beta1, beta2, eta)
+    .Call(`_remstimate_GDADAM`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate, beta1, beta2, eta)
 }
 
 #' logPostHMC
@@ -231,7 +231,7 @@ GDADAM <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ord
 #' @return value of log-posterior density
 #'
 logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
-    .Call('_remstimate_logPostHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
+    .Call(`_remstimate_logPostHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
 }
 
 #' logPostGradientHMC
@@ -252,7 +252,7 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, 
 #' @return value of log-posterior gradient
 #'
 logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
-    .Call('_remstimate_logPostGradientHMC', PACKAGE = 'remstimate', meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
+    .Call(`_remstimate_logPostGradientHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
 }
 
 #' iterHMC
@@ -273,7 +273,7 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omi
 #' @param fast boolean true/false whether to run the fast approach or not
 #'
 iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
-    .Call('_remstimate_iterHMC', PACKAGE = 'remstimate', L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
+    .Call(`_remstimate_iterHMC`, L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
 }
 
 #' burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)
@@ -287,7 +287,7 @@ iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, om
 #' @return cube with selected draws
 #'
 burninHMC <- function(samples, burnin, thin = 1L) {
-    .Call('_remstimate_burninHMC', PACKAGE = 'remstimate', samples, burnin, thin)
+    .Call(`_remstimate_burninHMC`, samples, burnin, thin)
 }
 
 #' HMC
@@ -317,7 +317,7 @@ burninHMC <- function(samples, burnin, thin = 1L) {
 #' @return posterior draws
 #'
 HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, thin = 1L, L = 100L, epsilon = 0.01) {
-    .Call('_remstimate_HMC', PACKAGE = 'remstimate', pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, thin, L, epsilon)
+    .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, thin, L, epsilon)
 }
 
 #' convtoASCII
@@ -330,7 +330,7 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
 #'
 #' @export
 convtoASCII <- function(rehBinary) {
-    .Call('_remstimate_convtoASCII', PACKAGE = 'remstimate', rehBinary)
+    .Call(`_remstimate_convtoASCII`, rehBinary)
 }
 
 #' toChar
@@ -343,7 +343,7 @@ convtoASCII <- function(rehBinary) {
 #'
 #' @export
 toChar <- function(input) {
-    .Call('_remstimate_toChar', PACKAGE = 'remstimate', input)
+    .Call(`_remstimate_toChar`, input)
 }
 
 #' experimental
@@ -357,6 +357,6 @@ toChar <- function(input) {
 #'
 #' @export
 experimental <- function(pars, stats) {
-    .Call('_remstimate_experimental', PACKAGE = 'remstimate', pars, stats)
+    .Call(`_remstimate_experimental`, pars, stats)
 }
 
