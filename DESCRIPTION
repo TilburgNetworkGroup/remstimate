@@ -52,7 +52,8 @@ Imports:
     RcppProgress,
     remify,
     tcltk,
-    trust
+    trust,
+    parallel
 LinkingTo: 
     mvnfast,
     Rcpp,

@@ -448,7 +448,7 @@ remstimate <- function(reh = NULL,
         # defining structure of class 'remstimate'
         str_out <- structure(remstimateList, class = "remstimate")
         # defining attributes
-        attr(str_out,"call") <- as.formula(some ~ formula + here + as + to + the + linear + predictor)
+        attr(str_out,"formula") <- as.formula(some ~ formula + here + as + to + the + linear + predictor)
         attr(str_out,"model") <- model
         attr(str_out,"ordinal") <- ordinal
         attr(str_out, "method") <- method
@@ -463,7 +463,7 @@ remstimate <- function(reh = NULL,
         # defining structure of class 'remstimate'
         str_out <- structure(remstimateList, class = "remstimate")
         # defining attributes
-        attr(str_out,"call") <- as.formula(some ~ formula + here + as + to + the + linear + predictor)
+        attr(str_out,"formula") <- as.formula(some ~ formula + here + as + to + the + linear + predictor)
         attr(str_out,"model") <- model
         attr(str_out,"ordinal") <- ordinal
         attr(str_out, "method") <- method
@@ -495,8 +495,8 @@ remstimate <- function(reh = NULL,
 #' @param ... further arguments to be passed.
 #' @export
 print.remstimate<-function(remstimate, ...){
-    if (is.null(attr(remstimate,"call"))) 
-        stop("invalid 'remstimate' object:  no 'call' attribute")
+    if (is.null(attr(remstimate,"formula"))) 
+        stop("invalid 'remstimate' object:  no 'formula' attribute")
     if (!inherits(remstimate, "remstimate")) 
         warning("calling summary.lm(<fake-remstimate-object>) ...") # check this warning "summary.lm" or "print.lm"
     cat("Relational Event Model",paste("(",attr(remstimate,"model")," oriented)",sep=""),"\n")
@@ -549,11 +549,11 @@ summary.remstimate<-function (remstimate, ...) #print.summary.remstimate
         summary_out$coefsTab <- coefsTab
     }
 
-    keep <- match(c("call","aic",
+    keep <- match(c("formula","aic",
 		      "contrasts", "df.residual","null.deviance","df.null",
                       "iter", "na.action"), names(remstimate), 0L)
 
-    keep <- list(call = attr(remstimate,"call"),
+    keep <- list(formula = attr(remstimate,"formula"),
                 model = attr(remstimate,"model"),
                 ordinal = attr(remstimate,"ordinal"),
                 method = attr(remstimate, "method"),
@@ -588,7 +588,7 @@ print.summary.remstimate <- function(x, ...)
 {
 
     cat("Relational Event Model",paste("(",x$model," oriented)",sep=""),"\n\n")
-    cat("Call:\n",deparse(x$call),"\n\n",sep="")
+    cat("Call:\n",deparse(x$formula),"\n\n",sep="")
     second_line <- paste("(",x$method," with ",sep="")
     if(x$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
     else{
