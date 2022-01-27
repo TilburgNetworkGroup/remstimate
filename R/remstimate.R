@@ -256,7 +256,7 @@ remstimate <- function(reh = NULL,
                                                                     ordinal = ordinal,
                                                                     senderRate = TRUE)$value)
                                                      
-            remstimateList$null.deviance.choice <- ifelse(length(omit_dyad)>0,2*(trust::trust(objfun = remDerivatives, 
+            remstimateList$null.deviance.choice <- ifelse(length(reh$omit_dyad)>0,2*(trust::trust(objfun = remDerivatives, 
                                                                 parinit = c(0), 
                                                                 rinit = 1, 
                                                                 rmax = 100, 
