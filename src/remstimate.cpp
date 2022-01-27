@@ -78,9 +78,9 @@ Rcpp::IntegerVector getDyadComposition(int d, int C, int N, int D) {
     c += 1;
   }
 
-  if(type == (-999)){
-    Rcpp::Rcout << "error \n"; //errorMessage(0); //adjust error message
-  }
+  //if(type == (-999)){
+  //  Rcpp::Rcout << "error \n"; //errorMessage(0); //adjust error message
+  //}
 
   r -= N*(N-1)*type;
 
@@ -92,9 +92,9 @@ Rcpp::IntegerVector getDyadComposition(int d, int C, int N, int D) {
     s += 1;
   }
 
-  if(sender == (-999)){
-    Rcpp::Rcout << "error \n"; //errorMessage(0); //adjust error message
-  }
+  //if(sender == (-999)){
+  //  Rcpp::Rcout << "error \n"; //errorMessage(0); //adjust error message
+  //}
 
   arma::mat receiver_vec(N,1);
   receiver_vec.col(0) = arma::linspace(0,N-1,N);
@@ -523,11 +523,11 @@ Rcpp::List remDerivativesSenderRates(
     int n, m;
 
     // variables for internal computation
-    arma::vec lambda_s(N) ;
+    arma::vec lambda_s(N);
     arma::vec expected_stat_m(P);
     Rcpp::IntegerVector dyad_m(3);
     arma::mat fisher_m(P,P);
-    double sum_lambda = 0;
+    double sum_lambda = 0.0;
 
     //output
     double loglik = 0.0;
@@ -535,8 +535,9 @@ Rcpp::List remDerivativesSenderRates(
     arma::vec grad(P,arma::fill::zeros);
 
     // omit_dyad 
-    arma::vec riskset_time_vec; 
+    arma::vec riskset_time_vec(M); 
     arma::mat riskset_mat;
+
     if(omit_dyad.size()>0){
       riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
       riskset_mat = Rcpp::as<arma::mat>(omit_dyad["risksetSender"]);
@@ -547,68 +548,73 @@ Rcpp::List remDerivativesSenderRates(
 
     //loop through all events
     for(m = 0; m < M; m++){
-        arma::mat stats_m = stats.slice(m).t(); // dimensions: [P * N]
+      arma::mat stats_m = stats.slice(m).t(); // dimensions: [P * N]
 
-        //this is exp(beta^T X) dot product
-        lambda_s = arma::exp(stats_m.t() * pars);
+      //this is exp(beta^T X) dot product
+      lambda_s = arma::exp(stats_m.t() * pars);
 
-        //actors in remify edgelist are 0 indexed hence no -1
-        dyad_m = getDyadComposition(edgelist(m,1),C,N,D);
-        int sender = dyad_m[0];
-        // int type = dyad[2]; // when type will be integrated in the function
+      //actors in remify edgelist are 0 indexed hence no -1
+      dyad_m = getDyadComposition(edgelist(m,1),C,N,D);
+      int sender = dyad_m[0];
+      // int type = dyad[2]; // when type will be integrated in the function
 
-        //reset internal variables
-        fisher_m.zeros();
-        expected_stat_m.zeros();
+      //reset internal variables
+      fisher_m.zeros();
+      expected_stat_m.zeros();
 
-        // riskset_m
-        int riskset_time_m = riskset_time_vec[m];
+      // riskset_m
+      int riskset_time_m = riskset_time_vec(m);
 
-        // changes in the riskset at m-th event
-        if(riskset_time_m!=(-1)){
-          for(n = 0; n < N; n++){
-            if(riskset_mat(riskset_time_m,n) == 1){
-              if(ordinal){
-                  expected_stat_m += lambda_s(n) * (stats_m.col(n));
-              }
-              fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()) );
-            }
-          }
-        }
-        else{  //no dynamic riskset
+      loglik += std::log(lambda_s(sender));
+      grad += stats_m.col(sender);
+
+      // changes in the riskset at m-th event
+      if(riskset_time_m!=(-1)){
+        sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s); 
+        if(ordinal){
+          loglik-= std::log(sum_lambda);
           for(n = 0; n < N; n++){         //loop throughout all actors
-            if(ordinal){
-                expected_stat_m += lambda_s(n) * (stats_m.col(n));
+            if(riskset_mat(riskset_time_m,n) == 1){
+              expected_stat_m += lambda_s(n) * (stats_m.col(n));
+              expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
+              grad -= expected_stat_m;
+              fisher_m += (expected_stat_m * expected_stat_m.t());
+              fisher_m -= (lambda_s(n) / sum_lambda) *( stats_m.col(n) * (stats_m.col(n).t()));
+              fisher += fisher_m;
             }
-            fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()) );
           }
+        } 
+        else{
+          loglik -=  sum_lambda * interevent_time(m);
+          grad -= interevent_time(m) * stats_m * (riskset_mat.row(riskset_time_m).t() % lambda_s); 
+          for(n = 0; n < N; n++){         //loop throughout all actors
+            fisher_m += (riskset_mat(riskset_time_m,n) * lambda_s(n)) * (stats_m.col(n) * (stats_m.col(n).t()) );
+          }
+          fisher -= interevent_time(m) * fisher_m;
         }
-
-
+      }
+      else{  //no dynamic riskset
         sum_lambda = sum(lambda_s);
-
         if(ordinal){
-            loglik +=  std::log((lambda_s(sender)/sum_lambda));
-        }else{
-            loglik += std::log(lambda_s(sender)); //(1) params_s^T * X_sender
-            loglik -=  sum_lambda * interevent_time(m); // (2);
-        }
-
-        grad += stats_m(sender); //(5)
-
-        if(ordinal){
+          loglik-= std::log(sum_lambda);
+          for(n = 0; n < N; n++){         //loop throughout all actors
+            expected_stat_m += lambda_s(n) * (stats_m.col(n));
             expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
             grad -= expected_stat_m;
-        }else{
-            grad -= interevent_time(m) * stats_m * lambda_s; //(6)
-        }
-        if(ordinal){
-            fisher_m /= sum_lambda;
-            fisher_m -= (expected_stat_m * expected_stat_m.t());
+            fisher_m += (expected_stat_m * expected_stat_m.t());
+            fisher_m -= (lambda_s(n) / sum_lambda) * (stats_m.col(n) * (stats_m.col(n).t()));
             fisher += fisher_m;
-        }else{
-            fisher -= interevent_time(m) * fisher_m;
+          }
+        } 
+        else{
+          loglik -=  sum_lambda * interevent_time(m);
+          grad -= interevent_time(m) * stats_m * lambda_s; //(6)
+          for(n = 0; n < N; n++){         //loop throughout all actors
+            fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()) );
+          }
+          fisher -= interevent_time(m) * fisher_m;
         }
+      }
     }
     return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
 }
@@ -643,6 +649,7 @@ Rcpp::List remDerivativesReceiverChoice(
 
     arma::uword P_d = stats.n_cols; // number of parameters for dyad stats
     arma::uword M = edgelist.n_rows; // number of events
+    int n;
 
     // variables for internal computation
     arma::vec lambda_d(D) ;
@@ -653,7 +660,7 @@ Rcpp::List remDerivativesReceiverChoice(
     double denom = 0;
 
     // omit_dyad 
-    arma::vec riskset_time_vec; 
+    arma::vec riskset_time_vec(M); 
     arma::mat riskset_mat;
     if(omit_dyad.size()>0){
       riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
@@ -687,13 +694,13 @@ Rcpp::List remDerivativesReceiverChoice(
         denom = 0;
 
         // riskset_m
-        int riskset_time_m = riskset_time_vec[m];
+        int riskset_time_m = riskset_time_vec(m);
 
         // changes in the riskset at m-th event
         if(riskset_time_m!=(-1)){ 
-          for(int i = 0;i<N; i++){
-              dyad = getDyadIndex(sender,i,0,N,directed);
-              if(i!=sender && riskset_mat(riskset_time_m,dyad) == 1){ // dynamic riskset [[event_binary(m,dyad)!= -1]]
+          for(n = 0; n<N; n++){
+              dyad = getDyadIndex(sender,n,0,N,directed);
+              if(n!=sender && riskset_mat(riskset_time_m,dyad) == 1){ // dynamic riskset
                   //loglik
                   denom += lambda_d(dyad); // exp(param_d * X_sender_i) (4)
                   fisher_m += lambda_d(dyad)*(stats_m.col(dyad) * stats_m.col(dyad).t());
@@ -702,9 +709,9 @@ Rcpp::List remDerivativesReceiverChoice(
           }
         }
         else{ // no changes in the riskset at m-th event
-          for(int i = 0;i<N; i++){ //loop throught all actors
-            dyad = getDyadIndex(sender,i,0,N,directed);
-            if(i!=sender){ // 
+          for(n = 0;n<N; n++){ //loop throught all actors
+            dyad = getDyadIndex(sender,n,0,N,directed);
+            if(n!=sender){ // 
                 //loglik
                 denom += lambda_d(dyad); // exp(param_d * X_sender_i) (4)
                 fisher_m += lambda_d(dyad)*(stats_m.col(dyad) * stats_m.col(dyad).t());
