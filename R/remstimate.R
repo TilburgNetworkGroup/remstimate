@@ -217,7 +217,7 @@ remstimate <- function(reh = NULL,
                                 D = reh$D,
                                 ordinal = ordinal,
                                 senderRate = TRUE)
-            print(optimum_sender_rate)              
+            if(!silent) {print(optimum_sender_rate)}   # this print will be removed in the public version of the package         
             optimum_receiver_choice <- trust::trust(objfun = remDerivatives, 
                                 parinit = rep(0,dim(stats$choice)[2]), 
                                 rinit = 1, 
@@ -231,7 +231,7 @@ remstimate <- function(reh = NULL,
                                 N = reh$N,
                                 C = reh$C,
                                 D = reh$D)
-            print(optimum_receiver_choice)                
+            if(!silent) {print(optimum_receiver_choice)}   # this print will be removed in the public version of the package                   
             remstimateList$coefficients <- c(optimum_sender_rate$argument, optimum_receiver_choice$argument)
             remstimateList$loglik <- -(optimum_sender_rate$value+optimum_receiver_choice$value) # log(L_sender) + log(L_choice)       
             remstimateList$gradient <- rbind(optimum_sender_rate$gradient, optimum_receiver_choice$gradient)
