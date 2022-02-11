@@ -12,14 +12,12 @@ remstimate(
   ncores = 1,
   prior = NULL,
   nsim = 1000,
-  bsir.samples = NULL,
   nchains = 2,
   burnin = 500,
   thin = 10,
   init = NULL,
   epochs = 200,
   learning_rate = 0.001,
-  fast = FALSE,
   silent = TRUE,
   seed = sample(1:10000, nchains),
   ...
@@ -28,7 +26,7 @@ remstimate(
 \arguments{
 \item{reh}{an \code{reh} object (output object of the function \code{remify::reh})}
 
-\item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate} receivers in the array \code{choice})}
+\item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})}
 
 \item{method}{optimization method to be used: \code{MLE}, \code{GD}, \code{GDADAM}, \code{BSIR}, \code{HMC}}
 
@@ -38,9 +36,7 @@ remstimate(
 
 \item{prior}{prior distribution when using Bayesian methods}
 
-\item{nsim}{number of iterations in each chain}
-
-\item{bsir.samples}{number of samples from the proposal distribution when method is \code{"BSIR"}. When is left \code{NULL}, it is set to \code{nsim*3}}
+\item{nsim}{when \code{method = "HMC"} it is the number of simulations (iterations) in each chain, when \code{method = "BSIR"} is the number of samples from the proposal distribution}
 
 \item{nchains}{number of chains to generate}
 
@@ -54,11 +50,11 @@ remstimate(
 
 \item{learning_rate}{0.001 by default. It is the learning rate used in the methods \code{"GD"} and \code{"GDADAM"}}
 
-\item{fast}{\code{TRUE/FALSE} whether to apply a faster computation of the likelihood}
-
 \item{silent}{\code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out}
 
 \item{seed}{seed for reproducibility (yet to be integrated in the code)}
+
+\item{...}{additional parameters. They can be parameters of other functions defined as input in some argument}
 }
 \value{
 remstimate S3 object

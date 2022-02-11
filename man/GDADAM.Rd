@@ -51,7 +51,7 @@ GDADAM(
 \item{eta}{hyperparameter eta}
 }
 \value{
-
+optimization with GDADAM
 }
 \description{
 function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values

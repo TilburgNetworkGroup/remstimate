@@ -4,13 +4,13 @@
 \alias{summary.remstimate}
 \title{summary.remstimate}
 \usage{
-\method{summary}{remstimate}(remstimate, ...)
+\method{summary}{remstimate}(object, ...)
 }
 \arguments{
-\item{remstimate}{is a \code{remstimate} object}
+\item{object}{is a \code{remstimate} object}
 
-\item{...}{further arguments to be passed.}
+\item{...}{further arguments to be passed to the 'summary' method}
 }
 \description{
-A function that prints out a summary of the optimization result (codings are based on the structure of summary.lm() and summary.glm() from package 'stats')
+A function that arranges a summary of a 'remstimate' object
 }

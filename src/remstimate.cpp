@@ -7,10 +7,15 @@
 #include <map>
 #include <iterator>
 #include <string>
-#include <sstream> // added for conversion to ASCII
-#include <bitset> // added for conversion to ASCII
 
-// getDyadIndex
+
+
+// /////////////////////////////////////////////////////////////////////////////////
+// //////(START)              getDyad-Index/Composition               (START)///////
+// /////////////////////////////////////////////////////////////////////////////////
+
+
+// getDyadIndex - function that in the future version of the pkg will be imported from remify.h
 //
 // @param actor1 id of actor1 from 0 to N-1
 // @param actor2 id of actor2 from 0 to N-1
@@ -52,7 +57,7 @@ int getDyadIndex(double actor1, double actor2, double type, int N, bool directed
 }
 
 
-// getDyadComposition (only for directed for now)
+// getDyadComposition (only for directed for now) - function that in the future version of the pkg will be imported from remify.h
 //
 // @param d id of the dyad
 // @param C number of event types
@@ -107,194 +112,10 @@ Rcpp::IntegerVector getDyadComposition(int d, int C, int N, int D) {
 
 
 // /////////////////////////////////////////////////////////////////////////////////
-// ///////////(BEGIN)     remstimateFAST routine functions      (BEGIN)/////////////
-// /////////// to calculate the objects needed for the fast approach   /////////////
+// ////////(END)              getDyad-Index/Composition               (END)/////////
 // /////////////////////////////////////////////////////////////////////////////////
 
 
-// cube2matrix
-//
-// A function to rearrange a cube into a matrix where slices of the cube are concatenated by column one next to the other.
-//
-// @param cube structure of dimensions [D*U*M]
-//
-// @return matrix of dimensions [(M*D)*U]
-arma::mat cube2matrix(arma::cube x){
-  arma::uword m;
-  arma::mat out_mat(x.n_rows*x.n_slices, x.n_cols, arma::fill::zeros);
-  for(m = 0; m < x.n_slices; m++){
-      arma::uword lb = m*x.n_rows;
-      arma::uword ub = (m+1)*x.n_rows-1;
-      out_mat(arma::span(lb,ub),arma::span::all) = x.slice(m);
-  }
-  return out_mat;
-}
-
-//' getUniqueVectors
-//'
-//' A function to retrieve only the unique vectors of statistics observed throught times points and dyads. This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
-//'
-//' @param stats cube structure of dimensions [D*U*M] filled with statistics values.
-//'
-//' @return matrix with only unique vectors of statistics with dimensions [R*U]
-//'
-//' @export
-// [[Rcpp::export]]
-arma::mat getUniqueVectors(arma::cube stats){
-
-  // transform the cube of statistics to matrix first
-  arma::mat A = cube2matrix(stats);
-  arma::uword a,a2compare;
-  arma::uvec indices(A.n_rows, arma::fill::zeros);
-
-  for(a = 0; a < (A.n_rows-1); a++){
-    for(a2compare = (a+1); a2compare < A.n_rows; a2compare++){
-      if(arma::approx_equal(A.row(a2compare), A.row(a), "absdiff", 0.000001)){
-         indices(a2compare) = 1;
-         break;
-      }
-    }
-  }
-
-  return A.rows(arma::find(indices == 0));
-}
-
-//' computeTimes
-//'
-//' A function to compute the sum of interevent times for those vector of statistics that occurre more than once (output of getUniqueVectors()). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
-//'
-//' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
-//' @param M number of observed relational events.
-//' @param stats array of statistics with dimensons [D*U*M].
-//' @param intereventTime vector of time differences between two subsequent time points (i.d., waiting time between t[m] and t[m-1]).
-//'
-//' @return vector of sum of interevent times per each unique_vector_stats element
-//'
-//' @export
-// [[Rcpp::export]]
-arma::vec computeTimes(const arma::mat& unique_vectors_stats,
-                       const arma::uword& M,
-                       const arma::cube& stats,
-                       const arma::vec& intereventTime){
-
-  arma::uword R = unique_vectors_stats.n_rows; // number of unique vector of statistics
-  arma::uword D = stats.n_rows; // number of dyads
-
-  arma::uword m,r,d;
-  arma::mat mat_counts(R, M, arma::fill::zeros);
-  arma::vec out(R, arma::fill::zeros);
-
-  for(m = 0; m < M; m++){
-    for(r = 0; r < R; r++){
-      for(d = 0; d < D; d++){
-        if(arma::approx_equal(unique_vectors_stats.row(r), stats.slice(m).row(d), "absdiff", 0.000001)){
-          mat_counts(r,m) += 1;
-        }
-      }
-    }
-  }
-
-  out = mat_counts * intereventTime; // we could include this step inside the loop above
-
-  return out;
-}
-
-//' computeOccurrencies
-//'
-//' A function to compute how many times each of the unique vector of statistics returned by getUniqueVectors() occurred in the network (as in contributing to the hazard in the likelihood). This function is based on the result shown by the Appendix C in the paper 'Hierarchical models for relational event sequences', DuBois et al. 2013 (pp. 308-309).
-//'
-//' @param edgelist is the preprocessed edgelist dataframe with information about [time,actor1,actor2,type,weight] by row.
-//' @param risksetCube array of index position fo dyads, with dimensions [N*N*C]
-//' @param M number of observed relational events.
-//' @param unique_vectors_stats matrix of unique vectors of statistics (output of getUniqueVectors()).
-//' @param stats array of statistics with dimensons [D*U*M]
-//'
-//' @return vector of q's
-//'
-//' @export
-// [[Rcpp::export]]
-arma::vec computeOccurrencies(const Rcpp::DataFrame& edgelist,
-                              const arma::ucube& risksetCube,
-                              const arma::uword& M,
-                              const arma::mat& unique_vectors_stats,
-                              const arma::cube& stats){
-
-  arma::uword r,m,d;
-  arma::uword R = unique_vectors_stats.n_rows;
-  arma::uword U = unique_vectors_stats.n_cols;
-  Rcpp::IntegerVector actor1 = edgelist["actor1"];
-  Rcpp::IntegerVector actor2 = edgelist["actor2"];
-  Rcpp::IntegerVector type = edgelist["type"];
-  arma::rowvec stats_event_m(U,arma::fill::zeros);
-  arma::vec out(R);
-
-  for(m = 0; m < M; m++){
-    d = risksetCube(actor1(m),actor2(m),type(m));
-    stats_event_m = stats.slice(m).row(d);
-    for(r = 0; r < R; r++){
-      if(arma::approx_equal(stats_event_m, unique_vectors_stats.row(r), "absdiff", 0.000001)){
-        out(r) += 1;
-      }
-    }
-  }
-  return out;
-}
-
-
-//' remDerivativesFast
-//'
-//' description of the function here
-//'
-//' @param pars vector of parameters
-//' @param times_r  former m
-//' @param occurrencies_r former q
-//' @param unique_vectors_stats former U
-//' @param gradient boolean
-//' @param hessian boolean
-//'
-//' @return list of value/gradient/hessian in pars
-//'
-// [[Rcpp::export]]
-Rcpp::List remDerivativesFast(const arma::vec& pars,
-                              const arma::vec &times_r = Rcpp::NumericVector::create(),
-                              const arma::vec &occurrencies_r = Rcpp::NumericVector::create(),
-                              const arma::mat &unique_vectors_stats = Rcpp::NumericMatrix::create(),
-                              bool gradient = true,
-                              bool hessian = true){
-
-  arma::uword U = pars.n_elem;
-  arma::uword u,k,l;
-
-  double loglik = sum(occurrencies_r.t()*unique_vectors_stats*pars - times_r.t() * exp(unique_vectors_stats*pars));
-
-  arma::vec grad(U);
-
-  for(u = 0; u < U; u++){
-    grad.row(u) =  sum(occurrencies_r % unique_vectors_stats.col(u) - times_r % exp(unique_vectors_stats * pars) % unique_vectors_stats.col(u));
-  }
-
-  arma::mat hess(U, U);
-
-  for(k = 0; k < U; k++){
-    for(l = 0; l < U; l++){
-      hess(k,l) = sum(- times_r % exp(unique_vectors_stats * pars) % unique_vectors_stats.col(l) % unique_vectors_stats.col(k));
-    }
-  }
-
-
-  if(gradient && !hessian){
-    return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
-  }else if(!gradient && !hessian){
-    return Rcpp::List::create(Rcpp::Named("value") = -loglik);
-  }else{
-    return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -hess);
-  }
-
-}
-
-// /////////////////////////////////////////////////////////////////////////////////
-// /////////////(END)     remstimateFAST routine functions      (END)///////////////
-// /////////////////////////////////////////////////////////////////////////////////
 
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(BEGIN)              remDerivatives               (BEGIN)/////////////
@@ -492,6 +313,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
       }
 }
 
+
 //' remDerivativesSenderRates
 //'
 //' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values for estimating the sender rate parameters for the actor oriented model
@@ -501,6 +323,8 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param C number of event types 
+//' @param D number of dyads
 //' @param ordinal boolean, true if the likelihood to use is the ordinal one, interval otherwise
 //'
 //'
@@ -610,7 +434,7 @@ Rcpp::List remDerivativesSenderRates(
           loglik -=  sum_lambda * interevent_time(m);
           grad -= interevent_time(m) * stats_m * lambda_s; //(6)
           for(n = 0; n < N; n++){         //loop throughout all actors
-            fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()) );
+            fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()));
           }
           fisher -= interevent_time(m) * fisher_m;
         }
@@ -618,6 +442,7 @@ Rcpp::List remDerivativesSenderRates(
     }
     return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
 }
+
 
 //' remDerivativesReceiverChoice
 //'
@@ -629,8 +454,9 @@ Rcpp::List remDerivativesSenderRates(
 //' @param omit_dyad, list object that takes care of the dynamic rikset (if defined)
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param directed, boolean TRUE/FALSE if the network is directed or not
-//' @param N, the number of actors
-//' @param C, number of event types 
+//' @param N the number of actors
+//' @param C number of event types 
+//' @param D number of dyads
 //'
 //'
 //' @return list of values: loglik, grad, fisher
@@ -652,12 +478,17 @@ Rcpp::List remDerivativesReceiverChoice(
     int n;
 
     // variables for internal computation
-    arma::vec lambda_d(D) ;
+    arma::vec lambda_d(N);
     arma::vec expected_stat_m(P_d);
     Rcpp::IntegerVector dyad_m(3);
     arma::mat fisher_m(P_d,P_d);
-    arma::uword dyad =0;
+    arma::uword dyad = 0;
     double denom = 0;
+
+    //output
+    double loglik = 0.0;
+    arma::mat fisher(P_d,P_d,arma::fill::zeros);
+    arma::vec grad(P_d,arma::fill::zeros);
 
     // omit_dyad 
     arma::vec riskset_time_vec(M); 
@@ -670,75 +501,65 @@ Rcpp::List remDerivativesReceiverChoice(
       riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
     }
 
-    //output
-    double loglik = 0.0;
-    arma::mat fisher(P_d,P_d,arma::fill::zeros);
-    arma::vec grad(P_d,arma::fill::zeros);
 
     //loop through all events
     for(arma::uword m = 0; m < M; m++){
-        arma::mat stats_m = stats.slice(m).t(); // dimensions : [P*D] we want to access dyads by column
+      arma::mat stats_m = stats.slice(m).t(); // dimensions : [P*N] we want to access dyads by column
 
-        //this is exp(beta^T X) dot product
-        lambda_d = arma::exp(stats_m.t() * pars);
+      //this is exp(beta^T X) dot product
+      lambda_d = arma::exp(stats_m.t() * pars);
 
-        //actors in remify edgelist are 0 indexed hence no -1
-        dyad_m = getDyadComposition(edgelist(m,1),C,N,D);
-        int sender = dyad_m[0]; 
-        int receiver = dyad_m[1];
-        // int type = dyad_m[2]; // when type will be integrated in the function
+      //actors in remify edgelist are 0 indexed hence no -1
+      dyad_m = getDyadComposition(edgelist(m,1),C,N,D);
+      int sender = dyad_m[0]; 
+      int receiver = dyad_m[1];
+      //int type = dyad_m[2]; // when type will be integrated in the function
 
-        //reset internal variables
-        fisher_m.zeros();
-        expected_stat_m.zeros();
-        denom = 0;
+      //reset internal variables
+      fisher_m.zeros();
+      expected_stat_m.zeros();
+      denom = 0;
 
-        // riskset_m
-        int riskset_time_m = riskset_time_vec(m);
+      // riskset_m
+      int riskset_time_m = riskset_time_vec(m);
 
-        // changes in the riskset at m-th event
-        if(riskset_time_m!=(-1)){ 
-          for(n = 0; n<N; n++){
-              dyad = getDyadIndex(sender,n,0,N,directed);
-              if(n!=sender && riskset_mat(riskset_time_m,dyad) == 1){ // dynamic riskset
-                  //loglik
-                  denom += lambda_d(dyad); // exp(param_d * X_sender_i) (4)
-                  fisher_m += lambda_d(dyad)*(stats_m.col(dyad) * stats_m.col(dyad).t());
-                  expected_stat_m += lambda_d(dyad) * stats_m.col(dyad);
-              }
-          }
-        }
-        else{ // no changes in the riskset at m-th event
-          for(n = 0;n<N; n++){ //loop throught all actors
+      // changes in the riskset at m-th event
+      if(riskset_time_m!=(-1)){ 
+        for(n = 0; n<N; n++){
             dyad = getDyadIndex(sender,n,0,N,directed);
-            if(n!=sender){ // 
+            if(n!=sender && riskset_mat(riskset_time_m,dyad) == 1){ // dynamic riskset
                 //loglik
-                denom += lambda_d(dyad); // exp(param_d * X_sender_i) (4)
-                fisher_m += lambda_d(dyad)*(stats_m.col(dyad) * stats_m.col(dyad).t());
-                expected_stat_m += lambda_d(dyad) * stats_m.col(dyad);
+                denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
+                fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+                expected_stat_m += lambda_d(n) * stats_m.col(n);
             }
+        }
+      }
+      else{ // no changes in the riskset at m-th event
+        for(n = 0;n<N; n++){ //loop throught all actors
+          if(n!=sender){ // 
+              //loglik
+              denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
+              fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+              expected_stat_m += lambda_d(n) * stats_m.col(n);
           }
         }
+      }
 
-        dyad = getDyadIndex(sender,receiver,0,N,directed);
+      loglik +=  std::log(lambda_d(receiver)); //(3) params_d^T * X_sender_receiver
+      loglik -= std::log(denom);
 
-        loglik +=  std::log(lambda_d(dyad)); //(3) params_d^T * X_sender_receiver
-        loglik -= std::log(denom);
+      grad += stats_m.col(receiver); //(7)
+      expected_stat_m /= denom; //(8)
+      grad -= expected_stat_m;
 
-        grad += stats_m.col(dyad); //(7)
-        expected_stat_m /= denom; //(8)
-        grad -= expected_stat_m;
-
-        fisher_m /= denom;
-        fisher_m -= (expected_stat_m * expected_stat_m.t());
-        fisher += fisher_m;
-        
+      fisher_m /= denom;
+      fisher_m += (expected_stat_m * expected_stat_m.t());
+      fisher += fisher_m;      
     }
 
     return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
 }
-
-
 
 
 //' remDerivatives 
@@ -750,14 +571,15 @@ Rcpp::List remDerivativesReceiverChoice(
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param model either "actor" or "tie" model
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
-//' @param fast boolean true/false whether to run the fast approach or not
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
 //' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+//' @param C number of event types 
+//' @param D number of dyads
 //'
 //' @return list of values: loglik, gradient, hessian
 //'
@@ -771,7 +593,6 @@ Rcpp::List remDerivatives(const arma::vec &pars,
                                   std::string model,
                                   bool ordinal = false,
                                   int ncores = 1,
-                                  bool fast = false,
                                   bool gradient = true,
                                   bool hessian = true,
                                   bool senderRate = true,
@@ -808,17 +629,16 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 }
 
 
-
-
-  
-
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(END)                remDerivatives                 (END)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
 
+
+
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(BEGIN)             Gradient Descent              (BEGIN)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
+
 
 //' GD
 //'
@@ -836,7 +656,7 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 //' @param epochs number of epochs
 //' @param learning_rate learning rate
 //'
-//' @return
+//' @return optimization with Gradient Descent algorithm
 //'
 //' @export
 // [[Rcpp::export]]
@@ -895,7 +715,7 @@ Rcpp::List GD(const arma::vec &pars,
 //' @param beta2 hyperparameter beta2
 //' @param eta hyperparameter eta
 //'
-//' @return
+//' @return optimization with GDADAM
 //'
 //' @export
 // [[Rcpp::export]]
@@ -958,9 +778,11 @@ Rcpp::List GDADAM(const arma::vec &pars,
 // /////////////////////////////////////////////////////////////////////////////////
 
 
+
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(START)          Hamiltonian Monte Carlo          (START)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
+
 
 //' logPostHMC
 //'
@@ -972,8 +794,9 @@ Rcpp::List GDADAM(const arma::vec &pars,
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
 //' @param fast boolean true/false whether to run the fast approach or not
 //'
@@ -1010,6 +833,7 @@ double logPostHMC(const arma::vec &meanPrior,
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
@@ -1038,7 +862,6 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 }
 
 
-
 //' iterHMC
 //'
 //' This function does one iteration of the Hamiltonian Monte carlo
@@ -1051,8 +874,9 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
 //' @param fast boolean true/false whether to run the fast approach or not
 //'
@@ -1140,7 +964,6 @@ arma::cube burninHMC(const arma::cube& samples, arma::uword burnin, arma::uword 
 }
 
 
-
 //' HMC
 //'
 //' This function performs the Hamiltonian Monte Carlo
@@ -1151,13 +974,13 @@ arma::cube burninHMC(const arma::cube& samples, arma::uword burnin, arma::uword 
 //' @param burnin is the number of draws to discard after running the chains
 //' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
 //' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
-//' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param 
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param model either "actor" or "tie" model
+//' @param ordinal logic TRUE/FALSE
 //' @param ncores number of threads to use for the parallelization
 //' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE)
 //' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
@@ -1231,88 +1054,25 @@ arma::cube HMC(arma::mat pars_init,
 // /////////////////////////////////////////////////////////////////////////////////
 
 
+
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(START)           Experimental function           (START)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
 
 
-//' convtoASCII
+//' experimental_function (where to try out specific operations at C++ level)
 //'
-//' converting rehBinary to characters using 8bit and 
+//' the experimental function has no description
 //'
-//' @param rehBinary matrix of integers 0/1 (dimensions are rows = M [number of events], columns = D [number of dyads])
+//' @param x integer value
 //'
-//' @return vector of char per each dyad (list of length D)
-//'
-//' @export
-// [[Rcpp::export]]
-Rcpp::List convtoASCII(Rcpp::List rehBinary){
-  Rcpp::List out(rehBinary.size());
-  for(arma::uword d = 0; d < rehBinary.size(); d++){
-    std::string data = Rcpp::as<std::string>(rehBinary[d]);
-    std::stringstream sstream(data);
-    std::string output;
-    while(sstream.good())
-    {
-        std::bitset<8> bits;
-        sstream >> bits;
-        char c = char(bits.to_ulong());
-        output += c;
-    }
-    out[d] = output;
-  }
-   return out;
-}
-
-
-//' toChar
-//'
-//' blah blah blah 
-//'
-//' @param input
-//'
-//' @return string
+//' @return matrix
 //'
 //' @export
 // [[Rcpp::export]]
-std::string toChar(std::vector<int> input){
-  auto comma_fold = [](std::string a, int b) { return std::move(a) + std::to_string(b); };
-  //std::string s;
-  //for(int d=0;d<input.size();d++){
-
-    //s += std::to_string(input[d]);
-  //}
-
-   std::string s= std::accumulate(std::next(input.begin()), input.end(),
-                                std::to_string(input[0]), // start with first element
-                                comma_fold);
-
-   return s;
-}
-
-//' experimental
-//'
-//' blah blah blah 
-//'
-//' @param pars parameters 
-//' @param stats array of statistics
-//'
-//' @return string
-//'
-//' @export
-// [[Rcpp::export]]
-arma::mat experimental(const arma::vec &pars,const arma::cube &stats){
-
-    arma::mat out(stats.n_rows,stats.n_slices);
-    for(arma::uword m = 0; m < stats.n_slices; m++){
-    arma::mat stats_m = stats.slice(m); // dimensions : [U*D] we want to access dyads by column 
-    arma::vec log_lambda_m = stats_m * pars;
-    double subtract = std::log(arma::sum(arma::exp(log_lambda_m)));
-    arma::vec subtract_vec(stats.n_rows);
-    subtract_vec.fill(subtract);
-    out.col(m) = log_lambda_m -  subtract_vec;
-    }
-   return out;
+arma::mat experimental_function(const arma::uword &x){
+  arma::mat out(x,x,arma::fill::zeros);
+  return out;
 }
 
 

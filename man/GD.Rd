@@ -42,7 +42,7 @@ GD(
 \item{learning_rate}{learning rate}
 }
 \value{
-
+optimization with Gradient Descent algorithm
 }
 \description{
 function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values

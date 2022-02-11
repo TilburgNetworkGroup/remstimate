@@ -26,6 +26,10 @@ remDerivativesSenderRates(
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
+\item{C}{number of event types}
+
+\item{D}{number of dyads}
+
 \item{ordinal}{boolean, true if the likelihood to use is the ordinal one, interval otherwise}
 }
 \value{

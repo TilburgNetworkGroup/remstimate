@@ -2,15 +2,15 @@
 % Please edit documentation in R/remstimate.R
 \name{print.summary.remstimate}
 \alias{print.summary.remstimate}
-\title{print.summary.remstimate()}
+\title{print.summary.remstimate}
 \usage{
 \method{print}{summary.remstimate}(x, ...)
 }
 \arguments{
 \item{x}{is a \code{summary.remstimate} object}
 
-\item{...}{further arguments to be passed.}
+\item{...}{further arguments to be passed to the 'print.summary' method}
 }
 \description{
-A function that prints out a summary of the optimization result (codings are based on the structure of summary.lm() and summary.glm() from package 'stats')
+A function that prints out a summary of a 'remstimate' object.
 }

@@ -46,7 +46,10 @@ URL: https://github.com/TilburgNetworkGroup/remstimate
 BugReports: https://github.com/TilburgNetworkGroup/remstimate/issues
 Depends: 
     R (>= 2.10)
-Imports: 
+Imports:  
+    stats,
+    utils,
+    methods,
     mvnfast,
     Rcpp,
     RcppProgress,

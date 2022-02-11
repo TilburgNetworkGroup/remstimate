@@ -1,3 +1,8 @@
-^remstimate\.Rproj$
+^.*\.Rproj$
 ^\.Rproj\.user$
+^doc$
+^Meta$
+^\.vscode$
+^\.git$
+^\.gitignore$
 ^LICENSE\.md$

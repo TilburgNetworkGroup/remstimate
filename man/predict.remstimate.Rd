@@ -2,15 +2,15 @@
 % Please edit documentation in R/remstimate.R
 \name{predict.remstimate}
 \alias{predict.remstimate}
-\title{predict.remstimate()}
+\title{predict.remstimate}
 \usage{
 \method{predict}{remstimate}(object, ...)
 }
 \arguments{
 \item{object}{is a \code{remstimate} object}
 
-\item{...}{further arguments to be passed.}
+\item{...}{further arguments to be passed to the 'predict' method depending on the estimator used}
 }
 \description{
-A function that prints out a summary of the optimization result (codings are based on the structure of summary.lm() and summary.glm() from package 'stats')
+A function that returns predictions given a 'remstimate' object.
 }

@@ -47,7 +47,7 @@ HMC(
 
 \item{model}{either "actor" or "tie" model}
 
-\item{ordinal}{whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood}
+\item{ordinal}{logic TRUE/FALSE}
 
 \item{ncores}{number of threads for parallel computing (default = 1)}
 
@@ -58,8 +58,6 @@ HMC(
 \item{L}{number of leapfrogs. Default (and recommended) value is 100.}
 
 \item{epsilon}{size of the leapfrog. Default value is 1e-02.}
-
-\item{pars}{is a vector of parameters (note: the order must be aligned with the column order in 'stats')}
 }
 \value{
 posterior draws

@@ -29,9 +29,11 @@ remDerivativesReceiverChoice(
 
 \item{directed, }{boolean TRUE/FALSE if the network is directed or not}
 
-\item{N, }{the number of actors}
+\item{N}{the number of actors}
 
-\item{C, }{number of event types}
+\item{C}{number of event types}
+
+\item{D}{number of dyads}
 }
 \value{
 list of values: loglik, grad, fisher

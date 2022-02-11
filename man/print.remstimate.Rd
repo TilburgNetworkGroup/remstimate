@@ -4,13 +4,13 @@
 \alias{print.remstimate}
 \title{print.remstimate}
 \usage{
-\method{print}{remstimate}(remstimate, ...)
+\method{print}{remstimate}(x, ...)
 }
 \arguments{
-\item{remstimate}{is a \code{remstimate} object}
+\item{x}{is a \code{remstimate} object}
 
-\item{...}{further arguments to be passed.}
+\item{...}{further arguments to be passed to the print method}
 }
 \description{
-A function that prints out the estimates of the selected optimization method.
+A function that prints out the estimates returned by a 'remstimate' object.
 }
