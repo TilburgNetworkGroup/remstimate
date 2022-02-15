@@ -272,17 +272,50 @@ remstimate <- function(reh = NULL,
 
     # ... [2] with Gradient Descent (GD)
     if(method == "GD"){
-        remstimateList$optimum <- GD(pars = stats::rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
+        if(is.null(init)){
+            remstimateList$optimum <- GD(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
                                     stats = stats,  
-                                    event_binary = reh$rehBinary, 
+                                    edgelist = reh$edgelist,
+                                    omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
+                                    model = model,
                                     epochs = epochs,
                                     learning_rate = learning_rate)
+        }else{
+            remstimateList$optimum <- GD(pars = init,
+                                    stats = stats,  
+                                    edgelist = reh$edgelist,
+                                    omit_dyad = reh$omit_dyad,
+                                    interevent_time = reh$intereventTime,
+                                    model = model,
+                                    epochs = epochs,
+                                    learning_rate = learning_rate)
+        }
+        
         return(remstimateList$optimum)
     }
 
     # ... [3] with Gradient Descent ADAM (GDADAM)
     if(method == "GDADAM"){
+        if(is.null(init)){
+            remstimateList$optimum <- GDADAM(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
+                                    stats = stats,
+                                    edgelist = reh$edgelist,
+                                    omit_dyad = reh$omit_dyad,
+                                    interevent_time = reh$intereventTime,
+                                    model = model,
+                                    epochs = epochs,
+                                    learning_rate = learning_rate)
+        }else{
+            remstimateList$optimum <- GDADAM(pars = init,
+                                    stats = stats,
+                                    edgelist = reh$edgelist,
+                                    omit_dyad = reh$omit_dyad,
+                                    interevent_time = reh$intereventTime,
+                                    model = model,
+                                    epochs = epochs,
+                                    learning_rate = learning_rate)
+        }
         remstimateList$optimum <- GDADAM(pars = stats::rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
                                     stats = stats,  
                                     event_binary = reh$rehBinary, 

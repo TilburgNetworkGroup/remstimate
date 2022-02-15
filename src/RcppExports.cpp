@@ -135,8 +135,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // GDADAM
-Rcpp::List GDADAM(const arma::vec& pars, const arma::cube& stats, const arma::mat& edgelist, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool fast, int epochs, double learning_rate, double beta1, double beta2, double eta);
-RcppExport SEXP _remstimate_GDADAM(SEXP parsSEXP, SEXP statsSEXP, SEXP edgelistSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP fastSEXP, SEXP epochsSEXP, SEXP learning_rateSEXP, SEXP beta1SEXP, SEXP beta2SEXP, SEXP etaSEXP) {
+Rcpp::List GDADAM(const arma::vec& pars, const arma::cube& stats, const arma::mat& edgelist, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, int epochs, double learning_rate, double beta1, double beta2, double eta);
+RcppExport SEXP _remstimate_GDADAM(SEXP parsSEXP, SEXP statsSEXP, SEXP edgelistSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP epochsSEXP, SEXP learning_rateSEXP, SEXP beta1SEXP, SEXP beta2SEXP, SEXP etaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -148,13 +148,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
     Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< bool >::type fast(fastSEXP);
     Rcpp::traits::input_parameter< int >::type epochs(epochsSEXP);
     Rcpp::traits::input_parameter< double >::type learning_rate(learning_rateSEXP);
     Rcpp::traits::input_parameter< double >::type beta1(beta1SEXP);
     Rcpp::traits::input_parameter< double >::type beta2(beta2SEXP);
     Rcpp::traits::input_parameter< double >::type eta(etaSEXP);
-    rcpp_result_gen = Rcpp::wrap(GDADAM(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate, beta1, beta2, eta));
+    rcpp_result_gen = Rcpp::wrap(GDADAM(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, epochs, learning_rate, beta1, beta2, eta));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -283,7 +282,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_remDerivativesReceiverChoice", (DL_FUNC) &_remstimate_remDerivativesReceiverChoice, 9},
     {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 14},
     {"_remstimate_GD", (DL_FUNC) &_remstimate_GD, 11},
-    {"_remstimate_GDADAM", (DL_FUNC) &_remstimate_GDADAM, 14},
+    {"_remstimate_GDADAM", (DL_FUNC) &_remstimate_GDADAM, 13},
     {"_remstimate_logPostHMC", (DL_FUNC) &_remstimate_logPostHMC, 11},
     {"_remstimate_logPostGradientHMC", (DL_FUNC) &_remstimate_logPostGradientHMC, 11},
     {"_remstimate_iterHMC", (DL_FUNC) &_remstimate_iterHMC, 13},

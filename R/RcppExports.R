@@ -150,8 +150,8 @@ GD <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal
 #' @return optimization with GDADAM
 #'
 #' @export
-GDADAM <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, epochs = 200L, learning_rate = 0.02, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
-    .Call(`_remstimate_GDADAM`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate, beta1, beta2, eta)
+GDADAM <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, epochs = 200L, learning_rate = 0.02, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
+    .Call(`_remstimate_GDADAM`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, epochs, learning_rate, beta1, beta2, eta)
 }
 
 #' logPostHMC

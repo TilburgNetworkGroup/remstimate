@@ -684,7 +684,7 @@ Rcpp::List GD(const arma::vec &pars,
     arma::vec loss(epochs,arma::fill::zeros);
 
     for(int i =0; i<epochs;i++){
-        Rcpp::List derv = remDerivatives(pars_prev,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast,true,false);
+        Rcpp::List derv = remDerivatives(pars_prev,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,true,false);
         double loglik = derv["value"];
         arma::vec grad = derv["gradient"];
         pars_next = pars_prev - (learning_rate * grad);
@@ -727,7 +727,6 @@ Rcpp::List GDADAM(const arma::vec &pars,
                    std::string model,
                    bool ordinal = false,
                    int ncores = 1,
-                   bool fast = false,
                    int epochs = 200,
                    double learning_rate = 0.02,
                    double beta1 = 0.9,
@@ -753,7 +752,7 @@ Rcpp::List GDADAM(const arma::vec &pars,
     arma::vec loss(epochs,arma::fill::zeros);
 
     for(int i =0; i<epochs;i++){
-        Rcpp::List derv = remDerivatives(pars_prev,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast,true,false);
+        Rcpp::List derv = remDerivatives(pars_prev,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,true,false);
         double loglik = derv["value"];
 
         arma::vec grad = derv["gradient"];
