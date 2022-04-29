@@ -1,5 +1,5 @@
 # remstimate (Version: 1.0.0)
-# Optimization Tools for Relational Event Model
+# Optimization Tools for Relational Event History data
 ### Table of contents
 * [About the package](#about-the-package)
 * [Programming Languages](#programming-languages)
@@ -8,7 +8,7 @@
 * [Notes](#notes)
 
 ### About the package
-The `remstimate` package provides a set of functions that perform necessary calculations when modeling a Relational Event History, e.g., when maximizing the log-likelihood function of a Relational Event Model (*Carter T. Butts, 2008*).
+The `remstimate` package provides a set of functions that perform necessary calculations when modeling a Relational Event History.
 
 ### Programming Languages
 The package contains code written in:
