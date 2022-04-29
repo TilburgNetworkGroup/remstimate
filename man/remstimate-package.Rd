@@ -2,8 +2,8 @@
 % Please edit documentation in R/remstimate-package.R
 \docType{package}
 \name{remstimate-package}
-\alias{remstimate}
 \alias{remstimate-package}
+\alias{_PACKAGE}
 \title{remstimate: optimization tools for tie-oriented and actor-oriented relational event models}
 \description{
 This package offers a set of tools for the optimization of the likelihood in a relational event modeling framework (initial objective: to compare time performance with relevent::rem function and to improve them).

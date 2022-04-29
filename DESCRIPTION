@@ -45,20 +45,15 @@ License: MIT + file LICENSE
 URL: https://github.com/TilburgNetworkGroup/remstimate
 BugReports: https://github.com/TilburgNetworkGroup/remstimate/issues
 Depends: 
-    R (>= 2.10)
-Imports:  
-    stats,
-    utils,
+    R (>= 4.0.0)
+Imports: 
     methods,
     mvnfast,
     Rcpp,
-    RcppProgress,
     remify,
-    tcltk,
     trust,
     parallel
-LinkingTo: 
-    mvnfast,
+LinkingTo:
     Rcpp,
     RcppArmadillo,
     RcppProgress,

@@ -649,10 +649,9 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time vector of interevent times (inside the reh object)
-//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param model either "actor" or "tie" model
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
-//' @param fast TRUE/FALSE whether to perform the fast approach or not
 //' @param epochs number of epochs
 //' @param learning_rate learning rate
 //'
@@ -668,7 +667,6 @@ Rcpp::List GD(const arma::vec &pars,
               std::string model,
               bool ordinal = false,
               int ncores = 1,
-              bool fast = false,
               int epochs = 200,
               double learning_rate = 0.001){
     //if loss function oscillates in later epochs, then reduce learning rate for better convergence
@@ -692,7 +690,7 @@ Rcpp::List GD(const arma::vec &pars,
         loss(i) = loglik;
         pars_prev = pars_next;
     }
-    return Rcpp::List::create(Rcpp::Named("loss") = loss, Rcpp::Named("coef") = pars_next, Rcpp::Named("betas") = beta);
+    return Rcpp::List::create(Rcpp::Named("value") = loss, Rcpp::Named("argument") = pars_next, Rcpp::Named("iterations") = beta);
 }
 
 
@@ -705,10 +703,9 @@ Rcpp::List GD(const arma::vec &pars,
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time vector of interevent times (inside the reh object)
-//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param model either "actor" or "tie" model
+//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
-//' @param fast TRUE/FALSE whether to perform the fast approach or not
 //' @param epochs number of epochs
 //' @param learning_rate learning rate
 //' @param beta1 hyperparameter beta1
@@ -768,7 +765,7 @@ Rcpp::List GDADAM(const arma::vec &pars,
 
         pars_prev = pars_next;
     }
-    return Rcpp::List::create(Rcpp::Named("loss") = loss, Rcpp::Named("coef") = pars_next, Rcpp::Named("betas") = beta);
+    return Rcpp::List::create(Rcpp::Named("value") = loss, Rcpp::Named("argument") = pars_next, Rcpp::Named("iterations") = beta);
 }
 
 

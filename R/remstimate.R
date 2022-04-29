@@ -90,6 +90,7 @@ remstimate <- function(reh = NULL,
             else{
                 stats <- aperm(stats, perm =c(2,3,1))
             }
+            model_formula <- ""
         }
         else{
             stop("tie-oriented modeling: 'stats' must be either a 'tomstats' 'remstats' object or an array of statistics")
@@ -118,6 +119,7 @@ remstimate <- function(reh = NULL,
              else{
                  stats <- list(rate = aperm(stats$rate, perm = c(2,3,1)), choice = aperm(stats$choice, perm = c(2,3,1)))
              }
+            model_formula <- ""
         }
         else{
             stop("actor-oriented modeling: 'stats' must be either a 'aomstats' 'remstats' object or a list of two arrays named 'rate' and 'choice'")
@@ -145,20 +147,80 @@ remstimate <- function(reh = NULL,
     # ... creating  an empty lists
     remstimateList <- list()
         
-    # ... [1] Maximum Likelihood
-    if(method == "MLE"){
+    # ... [1] Maximum Likelihood, Gradient Descent (GD), Gradient Descent ADAM (GDADAM)
+    if(method %in% c("MLE","GD","GDADAM")){
         if(model == "tie"){ # Relational Event Model (REM)
-            optimum_obj <- trust::trust(objfun = remDerivatives, 
-                                        parinit = rep(0,dim(stats)[2]), 
-                                        rinit = 1, 
-                                        rmax = 100, 
-                                        stats = stats,  
-                                        edgelist = reh$edgelist,
-                                        omit_dyad = reh$omit_dyad,
-                                        interevent_time = reh$intereventTime,
-                                        model = model,
-                                        ordinal = ordinal,
-                                        ncores = ncores)                               
+            if(method == "MLE"){
+                optimum_obj <- trust::trust(objfun = remDerivatives, 
+                                            parinit = rep(0,dim(stats)[2]), 
+                                            rinit = 1, 
+                                            rmax = 100, 
+                                            stats = stats,  
+                                            edgelist = data.matrix(reh$edgelist),
+                                            omit_dyad = reh$omit_dyad,
+                                            interevent_time = reh$intereventTime,
+                                            model = model,
+                                            ordinal = ordinal,
+                                            ncores = ncores)
+            }  
+            if(method == "GD"){
+                if(is.null(init)){
+                    optimum_obj <- GD(pars = stats::rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
+                                            stats = stats,  
+                                            edgelist = reh$edgelist,
+                                            omit_dyad = reh$omit_dyad,
+                                            interevent_time = reh$intereventTime,
+                                            model = model,
+                                            epochs = epochs,
+                                            learning_rate = learning_rate)
+                }else{
+                    optimum_obj <- GD(pars = init,
+                                            stats = stats,  
+                                            edgelist = reh$edgelist,
+                                            omit_dyad = reh$omit_dyad,
+                                            interevent_time = reh$intereventTime,
+                                            model = model,
+                                            epochs = epochs,
+                                            learning_rate = learning_rate)
+                }
+                optimum_obj$hessian <- remstimate::remDerivativesStandard(par = optimum_obj$argument,
+                                                                    stats = stats,  
+                                                                    edgelist = data.matrix(reh$edgelist),
+                                                                    omit_dyad = reh$omit_dyad,
+                                                                    interevent_time = reh$intereventTime,
+                                                                    ordinal = ordinal,
+                                                                    ncores = ncores)
+                optimum_obj$hessian <- optimum_obj$hessian$hessian                                                  
+            }   
+            if(method == "GDADAM"){
+                if(is.null(init)){
+                    optimum_obj <- GDADAM(pars = stats::rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
+                                            stats = stats,
+                                            edgelist = reh$edgelist,
+                                            omit_dyad = reh$omit_dyad,
+                                            interevent_time = reh$intereventTime,
+                                            model = model,
+                                            epochs = epochs,
+                                            learning_rate = learning_rate)
+                }else{
+                    optimum_obj <- GDADAM(pars = init,
+                                            stats = stats,
+                                            edgelist = reh$edgelist,
+                                            omit_dyad = reh$omit_dyad,
+                                            interevent_time = reh$intereventTime,
+                                            model = model,
+                                            epochs = epochs,
+                                            learning_rate = learning_rate)
+                }
+                optimum_obj$hessian <- remstimate::remDerivativesStandard(par = optimum_obj$argument,
+                                                                    stats = stats,  
+                                                                    edgelist = data.matrix(reh$edgelist),
+                                                                    omit_dyad = reh$omit_dyad,
+                                                                    interevent_time = reh$intereventTime,
+                                                                    ordinal = ordinal,
+                                                                    ncores = ncores)
+                optimum_obj$hessian <- optimum_obj$hessian$hessian
+            }                                  
             remstimateList$coefficients <- optimum_obj$argument 
             remstimateList$loglik <- -optimum_obj$value # loglikelihood value at MLE values (we take the '-value' because we minimized the '-loglik')        
             remstimateList$gradient <-optimum_obj$gradient
@@ -189,33 +251,42 @@ remstimate <- function(reh = NULL,
             remstimateList$iterations <- optimum_obj$iteration                                    
         }
         if(model == "actor" ){ # Actor Oriented Model 
-            optimum_sender_rate <- trust::trust(objfun = remDerivatives, 
-                                parinit = rep(0,dim(stats$rate)[2]), 
-                                rinit = 1, 
-                                rmax = 100, 
-                                stats = stats$rate, 
-                                edgelist = reh$edgelist,
-                                omit_dyad = reh$omit_dyad,
-                                interevent_time = reh$intereventTime,
-                                model = model,
-                                C = reh$C,
-                                D = reh$D,
-                                ordinal = ordinal,
-                                senderRate = TRUE)
-            if(!silent) {print(optimum_sender_rate)}   # this print will be removed in the public version of the package         
-            optimum_receiver_choice <- trust::trust(objfun = remDerivatives, 
-                                parinit = rep(0,dim(stats$choice)[2]), 
-                                rinit = 1, 
-                                rmax = 100, 
-                                stats = stats$choice, 
-                                edgelist = reh$edgelist,
-                                omit_dyad = reh$omit_dyad, 
-                                interevent_time = reh$intereventTime,
-                                model = model,
-                                senderRate = FALSE,
-                                N = reh$N,
-                                C = reh$C,
-                                D = reh$D)
+            if(method == "MLE"){
+                optimum_sender_rate <- trust::trust(objfun = remDerivatives, 
+                                    parinit = rep(0,dim(stats$rate)[2]), 
+                                    rinit = 1, 
+                                    rmax = 100, 
+                                    stats = stats$rate, 
+                                    edgelist = reh$edgelist,
+                                    omit_dyad = reh$omit_dyad,
+                                    interevent_time = reh$intereventTime,
+                                    model = model,
+                                    C = reh$C,
+                                    D = reh$D,
+                                    ordinal = ordinal,
+                                    senderRate = TRUE)
+                if(!silent) {print(optimum_sender_rate)}   # this print will be removed in the public version of the package         
+                optimum_receiver_choice <- trust::trust(objfun = remDerivatives, 
+                                    parinit = rep(0,dim(stats$choice)[2]), 
+                                    rinit = 1, 
+                                    rmax = 100, 
+                                    stats = stats$choice, 
+                                    edgelist = reh$edgelist,
+                                    omit_dyad = reh$omit_dyad, 
+                                    interevent_time = reh$intereventTime,
+                                    model = model,
+                                    senderRate = FALSE,
+                                    N = reh$N,
+                                    C = reh$C,
+                                    D = reh$D)
+            }
+            if(method == "GD"){
+                stop("Gradient Descent (GD) is not yet available for actor-oriented modeling")
+            }
+            if(method == "GDADAM"){
+                stop("Gradient Descent with ADAM optimization (GDADAM) is not yet available for actor-oriented modeling")
+            }
+
             if(!silent) {print(optimum_receiver_choice)}   # this print will be removed in the public version of the package                   
             remstimateList$coefficients <- c(optimum_sender_rate$argument, optimum_receiver_choice$argument)
             remstimateList$loglik <- -(optimum_sender_rate$value+optimum_receiver_choice$value) # log(L_sender) + log(L_choice)       
@@ -268,61 +339,6 @@ remstimate <- function(reh = NULL,
         }            
         # ...
         # in future : if(WAIC) and if(ELPD){if(PSIS)} for predictive power of models
-    }
-
-    # ... [2] with Gradient Descent (GD)
-    if(method == "GD"){
-        if(is.null(init)){
-            remstimateList$optimum <- GD(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
-                                    stats = stats,  
-                                    edgelist = reh$edgelist,
-                                    omit_dyad = reh$omit_dyad,
-                                    interevent_time = reh$intereventTime,
-                                    model = model,
-                                    epochs = epochs,
-                                    learning_rate = learning_rate)
-        }else{
-            remstimateList$optimum <- GD(pars = init,
-                                    stats = stats,  
-                                    edgelist = reh$edgelist,
-                                    omit_dyad = reh$omit_dyad,
-                                    interevent_time = reh$intereventTime,
-                                    model = model,
-                                    epochs = epochs,
-                                    learning_rate = learning_rate)
-        }
-        
-        return(remstimateList$optimum)
-    }
-
-    # ... [3] with Gradient Descent ADAM (GDADAM)
-    if(method == "GDADAM"){
-        if(is.null(init)){
-            remstimateList$optimum <- GDADAM(pars = rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
-                                    stats = stats,
-                                    edgelist = reh$edgelist,
-                                    omit_dyad = reh$omit_dyad,
-                                    interevent_time = reh$intereventTime,
-                                    model = model,
-                                    epochs = epochs,
-                                    learning_rate = learning_rate)
-        }else{
-            remstimateList$optimum <- GDADAM(pars = init,
-                                    stats = stats,
-                                    edgelist = reh$edgelist,
-                                    omit_dyad = reh$omit_dyad,
-                                    interevent_time = reh$intereventTime,
-                                    model = model,
-                                    epochs = epochs,
-                                    learning_rate = learning_rate)
-        }
-        remstimateList$optimum <- GDADAM(pars = stats::rnorm(dim(stats)[2]), # rep(0,dim(stats)[2])
-                                    stats = stats,  
-                                    event_binary = reh$rehBinary, 
-                                    interevent_time = reh$intereventTime,
-                                    epochs = epochs,
-                                    learning_rate = learning_rate)
-        return(remstimateList$optimum)
     }
    
     # ... [4] with Bayesian Sampling Importance Resampling (BSIR)
@@ -474,6 +490,7 @@ remstimate <- function(reh = NULL,
         if(method %in% c("GD","GDADAM")){                 
             attr(str_out, "epochs") <- epochs
             attr(str_out, "learning rate") <- learning_rate
+            attr(str_out, "iterations") <- optimum_obj$iterations
         }
     }
     else{ # bayesian approach

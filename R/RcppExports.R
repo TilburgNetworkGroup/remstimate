@@ -114,18 +114,17 @@ remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, mo
 #' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time vector of interevent times (inside the reh object)
-#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param ncores number of threads to use for the parallelization
-#' @param fast TRUE/FALSE whether to perform the fast approach or not
 #' @param epochs number of epochs
 #' @param learning_rate learning rate
 #'
 #' @return optimization with Gradient Descent algorithm
 #'
 #' @export
-GD <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, epochs = 200L, learning_rate = 0.001) {
-    .Call(`_remstimate_GD`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, epochs, learning_rate)
+GD <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, epochs = 200L, learning_rate = 0.001) {
+    .Call(`_remstimate_GD`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, epochs, learning_rate)
 }
 
 #' GDADAM
@@ -137,10 +136,9 @@ GD <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal
 #' @param edgelist is a matrix [M*3] of [time/dyad/weight]
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time vector of interevent times (inside the reh object)
-#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param ncores number of threads to use for the parallelization
-#' @param fast TRUE/FALSE whether to perform the fast approach or not
 #' @param epochs number of epochs
 #' @param learning_rate learning rate
 #' @param beta1 hyperparameter beta1

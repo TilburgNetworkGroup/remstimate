@@ -13,7 +13,6 @@ GD(
   model,
   ordinal = FALSE,
   ncores = 1L,
-  fast = FALSE,
   epochs = 200L,
   learning_rate = 0.001
 )
@@ -34,8 +33,6 @@ GD(
 \item{ordinal}{whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood}
 
 \item{ncores}{number of threads to use for the parallelization}
-
-\item{fast}{TRUE/FALSE whether to perform the fast approach or not}
 
 \item{epochs}{number of epochs}
 
