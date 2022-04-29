@@ -13,8 +13,8 @@ The `remstimate` package provides a set of functions that perform necessary calc
 ### Programming Languages
 The package contains code written in:
 * R (>= 4.0.0)
-* Rcpp (>= 1.0.4.6) and RcppArmadillo (>= 0.9.860.2.0)
-* C++11 (Compiler Version: GCC-8.1.0)
+* Rcpp (>= 1.0.8.3) and RcppArmadillo (>= 0.11)
+* C++14
 	
 ### Installing the package
 To install the package in R using `devtools`:
