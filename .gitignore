@@ -1,4 +1,4 @@
-/.vscode/*
+**/.vscode/*
 .Rproj.user
 .Rhistory
 .DS_Store
