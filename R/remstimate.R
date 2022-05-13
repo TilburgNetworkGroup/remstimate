@@ -119,7 +119,7 @@ remstimate <- function(reh = NULL,
              else{
                  stats <- list(rate = aperm(stats$rate, perm = c(2,3,1)), choice = aperm(stats$choice, perm = c(2,3,1)))
              }
-            model_formula <- ""
+            model_formula <- stats::as.formula(".~.")
         }
         else{
             stop("actor-oriented modeling: 'stats' must be either a 'aomstats' 'remstats' object or a list of two arrays named 'rate' and 'choice'")
