@@ -287,18 +287,35 @@ remstimate <- function(reh = NULL,
                 stop("Gradient Descent with ADAM optimization (GDADAM) is not yet available for actor-oriented modeling")
             }
 
-            if(!silent) {print(optimum_receiver_choice)}   # this print will be removed in the public version of the package                   
-            remstimateList$coefficients <- c(optimum_sender_rate$argument, optimum_receiver_choice$argument)
-            remstimateList$loglik <- -(optimum_sender_rate$value+optimum_receiver_choice$value) # log(L_sender) + log(L_choice)       
-            remstimateList$gradient <- rbind(optimum_sender_rate$gradient, optimum_receiver_choice$gradient)
-            remstimateList$hessian <- matrix(0,nrow=(dim(stats$rate)[2]+dim(stats$choice)[2]),ncol=(dim(stats$rate)[2]+dim(stats$choice)[2]))
-            remstimateList$hessian[1:dim(stats$rate)[2],1:dim(stats$rate)[2]] <- optimum_sender_rate$hessian # hessian matrix for sender rate model
-            remstimateList$hessian[-c(1:dim(stats$rate)[2]),-c(1:dim(stats$rate)[2])] <- optimum_receiver_choice$hessian # hessian matrix for choice model
-            remstimateList$vcov <- qr.solve(remstimateList$hessian) # matrix of variances and covariances
-            remstimateList$se <- diag(remstimateList$vcov)**0.5 # standard errors
-            names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- colnames(remstimateList$hessian) <- rownames(remstimateList$hessian) <- c(dimnames(stats$rate)[[2]],dimnames(stats$choice)[[2]])
-            remstimateList$residual.deviance <- -2*remstimateList$loglik
-            remstimateList$null.deviance.sender <- 2*(trust::trust(objfun = remDerivatives, 
+            if(!silent) {print(optimum_receiver_choice)}   # this print will be removed in the public version of the package 
+            remstimateList$sender_rate <- remstimateList$receiver_choice <- list() 
+
+            # coefficients
+            remstimateList$sender_rate$coefficients <- optimum_sender_rate$argument
+            remstimateList$receiver_choice$coefficients <- optimum_receiver_choice$argument
+            # loglik
+            remstimateList$sender_rate$loglik <- -optimum_sender_rate$value # log(L_sender)
+            remstimateList$receiver_choice$loglik <- -optimum_receiver_choice$value # log(L_choice)  
+            # gradient     
+            remstimateList$sender_rate$gradient <- optimum_sender_rate$gradient
+            remstimateList$receiver_choice$gradient <- optimum_receiver_choice$gradient
+            # hessian
+            remstimateList$sender_rate$hessian <- optimum_sender_rate$hessian # hessian matrix for sender rate model
+            remstimateList$receiver_choice$hessian <- optimum_receiver_choice$hessian # hessian matrix for choice model
+            # vcov
+            remstimateList$sender_rate$vcov <- qr.solve(remstimateList$sender_rate$hessian) # matrix of variances and covariances for the sender rate model
+            remstimateList$receiver_choice$vcov <- qr.solve(remstimateList$receiver_choice$hessian) # matrix of variances and covariances for the receiver choice model
+            # standard errors
+            remstimateList$sender_rate$se <- diag(remstimateList$sender_rate$vcov)**0.5 # standard errors
+            remstimateList$receiver_choice$se <- diag(remstimateList$receiver_choice$vcov)**0.5 # standard errors           
+            #re-naming
+            names(remstimateList$sender_rate$coefficients) <- names(remstimateList$sender_rate$se) <- rownames(remstimateList$sender_rate$vcov) <- colnames(remstimateList$sender_rate$vcov) <- colnames(remstimateList$sender_rate$hessian) <- rownames(remstimateList$sender_rate$hessian) <- dimnames(stats$rate)[[2]]
+            names(remstimateList$receiver_choice$coefficients) <- names(remstimateList$receiver_choice$se) <- rownames(remstimateList$receiver_choice$vcov) <- colnames(remstimateList$receiver_choice$vcov) <- colnames(remstimateList$receiver_choice$hessian) <- rownames(remstimateList$receiver_choice$hessian) <- dimnames(stats$choice)[[2]]
+            # residual deviance
+            remstimateList$sender_rate$residual.deviance <- -2*remstimateList$sender_rate$loglik
+            remstimateList$sender_rate$residual.deviance <- -2*remstimateList$sender_rate$loglik
+            # null deviance
+            remstimateList$sender_rate$null.deviance <- 2*(trust::trust(objfun = remDerivatives, 
                                                                     parinit = c(0), 
                                                                     rinit = 1, 
                                                                     rmax = 100, 
@@ -312,7 +329,7 @@ remstimate <- function(reh = NULL,
                                                                     ordinal = ordinal,
                                                                     senderRate = TRUE)$value)
                                                      
-            remstimateList$null.deviance.choice <- ifelse(length(reh$omit_dyad)>0,2*(trust::trust(objfun = remDerivatives, 
+            remstimateList$receiver_choice$null.deviance <- ifelse(length(reh$omit_dyad)>0,2*(trust::trust(objfun = remDerivatives, 
                                                                 parinit = c(0), 
                                                                 rinit = 1, 
                                                                 rmax = 100, 
@@ -326,16 +343,33 @@ remstimate <- function(reh = NULL,
                                                                 C = reh$C,
                                                                 D = reh$D)$value),-2*log(1/(reh$N-1)))
             # null.deviance.choice is -2*log(1/(reh$N-1)) when the riskset is always (all the time points) the same
-            remstimateList$null.deviance <- remstimateList$null.deviance.choice + remstimateList$null.deviance.choice                       
-            remstimateList$model.deviance <- remstimateList$null.deviance -  remstimateList$residual.deviance                     
-            remstimateList$df.null <- reh$M
-            remstimateList$df.model <- dim(stats$rate)[2] + dim(stats$choice)[2]
-
-            remstimateList$AIC <- 2*length(remstimateList$coefficients) - 2*remstimateList$loglik # AIC
-            remstimateList$AICC <- remstimateList$AIC + 2*length(remstimateList$coefficients)*(length(remstimateList$coefficients)+1)/(reh$M-length(remstimateList$coefficients)-1)
-            remstimateList$BIC <- length(remstimateList$coefficients)*log(reh$M) - 2*remstimateList$loglik # BIC
-            remstimateList$converged <- c("rate" = optimum_sender_rate$converged, "choice" = optimum_receiver_choice$converged)
-            remstimateList$iterations <- c("rate" = optimum_sender_rate$iteration, "choice" = optimum_receiver_choice$iteration)
+            # model deviance
+            remstimateList$sender_rate$model.deviance <- remstimateList$sender_rate$null.deviance -  remstimateList$sender_rate$residual.deviance 
+            remstimateList$receiver_choice$model.deviance <- remstimateList$receiver_choice$null.deviance - remstimateList$receiver_choice$residual.deviance
+            # df null
+            remstimateList$sender_rate$df.null <- reh$M
+            remstimateList$receiver_choice$df.null <- reh$M
+            # df model
+            remstimateList$sender_rate$df.model <- dim(stats$rate)[2]
+            remstimateList$receiver_choice$df.model <- dim(stats$choice)[2]
+            # df residual
+            remstimateList$sender_rate$df.residual <- remstimateList$sender_rate$df.null - remstimateList$sender_rate$df.model
+            remstimateList$receiver_choice$df.residual <- remstimateList$receiver_choice$df.null - remstimateList$receiver_choice$df.model       
+            # AIC
+            remstimateList$sender_rate$AIC <- 2*length(remstimateList$sender_rate$coefficients) - 2*remstimateList$sender_rate$loglik 
+            remstimateList$receiver_choice$AIC <- 2*length(remstimateList$receiver_choice$coefficients) - 2*remstimateList$receiver_choice$loglik 
+            # AICC
+            remstimateList$sender_rate$AICC <- remstimateList$sender_rate$AIC + 2*length(remstimateList$sender_rate$coefficients)*(length(remstimateList$sender_rate$coefficients)+1)/(reh$M-length(remstimateList$sender_rate$coefficients)-1)
+            remstimateList$receiver_choice$AICC <- remstimateList$receiver_choice$AIC + 2*length(remstimateList$receiver_choice$coefficients)*(length(remstimateList$receiver_choice$coefficients)+1)/(reh$M-length(remstimateList$receiver_choice$coefficients)-1)
+            # BIC
+            remstimateList$sender_rate$BIC <- length(remstimateList$sender_rate$coefficients)*log(reh$M) - 2*remstimateList$sender_rate$loglik
+            remstimateList$receiver_choice$BIC <- length(remstimateList$receiver_choice$coefficients)*log(reh$M) - 2*remstimateList$receiver_choice$loglik
+            # converged
+            remstimateList$sender_rate$converged <- optimum_sender_rate$converged
+            remstimateList$receiver_choice$converged <- optimum_receiver_choice$converged
+            # iterations
+            remstimateList$sender_rate$iterations <- optimum_sender_rate$iteration
+            remstimateList$receiver_choice$iterations <- optimum_receiver_choice$iteration
         }            
         # ...
         # in future : if(WAIC) and if(ELPD){if(PSIS)} for predictive power of models
@@ -541,16 +575,35 @@ print.remstimate<-function(x, ...){
         warning("calling summary.lm(<fake-remstimate-object>) ...") # check this warning "summary.lm" or "print.lm"
     cat("Relational Event Model",paste("(",attr(x,"model")," oriented)",sep=""),"\n")
     if(attr(x,"approach") == "Frequentist"){
-        cat("\nCoefficients:\n\n")
-        print(x$coefficients)
+        if(attr(x,"model") == "tie"){
+            cat("\nCoefficients:\n\n")
+            print(x$coefficients)
+            cat("\nNull deviance:",x$null.deviance,"\nResidual deviance:",x$residual.deviance,"\n")
+            cat("AIC:",x$AIC,"AICC:",x$AICC,"BIC:",x$BIC,"\n\n")
+        }
+        else if(attr(x,"model") == "actor"){
+            # printing sender model 
+            cat("\nCoefficients rate model:\n\n")
+            print(x$sender_rate$coefficients)
+            cat("\nNull deviance:",x$sender_rate$null.deviance,"\nResidual deviance:",x$sender_rate$residual.deviance,"\n")
+            cat("AIC:",x$sender_rate$AIC,"AICC:",x$sender_rate$AICC,"BIC:",x$sender_rate$BIC,"\n")
+            #
+            cat(paste0(rep("-", getOption("width")),collapse = ""))
+            #
+            # printing receiver model
+            cat("\n\nCoefficients choice model:\n\n")
+            print(x$receiver_choice$coefficients)
+            cat("\nNull deviance:",x$receiver_choice$null.deviance,"\nResidual deviance:",x$receiver_choice$residual.deviance,"\n")
+            cat("AIC:",x$receiver_choice$AIC,"AICC:",x$receiver_choice$AICC,"BIC:",x$receiver_choice$BIC,"\n\n")
+            #
+            
+        }
+
     }
     else{ # Bayesian
         cat("\nPosterior Modes:\n\n")
         print(x$post.mode)
     }
-    
-    cat("\nNull deviance:",x$null.deviance,"\nResidual deviance:",x$residual.deviance,"\n")
-    cat("AIC:",x$AIC,"AICC:",x$AICC,"BIC:",x$BIC,"\n\n")
 }
 
 
@@ -574,13 +627,88 @@ summary.remstimate<-function (object, ...) #print.summary.remstimate
 
     summary_out <- list()
     if(attr(object, "approach") == "Frequentist"){ # Frequentist
-        coefsTab <- cbind("Estimate" = object$coefficients,
-        "Std. Err" = object$se,
-        "z value" = object$coefficients/object$se,
-        "Pr(>|z|)" = 2*(1-stats::pnorm(abs(object$coefficients/object$se)))
-        )
-        rownames(coefsTab) <- attr(object, "statistics")
-        summary_out$coefsTab <- coefsTab
+        if(attr(object,"model") == "tie"){
+            coefsTab <- cbind("Estimate" = object$coefficients,
+            "Std. Err" = object$se,
+            "z value" = object$coefficients/object$se,
+            "Pr(>|z|)" = 2*(1-stats::pnorm(abs(object$coefficients/object$se)))
+            )
+            rownames(coefsTab) <- attr(object, "statistics")
+            summary_out$coefsTab <- coefsTab
+            keep <- match(c("formula","aic",
+		      "contrasts", "df.residual","null.deviance","df.null",
+                      "iter", "na.action"), names(object$sender_rate), 0L)
+
+            keep <- list(formula = attr(object,"formula"),
+                        model = attr(object,"model"),
+                        ordinal = attr(object,"ordinal"),
+                        method = attr(object, "method"),
+                        approach = attr(object, "approach"),
+                        residual.deviance = object$residual.deviance,
+                        null.deviance = object$null.deviance,
+                        model.deviance = object$model.deviance,
+                        df.residual = (object$df.null - object$df.model),
+                        df.null = object$df.null,
+                        df.model = object$df.model,
+                        AIC = object$AIC,
+                        AICC = object$AICC,
+                        BIC = object$BIC,
+                        learning.rate = attr(object, "learning rate"))                
+            summary_out <- do.call(c, list(keep, summary_out))
+        }
+        else if(attr(object,"model") == "actor"){
+            coefsTab <- list()
+            # summary sender model
+            coefsTab$sender_rate <- cbind("Estimate" = object$sender_rate$coefficients,
+            "Std. Err" = object$sender_rate$se,
+            "z value" = object$sender_rate$coefficients/object$sender_rate$se,
+            "Pr(>|z|)" = 2*(1-stats::pnorm(abs(object$sender_rate$coefficients/object$sender_rate$se))),
+            "Pr(=0)" = (stats::dnorm(0,mean=object$sender_rate$coefficients,sd=object$sender_rate$se) / stats::dnorm(0,mean=0,sd=object$sender_rate$se*sqrt(object$sender_rate$df.null)))/((stats::dnorm(0,mean=object$sender_rate$coefficients,sd=object$sender_rate$se) / stats::dnorm(0,mean=0,sd=object$sender_rate$se*sqrt(object$sender_rate$df.null)))+1)
+            )
+            rownames(coefsTab$sender_rate) <- names(object$sender_rate$coefficients)
+            # summary receiver model
+            coefsTab$receiver_choice <- cbind("Estimate" = object$receiver_choice$coefficients,
+            "Std. Err" = object$receiver_choice$se,
+            "z value" = object$receiver_choice$coefficients/object$receiver_choice$se,
+            "Pr(>|z|)" = 2*(1-stats::pnorm(abs(object$receiver_choice$coefficients/object$receiver_choice$se))),
+            "Pr(=0)" = (stats::dnorm(0,mean=object$receiver_choice$coefficients,sd=object$receiver_choice$se) / stats::dnorm(0,mean=0,sd=object$receiver_choice$se*sqrt(object$receiver_choice$df.null)))/((stats::dnorm(0,mean=object$receiver_choice$coefficients,sd=object$receiver_choice$se) / stats::dnorm(0,mean=0,sd=object$receiver_choice$se*sqrt(object$receiver_choice$df.null)))+1)
+            )
+            rownames(coefsTab$receiver_choice) <- names(object$receiver_choice$coefficients)
+            #
+            summary_out$coefsTab <- coefsTab
+            keep <- match(c("formula",
+		      "contrasts", "sender_rate", "receiver_choice", "na.action"), names(object), 0L)
+
+            keep <- list(formula = attr(object,"formula"),
+                        model = attr(object,"model"),
+                        ordinal = attr(object,"ordinal"),
+                        method = attr(object, "method"),
+                        approach = attr(object, "approach"),
+                        sender_rate = list(
+                            residual.deviance = object$sender_rate$residual.deviance, 
+                            null.deviance = object$sender_rate$null.deviance,
+                            model.deviance = object$sender_rate$model.deviance,
+                            df.residual = object$sender_rate$df.residual,
+                            df.null = object$sender_rate$df.null,
+                            df.model = object$sender_rate$df.model,
+                            AIC = object$sender_rate$AIC,
+                            AICC = object$sender_rate$AICC,
+                            BIC = object$sender_rate$BIC
+                        ),
+                        receiver_choice = list(
+                            residual.deviance = object$receiver_choice$residual.deviance, 
+                            null.deviance = object$receiver_choice$null.deviance,
+                            model.deviance = object$receiver_choice$model.deviance,
+                            df.residual = object$receiver_choice$df.residual,
+                            df.null = object$receiver_choice$df.null,
+                            df.model = object$receiver_choice$df.model,
+                            AIC = object$receiver_choice$AIC,
+                            AICC = object$receiver_choice$AICC,
+                            BIC = object$receiver_choice$BIC
+                        ),
+                        learning.rate = attr(object, "learning rate"))                      
+            summary_out <- do.call(c, list(keep, summary_out))
+        }
 
     }
     if(attr(object, "approach") == "Bayesian"){ # Bayesian
@@ -593,27 +721,6 @@ summary.remstimate<-function (object, ...) #print.summary.remstimate
         rownames(coefsTab) <- attr(object, "statistics")
         summary_out$coefsTab <- coefsTab
     }
-
-    keep <- match(c("formula","aic",
-		      "contrasts", "df.residual","null.deviance","df.null",
-                      "iter", "na.action"), names(object), 0L)
-
-    keep <- list(formula = attr(object,"formula"),
-                model = attr(object,"model"),
-                ordinal = attr(object,"ordinal"),
-                method = attr(object, "method"),
-                approach = attr(object, "approach"),
-                residual.deviance = object$residual.deviance,
-                null.deviance = object$null.deviance,
-                model.deviance = object$model.deviance,
-                df.residual = (object$df.null - object$df.model),
-                df.null = object$df.null,
-                df.model = object$df.model,
-                AIC = object$AIC,
-                AICC = object$AICC,
-                BIC = object$BIC,
-                learning.rate = attr(object, "learning rate"))                
-    summary_out <- do.call(c, list(keep, summary_out))
 
     if(length(summary_out)==0) stop("invalid 'remstimate' object")
 
@@ -639,35 +746,76 @@ print.summary.remstimate <- function(x, ...)
     cat("Relational Event Model",paste("(",x$model," oriented)",sep=""),"\n\n")
     if(x$model == "tie"){
         cat("Call:\n",deparse(x$formula),"\n\n",sep="")
+        second_line <- paste("(",x$method," with ",sep="")
+        if(x$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
+        else{
+            second_line <- paste(second_line,"interval likelihood):\n\n",sep="")
+        }
+        if(x$approach == "Frequentist"){
+            cat("\nCoefficients",second_line)
+        }
+        else{ # Bayesian
+            cat("\nPosterior Modes",second_line)
+        }
+        stats::printCoefmat(x$coefsTab, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), ...)
+        if(x$approach == "Frequentist"){
+            cat("Null deviance:", x$null.deviance, "on", x$df.null, "degrees of freedom\n")
+            cat("Residual deviance:", x$residual.deviance, "on", x$df.residual, "degrees of freedom\n")
+            cat("Chi-square:", x$model.deviance, "on", x$df.model, 
+                "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$model.deviance, 
+                    x$df.model), "\n")
+            cat("AIC:", x$AIC, "AICC:", x$AICC, "BIC:", x$BIC, "\n")
+        }
+        if(x$approach == "Bayesian"){
+        cat("Log posterior:",x$logpost,"\n")
+        cat("Prior parameters:",paste(names(x$prior.param),unlist(x$prior.param),sep="="),"\n")
+        }
     }
     else if(x$model == "actor"){
-       cat("Call rate model:\n",deparse(x$formula$rate_model_formula),"\n\n",sep="")
-       cat("Call choice model:\n",deparse(x$formula$choice_model_formula),"\n\n",sep="") 
+        second_line <- paste("(",x$method," with ",sep="")
+        if(x$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
+        else{
+            second_line <- paste(second_line,"interval likelihood):\n\n",sep="")
+        }
+        # sender rate summary
+        cat("Call rate model:\n\n\t",deparse(x$formula$rate_model_formula),"\n\n",sep="")
+        if(x$approach == "Frequentist"){
+            cat("\nCoefficients rate model",second_line)
+        }
+        else{ # Bayesian
+            cat("\nPosterior Modes rate model",second_line)
+        }
+        stats::printCoefmat(x$coefsTab$sender_rate, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), ...)
+        if(x$approach == "Frequentist"){
+            cat("Null deviance:", x$sender_rate$null.deviance, "on", x$sender_rate$df.null, "degrees of freedom\n")
+            cat("Residual deviance:", x$sender_rate$residual.deviance, "on", x$sender_rate$df.residual, "degrees of freedom\n")
+            cat("Chi-square:", x$sender_rate$model.deviance, "on", x$sender_rate$df.model, 
+                "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$sender_rate$model.deviance, 
+                    x$sender_rate$df.model), "\n")
+            cat("AIC:", x$sender_rate$AIC, "AICC:", x$sender_rate$AICC, "BIC:", x$sender_rate$BIC, "\n")
+        }
+        #
+        cat(paste0(rep("-", getOption("width")),collapse = ""),"\n\n")
+        #
+        # receiver choice summary 
+        cat("Call choice model:\n\n\t",deparse(x$formula$choice_model_formula),"\n\n",sep="") 
+                if(x$approach == "Frequentist"){
+            cat("\nCoefficients choice model",second_line)
+        }
+        else{ # Bayesian
+            cat("\nPosterior Modes choice model",second_line)
+        }
+        stats::printCoefmat(x$coefsTab$receiver_choice, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), ...)
+        if(x$approach == "Frequentist"){
+            cat("Null deviance:", x$receiver_choice$null.deviance, "on", x$receiver_choice$df.null, "degrees of freedom\n")
+            cat("Residual deviance:", x$receiver_choice$residual.deviance, "on", x$receiver_choice$df.residual, "degrees of freedom\n")
+            cat("Chi-square:", x$receiver_choice$model.deviance, "on", x$receiver_choice$df.model, 
+                "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$receiver_choice$model.deviance, 
+                    x$receiver_choice$df.model), "\n")
+            cat("AIC:", x$receiver_choice$AIC, "AICC:", x$receiver_choice$AICC, "BIC:", x$receiver_choice$BIC, "\n")
+        }
     }
-    second_line <- paste("(",x$method," with ",sep="")
-    if(x$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
-    else{
-        second_line <- paste(second_line,"interval likelihood):\n\n",sep="")
-    }
-    if(x$approach == "Frequentist"){
-        cat("\nCoefficients",second_line)
-    }
-    else{ # Bayesian
-        cat("\nPosterior Modes",second_line)
-    }
-    stats::printCoefmat(x$coefsTab, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), ...)
-    if(x$approach == "Frequentist"){
-        cat("Null deviance:", x$null.deviance, "on", x$df.null, "degrees of freedom\n")
-        cat("Residual deviance:", x$residual.deviance, "on", x$df.residual, "degrees of freedom\n")
-        cat("Chi-square:", x$model.deviance, "on", x$df.model, 
-            "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$model.deviance, 
-                x$df.model), "\n")
-        cat("AIC:", x$AIC, "AICC:", x$AICC, "BIC:", x$BIC, "\n")
-    }
-    if(x$approach == "Bayesian"){
-      cat("Log posterior:",x$logpost,"\n")
-      cat("Prior parameters:",paste(names(x$prior.param),unlist(x$prior.param),sep="="),"\n")
-    }
+
     #if(x$estimator%in%c("BMCMC","BSIR")){
 
     #}
