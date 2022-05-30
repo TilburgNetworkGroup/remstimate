@@ -757,7 +757,7 @@ print.summary.remstimate <- function(x, ...)
         else{ # Bayesian
             cat("\nPosterior Modes",second_line)
         }
-        stats::printCoefmat(x$coefsTab, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), ...)
+        stats::printCoefmat(x$coefsTab, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE, ...) 
         if(x$approach == "Frequentist"){
             cat("Null deviance:", x$null.deviance, "on", x$df.null, "degrees of freedom\n")
             cat("Residual deviance:", x$residual.deviance, "on", x$df.residual, "degrees of freedom\n")
@@ -785,7 +785,7 @@ print.summary.remstimate <- function(x, ...)
         else{ # Bayesian
             cat("\nPosterior Modes rate model",second_line)
         }
-        stats::printCoefmat(x$coefsTab$sender_rate, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), ...)
+        stats::printCoefmat(x$coefsTab$sender_rate, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE, ...)
         if(x$approach == "Frequentist"){
             cat("Null deviance:", x$sender_rate$null.deviance, "on", x$sender_rate$df.null, "degrees of freedom\n")
             cat("Residual deviance:", x$sender_rate$residual.deviance, "on", x$sender_rate$df.residual, "degrees of freedom\n")
@@ -805,7 +805,7 @@ print.summary.remstimate <- function(x, ...)
         else{ # Bayesian
             cat("\nPosterior Modes choice model",second_line)
         }
-        stats::printCoefmat(x$coefsTab$receiver_choice, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), ...)
+        stats::printCoefmat(x$coefsTab$receiver_choice, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE, ...)
         if(x$approach == "Frequentist"){
             cat("Null deviance:", x$receiver_choice$null.deviance, "on", x$receiver_choice$df.null, "degrees of freedom\n")
             cat("Residual deviance:", x$receiver_choice$residual.deviance, "on", x$receiver_choice$df.residual, "degrees of freedom\n")
