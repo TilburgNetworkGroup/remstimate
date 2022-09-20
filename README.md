@@ -1,5 +1,5 @@
 # remstimate (Version: 1.0.0)
-# Optimization Tools for Relational Event History data
+### Optimization Tools for Relational Event History data
 ### Table of contents
 - [About the package](#about-the-package)
 - [Programming Languages](#programming-languages)
