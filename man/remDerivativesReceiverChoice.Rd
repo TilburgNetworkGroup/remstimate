@@ -10,10 +10,11 @@ remDerivativesReceiverChoice(
   edgelist,
   omit_dyad,
   interevent_time,
-  directed,
   N,
   C,
-  D
+  D,
+  gradient = TRUE,
+  hessian = TRUE
 )
 }
 \arguments{
@@ -27,13 +28,15 @@ remDerivativesReceiverChoice(
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
-\item{directed, }{boolean TRUE/FALSE if the network is directed or not}
-
 \item{N}{the number of actors}
 
 \item{C}{number of event types}
 
 \item{D}{number of dyads}
+
+\item{gradient}{boolean true/false whether to return gradient value}
+
+\item{hessian}{boolean true/false whether to return hessian value}
 }
 \value{
 list of values: loglik, grad, fisher

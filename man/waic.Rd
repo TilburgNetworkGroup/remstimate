@@ -19,6 +19,6 @@ A function that returns the WAIC (Watanabe-Akaike's Information Criterion) value
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{remstimate}: WAIC (Watanabe-Akaike's Information Criterion) value of a 'remstimate' object
-}}
+\item \code{waic(remstimate)}: WAIC (Watanabe-Akaike's Information Criterion) value of a 'remstimate' object
 
+}}

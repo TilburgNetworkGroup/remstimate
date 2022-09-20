@@ -1,11 +1,12 @@
 # remstimate (Version: 1.0.0)
 # Optimization Tools for Relational Event History data
 ### Table of contents
-* [About the package](#about-the-package)
-* [Programming Languages](#programming-languages)
-* [Installing the package](#installing-the-package)
-* [NEWS](#news)
-* [Notes](#notes)
+- [About the package](#about-the-package)
+- [Programming Languages](#programming-languages)
+- [Installing the package](#installing-the-package)
+- [NEWS](#news)
+- [Funding](#funding)
+- [Author](#author)
 
 ### About the package
 The `remstimate` package provides a set of functions that perform necessary calculations when modeling a Relational Event History.
@@ -30,10 +31,10 @@ library(remstimate)
 ### NEWS
 See [NEWS](NEWS.md) file for the most up to date changes.
 
-### Notes
-To collaborators: if you have suggestions of any improvement or you notice an error, open an issue and label it.
+### Funding
+The funder of this work is the ERC and the ERC project number is 758791.
 
-
-
+### Author
+Giuseppe Arena, Tilburg University (Tilburg, The Netherlands). (g.arena@tilburguniversity.edu)
 
 

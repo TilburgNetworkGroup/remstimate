@@ -17,7 +17,10 @@ iterHMC(
   model,
   ordinal = FALSE,
   ncores = 1L,
-  fast = FALSE
+  senderRate = TRUE,
+  N = NULL,
+  C = NULL,
+  D = NULL
 )
 }
 \arguments{
@@ -45,7 +48,13 @@ iterHMC(
 
 \item{ncores}{number of threads to use for the parallelization}
 
-\item{fast}{boolean true/false whether to run the fast approach or not}
+\item{senderRate}{boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)}
+
+\item{N}{number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")}
+
+\item{C}{number of event types}
+
+\item{D}{number of dyads}
 }
 \description{
 This function does one iteration of the Hamiltonian Monte carlo

@@ -19,6 +19,6 @@ A function that returns the AIC (Akaike's Information Criterion) value in a 'rem
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{remstimate}: AIC (Akaike's Information Criterion) value of a 'remstimate' object
-}}
+\item \code{aic(remstimate)}: AIC (Akaike's Information Criterion) value of a 'remstimate' object
 
+}}

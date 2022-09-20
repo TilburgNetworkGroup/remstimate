@@ -19,6 +19,6 @@ A function that returns the BIC (Bayesian Information Criterion) value in a 'rem
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{remstimate}: BIC (Bayesian Information Criterion) value of a 'remstimate' object
-}}
+\item \code{bic(remstimate)}: BIC (Bayesian Information Criterion) value of a 'remstimate' object
 
+}}

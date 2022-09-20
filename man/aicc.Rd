@@ -19,6 +19,6 @@ A function that returns the AICC (Akaike's Information Corrected Criterion) valu
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{remstimate}: AICC (Akaike's Information Corrected Criterion) value of a 'remstimate' object
-}}
+\item \code{aicc(remstimate)}: AICC (Akaike's Information Corrected Criterion) value of a 'remstimate' object
 
+}}

@@ -7,7 +7,7 @@
 remstimate(
   reh = NULL,
   stats = NULL,
-  method = c("MLE", "GD", "GDADAM", "BSIR", "HMC"),
+  method = c("MLE", "GDADAMAX", "BSIR", "HMC"),
   model = c("actor", "tie"),
   ncores = 1,
   prior = NULL,
@@ -16,8 +16,8 @@ remstimate(
   burnin = 500,
   thin = 10,
   init = NULL,
-  epochs = 200,
-  learning_rate = 0.001,
+  epochs = 1000,
+  epsilon = 0.001,
   silent = TRUE,
   seed = sample(1:10000, nchains),
   ...
@@ -28,7 +28,7 @@ remstimate(
 
 \item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})}
 
-\item{method}{optimization method to be used: \code{MLE}, \code{GD}, \code{GDADAM}, \code{BSIR}, \code{HMC}}
+\item{method}{optimization method to be used: \code{MLE}, \code{GDADAMAX}, \code{BSIR}, \code{HMC}}
 
 \item{model}{either \code{"actor"} or \code{"tie"} oriented. \code{"tie"} is the default value (literature ref. here to DyNAM and to REM?)}
 
@@ -44,11 +44,11 @@ remstimate(
 
 \item{thin}{number of steps to skip in the posterior draws of the HMC}
 
-\item{init}{matrix of initial values for \code{"HMC"}}
+\item{init}{vector of initial values if model = "tie", or a named list of two vectors ('rate' and 'choice') if model = "actor". This argument is used for the methods: \code{"GDADAMAX"} and \code{"HMC"}}
 
-\item{epochs}{200 by defaut. It is the number of iteration used in the methods \code{"GD"} and \code{"GDADAM"}}
+\item{epochs}{1e03 by defaut. It is the number of iteration used in the methods \code{"GDADAMAX"}}
 
-\item{learning_rate}{0.001 by default. It is the learning rate used in the methods \code{"GD"} and \code{"GDADAM"}}
+\item{epsilon}{0.001 by default. It is the inter-iteration difference of the loss function used in the methods \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.}
 
 \item{silent}{\code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out}
 

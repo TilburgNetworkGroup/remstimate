@@ -50,12 +50,15 @@ remDerivativesStandard <- function(pars, stats, edgelist, omit_dyad, interevent_
 #' @param C number of event types 
 #' @param D number of dyads
 #' @param ordinal boolean, true if the likelihood to use is the ordinal one, interval otherwise
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
 #'
 #'
 #' @return list of values: loglik, grad, fisher information
 #'
-remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal = FALSE) {
-    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal)
+#' @export
+remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal = FALSE, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal, gradient, hessian)
 }
 
 #' remDerivativesReceiverChoice
@@ -67,16 +70,18 @@ remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, intereve
 #' @param edgelist, output from remify, (note: indices of the actors must start from 0)
 #' @param omit_dyad, list object that takes care of the dynamic rikset (if defined)
 #' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param directed, boolean TRUE/FALSE if the network is directed or not
 #' @param N the number of actors
 #' @param C number of event types 
 #' @param D number of dyads
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
 #'
 #'
 #' @return list of values: loglik, grad, fisher
 #'
-remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, interevent_time, directed, N, C, D) {
-    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, edgelist, omit_dyad, interevent_time, directed, N, C, D)
+#' @export
+remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, interevent_time, N, C, D, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, edgelist, omit_dyad, interevent_time, N, C, D, gradient, hessian)
 }
 
 #' remDerivatives 
@@ -94,6 +99,8 @@ remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, inter
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
 #' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
 #' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
 #' @param C number of event types 
 #' @param D number of dyads
@@ -105,7 +112,7 @@ remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, mo
     .Call(`_remstimate_remDerivatives`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, gradient, hessian, senderRate, N, C, D)
 }
 
-#' GD
+#' GDADAMAX
 #'
 #' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
 #'
@@ -116,40 +123,24 @@ remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, mo
 #' @param interevent_time vector of interevent times (inside the reh object)
 #' @param model either "actor" or "tie" model
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
-#' @param ncores number of threads to use for the parallelization
-#' @param epochs number of epochs
-#' @param learning_rate learning rate
-#'
-#' @return optimization with Gradient Descent algorithm
-#'
-#' @export
-GD <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, epochs = 200L, learning_rate = 0.001) {
-    .Call(`_remstimate_GD`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, epochs, learning_rate)
-}
-
-#' GDADAM
-#'
-#' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-#'
-#' @param pars parameters
-#' @param stats array of statistics
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
-#' @param interevent_time vector of interevent times (inside the reh object)
-#' @param model either "actor" or "tie" model
-#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+#' @param gradient boolean true/false whether to return gradient value
+#' @param hessian boolean true/false whether to return hessian value
+#' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+#' @param C number of event types 
+#' @param D number of dyads
 #' @param ncores number of threads to use for the parallelization
 #' @param epochs number of epochs
 #' @param learning_rate learning rate
 #' @param beta1 hyperparameter beta1
 #' @param beta2 hyperparameter beta2
-#' @param eta hyperparameter eta
+#' @param epsilon hyperparameter eta
 #'
 #' @return optimization with GDADAM
 #'
 #' @export
-GDADAM <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, epochs = 200L, learning_rate = 0.02, beta1 = 0.9, beta2 = 0.999, eta = 0.00000001) {
-    .Call(`_remstimate_GDADAM`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, epochs, learning_rate, beta1, beta2, eta)
+GDADAMAX <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, senderRate = TRUE, gradient = TRUE, hessian = FALSE, N = NULL, C = NULL, D = NULL, ncores = 1L, epochs = 1e03L, learning_rate = 0.002, beta1 = 0.9, beta2 = 0.999, epsilon = 0.01) {
+    .Call(`_remstimate_GDADAMAX`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, senderRate, gradient, hessian, N, C, D, ncores, epochs, learning_rate, beta1, beta2, epsilon)
 }
 
 #' logPostHMC
@@ -166,12 +157,15 @@ GDADAM <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ord
 #' @param model either "actor" or "tie" model
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not
+#' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+#' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+#' @param C number of event types 
+#' @param D number of dyads
 #'
 #' @return value of log-posterior density
 #'
-logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
-    .Call(`_remstimate_logPostHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
+logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_logPostHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 
 #' logPostGradientHMC
@@ -188,12 +182,15 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, 
 #' @param model either "actor" or "tie" model
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not
+#' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+#' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+#' @param C number of event types 
+#' @param D number of dyads
 #'
 #' @return value of log-posterior gradient
 #'
-logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
-    .Call(`_remstimate_logPostGradientHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
+logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_logPostGradientHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 
 #' iterHMC
@@ -212,10 +209,13 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omi
 #' @param model either "actor" or "tie" model
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean true/false whether to run the fast approach or not
+#' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+#' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+#' @param C number of event types 
+#' @param D number of dyads
 #'
-iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE) {
-    .Call(`_remstimate_iterHMC`, L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast)
+iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_iterHMC`, L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 
 #' burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)
@@ -250,7 +250,10 @@ burninHMC <- function(samples, burnin, thin = 1L) {
 #' @param model either "actor" or "tie" model
 #' @param ordinal logic TRUE/FALSE
 #' @param ncores number of threads to use for the parallelization
-#' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE)
+#' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+#' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+#' @param C number of event types 
+#' @param D number of dyads
 #' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 #' @param L number of leapfrogs. Default (and recommended) value is 100.
 #' @param epsilon size of the leapfrog. Default value is 1e-02.
@@ -258,8 +261,8 @@ burninHMC <- function(samples, burnin, thin = 1L) {
 #'
 #' @return posterior draws
 #'
-HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, fast = FALSE, thin = 1L, L = 100L, epsilon = 0.01) {
-    .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, fast, thin, L, epsilon)
+HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL, thin = 1L, L = 100L, epsilon = 0.01) {
+    .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D, thin, L, epsilon)
 }
 
 #' experimental_function (where to try out specific operations at C++ level)

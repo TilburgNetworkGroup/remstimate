@@ -1,8 +1,8 @@
 Type: Package
 Package: remstimate
 Title: optimization tools for tie-oriented and actor-oriented relational event models
-Version: 1.0
-Date: 2022-01-19 
+Version: 2.0.0
+Date: 2022-09-20
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
@@ -12,22 +12,22 @@ Authors@R:
              family = "Lakdawala",
              role = "aut",
              email = "r.j.lakdawala@tilburguniversity.edu"),
-      person(given = "Marlyne",
-             family = "Meijerink-Bosman",
-             role = "aut",
-             email = "m.l.meijerink@tilburguniversity.edu"),
-      person(given = "Diana",
-             family = "Karimova",
-             role = "aut",
-             email = "d.karimova@tilburguniversity.edu"),
-      person(given = "Mahdi",
-             family = "Shafiee Kamalabad",
-             role = "aut",
-             email = "m.shafiee@tilburguniversity.edu"),
       person(given = "Fabio",
              family = "Generoso Vieira",
              role = "aut",
-             email = "f.v.generosovieira@tilburguniversity.edu"),
+             email = "f.v.generosovieira@tilburguniversity.edu"),             
+      person(given = "Marlyne",
+             family = "Meijerink-Bosman",
+             role = "ctb",
+             email = "m.l.meijerink@tilburguniversity.edu"),
+      person(given = "Diana",
+             family = "Karimova",
+             role = "ctb",
+             email = "d.karimova@tilburguniversity.edu"),
+      person(given = "Mahdi",
+             family = "Shafiee Kamalabad",
+             role = "ctb",
+             email = "m.shafiee@tilburguniversity.edu"),
       person(given = "Roger",
              family = "Leenders",
              role = "ctb",
@@ -60,5 +60,5 @@ LinkingTo:
     remify
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 SystemRequirements: GNU make

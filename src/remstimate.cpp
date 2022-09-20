@@ -7,7 +7,8 @@
 #include <map>
 #include <iterator>
 #include <string>
-
+#include <progress.hpp>
+#include <progress_bar.hpp>
 
 
 // /////////////////////////////////////////////////////////////////////////////////
@@ -326,10 +327,13 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 //' @param C number of event types 
 //' @param D number of dyads
 //' @param ordinal boolean, true if the likelihood to use is the ordinal one, interval otherwise
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
 //'
 //'
 //' @return list of values: loglik, grad, fisher information
 //'
+//' @export
 // [[Rcpp::export]]
 Rcpp::List remDerivativesSenderRates(
         const arma::vec &pars,
@@ -339,7 +343,9 @@ Rcpp::List remDerivativesSenderRates(
         const arma::vec &interevent_time,
         int C,
         int D,
-        bool ordinal = false){
+        bool ordinal = false,
+        bool gradient = true,
+        bool hessian  = true){
 
     int P = stats.n_cols; // number of parameters for send stats
     int M = stats.n_slices; // number of events
@@ -383,64 +389,95 @@ Rcpp::List remDerivativesSenderRates(
       // int type = dyad[2]; // when type will be integrated in the function
 
       //reset internal variables
-      fisher_m.zeros();
-      expected_stat_m.zeros();
+      if(gradient | hessian){
+        fisher_m.zeros();
+        expected_stat_m.zeros();
+      }
 
       // riskset_m
       int riskset_time_m = riskset_time_vec(m);
 
       loglik += std::log(lambda_s(sender));
-      grad += stats_m.col(sender);
+      if(gradient){
+        grad += stats_m.col(sender);
+      }
 
       // changes in the riskset at m-th event
       if(riskset_time_m!=(-1)){
         sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s); 
         if(ordinal){
           loglik-= std::log(sum_lambda);
-          for(n = 0; n < N; n++){         //loop throughout all actors
-            if(riskset_mat(riskset_time_m,n) == 1){
-              expected_stat_m += lambda_s(n) * (stats_m.col(n));
-              expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
-              grad -= expected_stat_m;
-              fisher_m += (expected_stat_m * expected_stat_m.t());
-              fisher_m -= (lambda_s(n) / sum_lambda) *( stats_m.col(n) * (stats_m.col(n).t()));
-              fisher += fisher_m;
+          if(gradient | hessian){
+            for(n = 0; n < N; n++){         //loop throughout all actors
+              if(riskset_mat(riskset_time_m,n) == 1){
+                expected_stat_m += lambda_s(n) * (stats_m.col(n));
+                expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
+                if(gradient){
+                  grad -= expected_stat_m;
+                }
+                if(hessian){
+                  fisher_m += (expected_stat_m * expected_stat_m.t());
+                  fisher_m -= (lambda_s(n) / sum_lambda) *( stats_m.col(n) * (stats_m.col(n).t()));
+                  fisher += fisher_m;
+                }   
+              }
             }
           }
         } 
         else{
           loglik -=  sum_lambda * interevent_time(m);
-          grad -= interevent_time(m) * stats_m * (riskset_mat.row(riskset_time_m).t() % lambda_s); 
-          for(n = 0; n < N; n++){         //loop throughout all actors
-            fisher_m += (riskset_mat(riskset_time_m,n) * lambda_s(n)) * (stats_m.col(n) * (stats_m.col(n).t()) );
+          if(gradient){
+            grad -= interevent_time(m) * stats_m * (riskset_mat.row(riskset_time_m).t() % lambda_s); 
           }
-          fisher -= interevent_time(m) * fisher_m;
+          if(hessian){
+            for(n = 0; n < N; n++){         //loop throughout all actors
+              fisher_m += (riskset_mat(riskset_time_m,n) * lambda_s(n)) * (stats_m.col(n) * (stats_m.col(n).t()) );
+            }
+            fisher -= interevent_time(m) * fisher_m;
+          }
         }
       }
       else{  //no dynamic riskset
         sum_lambda = sum(lambda_s);
         if(ordinal){
           loglik-= std::log(sum_lambda);
-          for(n = 0; n < N; n++){         //loop throughout all actors
-            expected_stat_m += lambda_s(n) * (stats_m.col(n));
-            expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
-            grad -= expected_stat_m;
-            fisher_m += (expected_stat_m * expected_stat_m.t());
-            fisher_m -= (lambda_s(n) / sum_lambda) * (stats_m.col(n) * (stats_m.col(n).t()));
-            fisher += fisher_m;
+          if(gradient | hessian){
+            for(n = 0; n < N; n++){         //loop throughout all actors
+              expected_stat_m += lambda_s(n) * (stats_m.col(n));
+              expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
+              if(gradient){
+                grad -= expected_stat_m;
+              }
+              if(hessian){
+                fisher_m += (expected_stat_m * expected_stat_m.t());
+                fisher_m -= (lambda_s(n) / sum_lambda) * (stats_m.col(n) * (stats_m.col(n).t()));
+                fisher += fisher_m;
+              }
+            }
           }
         } 
         else{
           loglik -=  sum_lambda * interevent_time(m);
-          grad -= interevent_time(m) * stats_m * lambda_s; //(6)
-          for(n = 0; n < N; n++){         //loop throughout all actors
-            fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()));
+          if(gradient){
+            grad -= interevent_time(m) * stats_m * lambda_s; //(6)
           }
-          fisher -= interevent_time(m) * fisher_m;
+          if(hessian){
+            for(n = 0; n < N; n++){         //loop throughout all actors
+              fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()));
+            }
+            fisher -= interevent_time(m) * fisher_m;
+          }
         }
       }
     }
-    return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
+
+    if(gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
+    }else if(!gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
+    }else{
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
+    }
 }
 
 
@@ -453,14 +490,16 @@ Rcpp::List remDerivativesSenderRates(
 //' @param edgelist, output from remify, (note: indices of the actors must start from 0)
 //' @param omit_dyad, list object that takes care of the dynamic rikset (if defined)
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param directed, boolean TRUE/FALSE if the network is directed or not
 //' @param N the number of actors
 //' @param C number of event types 
 //' @param D number of dyads
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
 //'
 //'
 //' @return list of values: loglik, grad, fisher
 //'
+//' @export
 //[[Rcpp::export]]
 Rcpp::List remDerivativesReceiverChoice(
         const arma::vec &pars,
@@ -468,10 +507,11 @@ Rcpp::List remDerivativesReceiverChoice(
         const arma::mat &edgelist,
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
-        bool directed,
         int N,
         int C,
-        int D){
+        int D,
+        bool gradient = true,
+        bool hessian  = true){
 
     arma::uword P_d = stats.n_cols; // number of parameters for dyad stats
     arma::uword M = edgelist.n_rows; // number of events
@@ -516,8 +556,10 @@ Rcpp::List remDerivativesReceiverChoice(
       //int type = dyad_m[2]; // when type will be integrated in the function
 
       //reset internal variables
-      fisher_m.zeros();
-      expected_stat_m.zeros();
+      if(gradient | hessian){
+        fisher_m.zeros();
+        expected_stat_m.zeros();
+      }
       denom = 0;
 
       // riskset_m
@@ -526,12 +568,16 @@ Rcpp::List remDerivativesReceiverChoice(
       // changes in the riskset at m-th event
       if(riskset_time_m!=(-1)){ 
         for(n = 0; n<N; n++){
-            dyad = getDyadIndex(sender,n,0,N,directed);
+            dyad = getDyadIndex(sender,n,0,N,true);
             if(n!=sender && riskset_mat(riskset_time_m,dyad) == 1){ // dynamic riskset
                 //loglik
                 denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
-                fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
-                expected_stat_m += lambda_d(n) * stats_m.col(n);
+                if(hessian){
+                  fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+                }
+                if(gradient | hessian){
+                  expected_stat_m += lambda_d(n) * stats_m.col(n);
+                }
             }
         }
       }
@@ -540,8 +586,12 @@ Rcpp::List remDerivativesReceiverChoice(
           if(n!=sender){ // 
               //loglik
               denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
-              fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+              if(hessian){
+                fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+              }
+              if(gradient | hessian){
               expected_stat_m += lambda_d(n) * stats_m.col(n);
+              }
           }
         }
       }
@@ -549,16 +599,27 @@ Rcpp::List remDerivativesReceiverChoice(
       loglik +=  std::log(lambda_d(receiver)); //(3) params_d^T * X_sender_receiver
       loglik -= std::log(denom);
 
-      grad += stats_m.col(receiver); //(7)
-      expected_stat_m /= denom; //(8)
-      grad -= expected_stat_m;
-
-      fisher_m /= denom;
-      fisher_m += (expected_stat_m * expected_stat_m.t());
-      fisher += fisher_m;      
+      if(gradient | hessian){
+        expected_stat_m /= denom; //(8)
+      }
+      if(gradient){
+        grad += stats_m.col(receiver); //(7)
+        grad -= expected_stat_m;
+      }
+      if(hessian){
+        fisher_m /= denom;
+        fisher_m += (expected_stat_m * expected_stat_m.t());
+        fisher += fisher_m;
+      }     
     }
 
-    return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
+    if(gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
+    }else if(!gradient && !hessian){
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
+    }else{
+      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
+    }
 }
 
 
@@ -577,6 +638,8 @@ Rcpp::List remDerivativesReceiverChoice(
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
 //' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
 //' @param C number of event types 
 //' @param D number of dyads
@@ -612,13 +675,13 @@ Rcpp::List remDerivatives(const arma::vec &pars,
     break;}
 
   case 1: { 
-      switch (senderRate){
+      switch (senderRate){ // both likelihood miss paralellization
         case 0 : {
-                  out = remDerivativesReceiverChoice(pars,stats,edgelist,omit_dyad,interevent_time,true,Rcpp::as<int>(N),Rcpp::as<int>(C),Rcpp::as<int>(D));  // add gradient and hessian switch
+                  out = remDerivativesReceiverChoice(pars,stats,edgelist,omit_dyad,interevent_time,Rcpp::as<int>(N),Rcpp::as<int>(C),Rcpp::as<int>(D),gradient,hessian);  // add gradient and hessian switch
                   break;
                   }
         case 1 : {
-                  out = remDerivativesSenderRates(pars,stats,edgelist,omit_dyad,interevent_time,Rcpp::as<int>(C),Rcpp::as<int>(D),ordinal); // add gradient and hessian switch
+                  out = remDerivativesSenderRates(pars,stats,edgelist,omit_dyad,interevent_time,Rcpp::as<int>(C),Rcpp::as<int>(D),ordinal,gradient,hessian); // add gradient and hessian switch
                   break;
                   }
       }
@@ -640,7 +703,7 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 // /////////////////////////////////////////////////////////////////////////////////
 
 
-//' GD
+//' GDADAMAX
 //'
 //' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
 //'
@@ -651,123 +714,108 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 //' @param interevent_time vector of interevent times (inside the reh object)
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
-//' @param ncores number of threads to use for the parallelization
-//' @param epochs number of epochs
-//' @param learning_rate learning rate
-//'
-//' @return optimization with Gradient Descent algorithm
-//'
-//' @export
-// [[Rcpp::export]]
-Rcpp::List GD(const arma::vec &pars,
-              const arma::cube &stats,
-              const arma::mat &edgelist,
-              const Rcpp::List &omit_dyad,
-              const arma::vec &interevent_time,
-              std::string model,
-              bool ordinal = false,
-              int ncores = 1,
-              int epochs = 200,
-              double learning_rate = 0.001){
-    //if loss function oscillates in later epochs, then reduce learning rate for better convergence
-    // suggestions: (1) tuning of learning rate, (2) standardization of data
-    // further implementation: parallelizing with multiple starting points
-    // stopping rule (gradient value/loglik difference/number of epochs)
-    arma::vec pars_prev = pars;
-    arma::vec pars_next;
-    arma::uword P = pars.n_elem;
-
-    //for output
-    arma::mat beta(P,epochs,arma::fill::zeros);
-    arma::vec loss(epochs,arma::fill::zeros);
-
-    for(int i =0; i<epochs;i++){
-        Rcpp::List derv = remDerivatives(pars_prev,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,true,false);
-        double loglik = derv["value"];
-        arma::vec grad = derv["gradient"];
-        pars_next = pars_prev - (learning_rate * grad);
-        beta.col(i) = pars_next;
-        loss(i) = loglik;
-        pars_prev = pars_next;
-    }
-    return Rcpp::List::create(Rcpp::Named("value") = loss, Rcpp::Named("argument") = pars_next, Rcpp::Named("iterations") = beta);
-}
-
-
-//' GDADAM
-//'
-//' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
-//'
-//' @param pars parameters
-//' @param stats array of statistics
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
-//' @param interevent_time vector of interevent times (inside the reh object)
-//' @param model either "actor" or "tie" model
-//' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+//' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+//' @param gradient boolean true/false whether to return gradient value
+//' @param hessian boolean true/false whether to return hessian value
+//' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+//' @param C number of event types 
+//' @param D number of dyads
 //' @param ncores number of threads to use for the parallelization
 //' @param epochs number of epochs
 //' @param learning_rate learning rate
 //' @param beta1 hyperparameter beta1
 //' @param beta2 hyperparameter beta2
-//' @param eta hyperparameter eta
+//' @param epsilon hyperparameter eta
 //'
 //' @return optimization with GDADAM
 //'
 //' @export
 // [[Rcpp::export]]
-Rcpp::List GDADAM(const arma::vec &pars,
-                   const arma::cube &stats,
-                   const arma::mat &edgelist,
-                   const Rcpp::List &omit_dyad,
-                   const arma::vec &interevent_time,
-                   std::string model,
-                   bool ordinal = false,
-                   int ncores = 1,
-                   int epochs = 200,
-                   double learning_rate = 0.02,
-                   double beta1 = 0.9,
-                   double beta2 = 0.999,
-                   double eta = 0.00000001){
+Rcpp::List GDADAMAX(const arma::vec &pars,
+                  const arma::cube &stats,
+                  const arma::mat &edgelist,
+                  const Rcpp::List &omit_dyad,
+                  const arma::vec &interevent_time,
+                  std::string model,
+                  bool ordinal = false,
+                  bool senderRate = true,
+                  bool gradient = true,
+                  bool hessian = false,
+                  Rcpp::Nullable<int> N = R_NilValue,
+                  Rcpp::Nullable<int> C = R_NilValue,
+                  Rcpp::Nullable<int> D = R_NilValue,
+                  int ncores = 1,
+                  int epochs = 1e03,
+                  double learning_rate = 0.002,
+                  double beta1 = 0.9,
+                  double beta2 = 0.999,
+                  double epsilon = 0.01){
 
-// default values for hyper-parameters recommended in literature (https://arxiv.org/abs/1412.6980)
-// β1 =  0.9 for β2 =  0.999
-// eta = 10^-8
-    arma::uword P = pars.n_elem;
-    arma::vec pars_prev = pars;
-    arma::vec pars_next;
+  // link ref: https://machinelearningmastery.com/gradient-descent-optimization-with-adamax-from-scratch/   (cite properly original papers)               
+  arma::uword P = pars.n_elem;
+  double  alpha = 0.002; 
+  double loglik,loglik_prev;
+  int i = 0;
+  arma::vec moment(P,arma::fill::zeros);
+  arma::vec inf_norm(P,arma::fill::zeros);
+  arma::vec iterations_loglik(epochs,arma::fill::zeros);
+  arma::vec step_size(1,arma::fill::zeros);
+  arma::vec pars_loc = pars;
+  arma::vec grad(P,arma::fill::zeros);
+  std::string reason;
+  arma::mat iterations_pars(P,epochs,arma::fill::zeros);
 
 
-    arma::vec moment1(P,arma::fill::zeros);
-    arma::vec moment2(P,arma::fill::zeros);
+  while(i <= (epochs-1)){
+    Rcpp::List derv = remDerivatives(pars_loc,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,gradient,hessian,senderRate,N,C,D);
 
-    arma::vec moment1_est(P,arma::fill::zeros);
-    arma::vec moment2_est(P,arma::fill::zeros);
+    // calculate loglik and gradient with the previous iteration
+    loglik = derv["value"];
+    grad = Rcpp::as<arma::vec>(derv["gradient"]);
 
-    //for output
-    arma::mat beta(P,epochs,arma::fill::zeros);
-    arma::vec loss(epochs,arma::fill::zeros);
-
-    for(int i =0; i<epochs;i++){
-        Rcpp::List derv = remDerivatives(pars_prev,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,true,false);
-        double loglik = derv["value"];
-
-        arma::vec grad = derv["gradient"];
-        moment1 = (beta1*moment1) + (1-beta1)*grad;
-        moment2 = (beta2 * moment2) + (1-beta2) * (grad%grad);
-        // bias-corrected first and second moment estimates:
-        moment1_est = moment1 / (1-pow(beta1,i+1));
-        moment2_est = moment2/  (1-pow(beta2,i+1));
-        pars_next = pars_prev - (learning_rate * moment1_est)/(sqrt(moment2_est)+eta);
-
-        beta.col(i) = pars_next;
-        loss(i) = loglik;
-
-        pars_prev = pars_next;
+    //Rcpp::Rcout << std::abs(loglik_prev - loglik) << "\n";
+    if((i > 1)  & (std::abs(loglik_prev - loglik) < epsilon)){
+        reason = "epsilon condition reached";
+        break;
     }
-    return Rcpp::List::create(Rcpp::Named("value") = loss, Rcpp::Named("argument") = pars_next, Rcpp::Named("iterations") = beta);
-}
 
+    loglik_prev = loglik;
+
+    // store values
+    iterations_pars.col(i) = pars_loc;
+    iterations_loglik(i) = loglik;
+
+    // updating moment vector
+    arma::vec moment_prev = moment;
+    moment = (beta1*moment_prev) + (1-beta1)*grad;
+
+    // updating exponentially weighted infinity norm
+    arma::vec inf_norm_prev = inf_norm;
+    arma::vec abs_grad = arma::abs(grad);
+    for(int p=0; p<P; p++){
+      arma::vec inf_norm_both = {beta2*inf_norm_prev(p),abs_grad(p)};
+      inf_norm(p) = arma::max(inf_norm_both);
+    }
+
+    // updating parameter value
+    step_size(0) = alpha/(1-std::pow(beta1,i+1));
+
+    // updating gradient
+    arma::vec delta = moment / inf_norm;
+
+    // updating parameter value
+    pars_loc = pars_loc - (step_size(0) * delta);
+
+    i += 1;
+  }
+
+  if(reason.size() == 0){
+    reason = "max epochs condition reached";
+  }
+
+  return Rcpp::List::create(Rcpp::Named("value") = loglik, Rcpp::Named("argument") = pars_loc, Rcpp::Named("gradient") = grad,Rcpp::Named("iterations_loglik") = iterations_loglik(arma::span(0,i-1)), Rcpp::Named("iterations_pars") = iterations_pars(arma::span::all,arma::span(0,i-1)),Rcpp::Named("iterations") = i, Rcpp::Named("converged") = reason);
+    
+}
 
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(END)               Gradient Descent                (END)/////////////
@@ -794,7 +842,10 @@ Rcpp::List GDADAM(const arma::vec &pars,
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
-//' @param fast boolean true/false whether to run the fast approach or not
+//' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+//' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+//' @param C number of event types 
+//' @param D number of dyads
 //'
 //' @return value of log-posterior density
 //'
@@ -809,10 +860,13 @@ double logPostHMC(const arma::vec &meanPrior,
                   std::string model,
                   bool ordinal = false,
                   int ncores = 1,
-                  bool fast = false){
+                  bool senderRate = true,
+                  Rcpp::Nullable<int> N = R_NilValue,
+                  Rcpp::Nullable<int> C = R_NilValue,
+                  Rcpp::Nullable<int> D = R_NilValue){
 
-  Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast,false,false);
-
+  Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,C,D);
+                                
   double prior = - sum(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
 
   return -(prior + derv[0]);
@@ -833,7 +887,10 @@ double logPostHMC(const arma::vec &meanPrior,
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
-//' @param fast boolean true/false whether to run the fast approach or not
+//' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+//' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+//' @param C number of event types 
+//' @param D number of dyads
 //'
 //' @return value of log-posterior gradient
 //'
@@ -848,9 +905,12 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               std::string model,
                               bool ordinal = false,
                               int ncores = 1,
-                              bool fast = false){
+                              bool senderRate = true,
+                              Rcpp::Nullable<int> N = R_NilValue,
+                              Rcpp::Nullable<int> C = R_NilValue,
+                              Rcpp::Nullable<int> D = R_NilValue){
 
-  Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast,true,false);
+  Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N,C,D);
   arma::vec gprior = - 0.5 * inv(sigmaPrior) * (pars - meanPrior);
   arma::vec glp = derv[1];
 
@@ -874,7 +934,10 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param ncores number of threads to use for the parallelization
-//' @param fast boolean true/false whether to run the fast approach or not
+//' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+//' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+//' @param C number of event types 
+//' @param D number of dyads
 //'
 // [[Rcpp::export]]
 arma::vec iterHMC(arma::uword L,
@@ -889,28 +952,31 @@ arma::vec iterHMC(arma::uword L,
                   std::string model,
                   bool ordinal = false,
                   int ncores = 1,
-                  bool fast = false){
+                  bool senderRate = true,
+                  Rcpp::Nullable<int> N = R_NilValue,
+                  Rcpp::Nullable<int> C = R_NilValue,
+                  Rcpp::Nullable<int> D = R_NilValue){
 
   arma::vec accept; //vector to store sample
-  arma::uword N = pars.size(); //number of parameters
+  arma::uword P = pars.size(); //number of parameters
 
-  arma::vec r = arma::randn(N); //Rcpp::rnorm(N, 0.0, 1.0); rv's to use in the hamiltonian equations
+  arma::vec r = arma::randn(P); //Rcpp::rnorm(P, 0.0, 1.0); rv's to use in the hamiltonian equations
   arma::vec betaC = pars;
   arma::vec betaP = pars;
   arma::vec rC = r;
 
   //leapfrog algorithm, updates via Hamiltonian equations
-  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast);
+  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
   for(arma::uword i = 1; i <= L; i++){
     betaP = betaP + r * epsilon;
-    if(i != L) r = r - epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast);
+    if(i != L) r = r - epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
   }
-  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast);
+  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
   r = -r;
 
   //computes final quantities for the acceptance rate
-  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast);
-  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast);
+  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
   double K = 0.5 * sum(rC.t() * rC);
   double propK = 0.5 * sum(r.t() * r);
 
@@ -978,7 +1044,10 @@ arma::cube burninHMC(const arma::cube& samples, arma::uword burnin, arma::uword 
 //' @param model either "actor" or "tie" model
 //' @param ordinal logic TRUE/FALSE
 //' @param ncores number of threads to use for the parallelization
-//' @param fast boolean TRUE/FALSE whether to run the fast approach or not (default = FALSE)
+//' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+//' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+//' @param C number of event types 
+//' @param D number of dyads
 //' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 //' @param L number of leapfrogs. Default (and recommended) value is 100.
 //' @param epsilon size of the leapfrog. Default value is 1e-02.
@@ -1000,25 +1069,27 @@ arma::cube HMC(arma::mat pars_init,
                 std::string model,
                 bool ordinal = false,
                 int ncores = 1,
-                bool fast = false,
+                bool senderRate = true,
+                Rcpp::Nullable<int> N = R_NilValue,
+                Rcpp::Nullable<int> C = R_NilValue,
+                Rcpp::Nullable<int> D = R_NilValue,
                 arma::uword thin = 1,
                 arma::uword L = 100,
-                double epsilon = 0.01){
-
+                double epsilon = 0.01){ 
   arma::cube store(nsim, pars_init.n_rows, nchains); //output
   arma::uword j,i;
 
   for(j = 0; j < nchains; j++){ //looping through chains
-
+    Rcpp::Rcout << "\n Progress chain " << j << "\n";
+    Progress p(nsim,true);
     arma::mat aux(pars_init.n_rows, 1,arma::fill::zeros);
     arma::mat chain_j(nsim,pars_init.n_rows,arma::fill::zeros);
-
     for(i = 0; i < nsim; i++){ //looping through iterations of the MCMC
-      Rcpp::Rcout << i << "\n";
+    
       if(i == 0){
 
         //this step only get the first sample out of the starting value
-        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast);
+        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
 
         chain_j.row(i) = aux.col(0).t();
 
@@ -1027,11 +1098,12 @@ arma::cube HMC(arma::mat pars_init,
       } else {
 
         //Then the next step will always be based on the previous one
-        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,aux.col(0),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,fast);
+        aux.col(0) = iterHMC(L,epsilon,meanPrior,sigmaPrior,aux.col(0),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
 
         chain_j.row(i) = aux.col(0).t();
 
       }
+      p.increment();
     }
     store.slice(j) = chain_j;
 

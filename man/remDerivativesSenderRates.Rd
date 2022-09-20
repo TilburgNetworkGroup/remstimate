@@ -12,7 +12,9 @@ remDerivativesSenderRates(
   interevent_time,
   C,
   D,
-  ordinal = FALSE
+  ordinal = FALSE,
+  gradient = TRUE,
+  hessian = TRUE
 )
 }
 \arguments{
@@ -31,6 +33,10 @@ remDerivativesSenderRates(
 \item{D}{number of dyads}
 
 \item{ordinal}{boolean, true if the likelihood to use is the ordinal one, interval otherwise}
+
+\item{gradient}{boolean true/false whether to return gradient value}
+
+\item{hessian}{boolean true/false whether to return hessian value}
 }
 \value{
 list of values: loglik, grad, fisher information

@@ -22,14 +22,14 @@ Useful links:
 Authors:
 \itemize{
   \item Rumana Lakdawala \email{r.j.lakdawala@tilburguniversity.edu}
-  \item Marlyne Meijerink-Bosman \email{m.l.meijerink@tilburguniversity.edu}
-  \item Diana Karimova \email{d.karimova@tilburguniversity.edu}
-  \item Mahdi Shafiee Kamalabad \email{m.shafiee@tilburguniversity.edu}
   \item Fabio Generoso Vieira \email{f.v.generosovieira@tilburguniversity.edu}
 }
 
 Other contributors:
 \itemize{
+  \item Marlyne Meijerink-Bosman \email{m.l.meijerink@tilburguniversity.edu} [contributor]
+  \item Diana Karimova \email{d.karimova@tilburguniversity.edu} [contributor]
+  \item Mahdi Shafiee Kamalabad \email{m.shafiee@tilburguniversity.edu} [contributor]
   \item Roger Leenders \email{r.t.a.j.leenders@tilburguniversity.edu} [contributor]
   \item Joris Mulder \email{j.mulder3@tilburguniversity.edu} [contributor]
 }
