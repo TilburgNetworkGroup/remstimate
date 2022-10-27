@@ -866,10 +866,11 @@ double logPostHMC(const arma::vec &meanPrior,
                   Rcpp::Nullable<int> D = R_NilValue){
 
   Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,C,D);
+  double derv_0 = Rcpp::as<double>(derv[0]);
                                 
   double prior = - sum(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
 
-  return -(prior + derv[0]);
+  return -(prior + derv_0);
 }
 
 
