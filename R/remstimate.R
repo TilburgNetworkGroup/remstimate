@@ -162,7 +162,10 @@ remstimate <- function(reh,
     # ... ncores
     if(is.null(ncores)) ncores <- 1
     else{
-      if(ncores > (floor(parallel::detectCores()) - 2)) stop(cat("'ncores' is recommended to be set at most to ", (floor(parallel::detectCores()) - 2),"."))
+        if((parallel::detectCores() == 2) & (ncores > 1))
+            stop(cat("'ncores' is recommended to be set at most to 1."))
+        else if((parallel::detectCores() > 2) & (ncores > floor(parallel::detectCores()-2)))
+            stop(cat("'ncores' is recommended to be set at most to",floor(parallel::detectCores()-2),"."))
     }
 
     # ... seed

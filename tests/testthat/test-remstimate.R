@@ -12,6 +12,7 @@ test_that("testing input arguments", {
   mle_loc <- remstimate::remstimate(reh = attr(tie_reh,"remulate.reh"),
                           stats = tie_reh_stats,
                           method = "MLE",
+                          ncores = 1,
                           model = "tie")
 
   # testing errors 
@@ -19,6 +20,7 @@ test_that("testing input arguments", {
   ## input `reh` is null
   expect_error(remstimate::remstimate(reh = NULL,
                           stats = tie_reh_stats,
+                          ncores = 1,
                           method = "MLE"),
   "missing 'reh' argument.",
   fixed = TRUE
@@ -42,6 +44,7 @@ test_that("testing tie-oriented modeling", {
   # (1) method = "MLE"
   tie_mle <- remstimate::remstimate(reh = tie_reh,
                           stats = tie_reh_stats,
+                          ncores = 1,
                           method = "MLE") 
   # these two tests are risky because estimates can slightly change across operating systems                          
   # expect_snapshot(tie_mle)
