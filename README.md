@@ -3,7 +3,7 @@
 [![github-repo-status](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![R-package-version](https://img.shields.io/github/r-package/v/TilburgNetworkGroup/remstimate)](https://www.github.com/TilburgNetworkGroup/remstimate)
 [![R-CMD-check](https://github.com/TilburgNetworkGroup/remstimate/actions/workflows/check-standard.yaml/badge.svg)](https://github.com/TilburgNetworkGroup/remstimate/actions/workflows/check-standard.yaml)
-
+[![codecov](https://codecov.io/gh/TilburgNetworkGroup/remstimate/branch/master/graph/badge.svg?token=8NZ4T6E4N9)](https://codecov.io/gh/TilburgNetworkGroup/remstimate)
 
 ## Optimization Tools for Relational Event History data
 The `remstimate` package provides a set of functions that perform necessary calculations when modeling a Relational Event History. It can perform tie-oriented as well as actor-oriented modeling. The main function is `remstimate::remstimate()` which provides four different estimation methods: 
