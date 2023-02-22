@@ -1,40 +1,38 @@
-# remstimate (Version: 2.0.0)
-### Optimization Tools for Relational Event History data
-### Table of contents
-- [About the package](#about-the-package)
-- [Programming Languages](#programming-languages)
-- [Installing the package](#installing-the-package)
-- [NEWS](#news)
-- [Funding](#funding)
-- [Author](#author)
+# remstimate
 
-### About the package
-The `remstimate` package provides a set of functions that perform necessary calculations when modeling a Relational Event History.
+[![github-repo-status](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![R-package-version](https://img.shields.io/github/r-package/v/TilburgNetworkGroup/remstimate)](https://www.github.com/TilburgNetworkGroup/remstimate)
+[![R-CMD-check](https://github.com/TilburgNetworkGroup/remstimate/actions/workflows/check-standard.yaml/badge.svg)](https://github.com/TilburgNetworkGroup/remstimate/actions/workflows/check-standard.yaml)
 
-### Programming Languages
-The package contains code written in:
-* R (>= 4.0.0)
-* Rcpp (>= 1.0.8.3) and RcppArmadillo (>= 0.11)
-* C++14
-	
-### Installing the package
-To install the package in R using `devtools`:
+
+## Optimization Tools for Relational Event History data
+The `remstimate` package provides a set of functions that perform necessary calculations when modeling a Relational Event History. It can perform tie-oriented as well as actor-oriented modeling. The main function is `remstimate::remstimate()` which provides four different estimation methods: 
+
+- `"MLE"`, maximizing the model likelihood
+- `"GDADAMAX"`, optimization based on the gradient 
+- `"BSIR"`, Bayesian Sampling Importance Resampling
+- `"HMC"`, Hamiltonian Monte Carlo
+
+
+## Installation
+Install the package in R using `devtools`:
 
 ```
-library(devtools)
-install_github("TilburgNetworkGroup/remstimate")
-
-# load the package
-library(remstimate)
+devtools::install_github(repo = "TilburgNetworkGroup/remstimate")
 ```
 
-### NEWS
-See [NEWS](NEWS.md) file for the most up to date changes.
 
-### Funding
-The funder of this work is the ERC and the ERC project number is 758791.
+## Vignettes
+Not yet available
 
-### Author
+
+## Author
 Giuseppe Arena, Tilburg University (Tilburg, The Netherlands). (g.arena@tilburguniversity.edu)
 
 
+## Funding
+The funder of this work is the ERC and the ERC project number is 758791.
+
+
+## NEWS
+See [NEWS](NEWS.md) file for the most up to date changes.

@@ -5,7 +5,6 @@
 #' @param reh an \code{reh} object (output object of the function \code{remify::reh})
 #' @param stats a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})
 #' @param method optimization method to be used: \code{MLE}, \code{GDADAMAX}, \code{BSIR}, \code{HMC}
-#' @param model either \code{"actor"} or \code{"tie"} oriented. \code{"tie"} is the default value (literature ref. here to DyNAM and to REM?)
 #' @param ncores number of threads for the parallelization (\code{default = 1}, no parallelization)
 #' @param prior prior distribution when using Bayesian methods
 #' @param nsim  when \code{method = "HMC"} it is the number of simulations (iterations) in each chain, when \code{method = "BSIR"} is the number of samples from the proposal distribution
@@ -17,15 +16,13 @@
 #' @param epsilon 0.001 by default. It is the inter-iteration difference of the loss function used in the methods \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.
 #' @param seed seed for reproducibility (yet to be integrated in the code)
 #' @param silent \code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out
-#' @param seed seed for reproducibility (yet to be integrated in the code)
 #' @param ... additional parameters. They can be parameters of other functions defined as input in some argument
 #'
 #' @return  remstimate S3 object
 #' @export
-remstimate <- function(reh = NULL,
-                       stats = NULL, 
-                       method = c("MLE","GDADAMAX","BSIR","HMC"), 
-                       model = c("actor","tie"),
+remstimate <- function(reh,
+                       stats, 
+                       method = c("MLE","GDADAMAX","BSIR","HMC"),
                        ncores = 1,
                        prior = NULL,
                        nsim = 1000,
@@ -35,8 +32,8 @@ remstimate <- function(reh = NULL,
                        init = NULL,                 
                        epochs = 1e03,
                        epsilon = 0.001,
-                       silent = TRUE,
                        seed = sample(1:1e04,nchains),
+                       silent = TRUE,
                        ...){
 
     # ... processing input:
@@ -44,24 +41,19 @@ remstimate <- function(reh = NULL,
     # ... reh
     if(is.null(reh)) stop("missing 'reh' argument.")
     else{
-        if(class(reh)!="reh"){
-            if(is.data.frame(reh) | is.matrix(reh)){
+        if(!inherits(reh,"reh")){
+            if(is.data.frame(reh)){
                 reh <- remify::reh(edgelist = reh, ...)
             }
             else{
-                stop("Input 'reh' must be either a 'reh' object (from 'remify' package) or the event sequence (matrix or data.frame).")
+                stop("Input 'reh' must be either a 'reh' object (from 'remify' package) or the event sequence (data.frame).")
             }
         }
     }
 
     # ... model :
-    if(is.null(model)) {
-        model <- "tie"
-        warning("argument 'model' set to 'tie' by default")
-    }
-    if(!is.null(model) & !(model %in% c("tie","actor"))) stop("argument 'model' must be set to either 'tie' or 'actor'")
-    if(!is.null(model) & all(model==c("tie","actor"))) model <- "tie"
-    
+    model <- attr(reh, "model") # attribute from reh object
+
     # ... method : 
     if(!(method %in% c("MLE","GDADAMAX","BSIR","HMC"))){stop("The `method` specified is not available or it is mistyped.")}
 

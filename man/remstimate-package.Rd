@@ -6,7 +6,7 @@
 \alias{_PACKAGE}
 \title{remstimate: optimization tools for tie-oriented and actor-oriented relational event models}
 \description{
-This package offers a set of tools for the optimization of the likelihood in a relational event modeling framework (initial objective: to compare time performance with relevent::rem function and to improve them).
+This package offers a set of tools for the optimization of the likelihood in a relational event modeling framework. Frequentist as well as Bayesian approaches are available inside the package.
 }
 \seealso{
 Useful links:

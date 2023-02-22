@@ -5,10 +5,9 @@
 \title{remstimate}
 \usage{
 remstimate(
-  reh = NULL,
-  stats = NULL,
+  reh,
+  stats,
   method = c("MLE", "GDADAMAX", "BSIR", "HMC"),
-  model = c("actor", "tie"),
   ncores = 1,
   prior = NULL,
   nsim = 1000,
@@ -18,8 +17,8 @@ remstimate(
   init = NULL,
   epochs = 1000,
   epsilon = 0.001,
-  silent = TRUE,
   seed = sample(1:10000, nchains),
+  silent = TRUE,
   ...
 )
 }
@@ -29,8 +28,6 @@ remstimate(
 \item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})}
 
 \item{method}{optimization method to be used: \code{MLE}, \code{GDADAMAX}, \code{BSIR}, \code{HMC}}
-
-\item{model}{either \code{"actor"} or \code{"tie"} oriented. \code{"tie"} is the default value (literature ref. here to DyNAM and to REM?)}
 
 \item{ncores}{number of threads for the parallelization (\code{default = 1}, no parallelization)}
 
@@ -50,9 +47,9 @@ remstimate(
 
 \item{epsilon}{0.001 by default. It is the inter-iteration difference of the loss function used in the methods \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.}
 
-\item{silent}{\code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out}
-
 \item{seed}{seed for reproducibility (yet to be integrated in the code)}
+
+\item{silent}{\code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out}
 
 \item{...}{additional parameters. They can be parameters of other functions defined as input in some argument}
 }
