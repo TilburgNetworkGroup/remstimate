@@ -20,13 +20,101 @@ test_that("testing input arguments", {
   ## input `reh` is null
   expect_error(remstimate::remstimate(reh = NULL,
                           stats = tie_reh_stats,
-                          ncores = 1,
-                          method = "MLE"),
+                          method = "MLE",
+                          ncores = 1),
   "missing 'reh' argument.",
   fixed = TRUE
   )         
 
   ## input `reh` is not an `reh` object nor a  `data.frame`
+  expect_error(remstimate::remstimate(reh = data.matrix(attr(tie_reh,"remulate.reh ")),
+                          stats = tie_reh_stats,
+                          method = "MLE",
+                          ncores = 1),
+  "Input 'reh' must be either a 'reh' object (from 'remify' package) or the event sequence (data.frame).",
+  fixed = TRUE
+  )       
+
+  ## input `method` is not available or it is mistyped
+  expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "mle",
+                          ncores = 1),
+  "The `method` specified is not available or it is mistyped.",
+  fixed = TRUE
+  )  
+
+  ## tests on the stats object
+
+  # [ ... here ... ]
+
+  ## input `epochs` is negative
+  expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "GDADAMAX",
+                          ncores = 1,
+                          epochs = -29),
+  "'epoch' must be a positive number",
+  fixed = TRUE
+  )  
+
+  ## input `epochs` is a character
+  expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "GDADAMAX",
+                          ncores = 1,
+                          epochs = "ss"),
+  "'epoch' must be a positive number",
+  fixed = TRUE
+  )  
+
+  ## input `epsilon` must be a positive number
+  expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "GDADAMAX",
+                          ncores = 1,
+                          epsilon = -3.2),
+  "'epsilon' must be a positive number",
+  fixed = TRUE
+  )
+
+  # estimate with NULL epochs and epsilon
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "GDADAMAX",
+                          ncores = 1,
+                          epochs = NULL,
+                          epsilon = NULL))
+
+
+  ## when parallel::detectCores() == 2 and input `ncores` is greater than 1
+  if(parallel::detectCores() ==2)
+  { # run the test only if there are 2 cores in the machine
+    expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "MLE",
+                          ncores = 10),
+  "'ncores' is recommended to be set at most to 1.",
+  fixed = TRUE
+  )
+  }
+
+  ## when parallel::detectCores() > 2 and the input `ncores` is greater than the suggested maximum value 
+  expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "MLE",
+                          ncores = 20),
+  paste("'ncores' is recommended to be set at most to",floor(parallel::detectCores()-2),".",sep=" "),
+  fixed = TRUE
+  )
+
+  # estimate with NULL ncores 
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "MLE",
+                          ncores = NULL))
+
+ 
 
 })
 

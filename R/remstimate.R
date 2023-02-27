@@ -23,14 +23,14 @@
 remstimate <- function(reh,
                        stats, 
                        method = c("MLE","GDADAMAX","BSIR","HMC"),
-                       ncores = 1,
+                       ncores = 1L,
                        prior = NULL,
                        nsim = 1000,
-                       nchains = 2,
-                       burnin = 500,
-                       thin = 10,  
+                       nchains = 2L,
+                       burnin = 500L,
+                       thin = 10L,  
                        init = NULL,                 
-                       epochs = 1e03,
+                       epochs = 1e03L,
                        epsilon = 0.001,
                        seed = sample(1:1e04,nchains),
                        silent = TRUE,
@@ -89,7 +89,7 @@ remstimate <- function(reh,
         }
 
         if((!is.null(init)) & (method == "GDADAMAX")){
-            if(!is.vector(init)){
+            if(!is.vector(init)){ # there should be more stop()'s as to the structure of the init input based on the modeling framework (tie or actor oriented)
                 stop("'init' must be a vector with the starting values of the effects of the statistics")
             }
         }
@@ -137,16 +137,27 @@ remstimate <- function(reh,
 
     # ... epochs and epsilon (parameters for GDADAMAX)
     if(method == "GDADAMAX"){
+
+        # ... epochs
         if(is.null(epochs)){
-            epochs <- 1e03
+            epochs <- 1e03L
         }
-        else if(epochs < 0){
-            stop("'epochs' must be a positive integer")   
+        else if(is.numeric(epochs) | is.integer(epochs)){
+            epochs <- as.integer(epochs) # this converts, for instance 3.2 to 3, 3.7 to 3
+            if(epochs<0){
+                stop("'epoch' must be a positive number'")
+            }
         }
+        else{
+            stop("'epoch' must be a positive number")
+        }
+
+
+        # ... epsilon
         if(is.null(epsilon)){
             epsilon <- 0.01
         }
-        else if((epsilon < 0)){
+        else if((epsilon <= 0)){
             stop("'epsilon' must be a positive number")
         }
     }
@@ -160,12 +171,12 @@ remstimate <- function(reh,
 
 
     # ... ncores
-    if(is.null(ncores)) ncores <- 1
+    if(is.null(ncores)) ncores <- 1L
     else{
-        if((parallel::detectCores() == 2) & (ncores > 1))
-            stop(cat("'ncores' is recommended to be set at most to 1."))
-        else if((parallel::detectCores() > 2) & (ncores > floor(parallel::detectCores()-2)))
-            stop(cat("'ncores' is recommended to be set at most to",floor(parallel::detectCores()-2),"."))
+        if((parallel::detectCores() == 2L) & (ncores > 1L))
+            stop("'ncores' is recommended to be set at most to 1.")
+        else if((parallel::detectCores() > 2L) & (ncores > floor(parallel::detectCores()-2L)))
+            stop(paste("'ncores' is recommended to be set at most to",floor(parallel::detectCores()-2L),".",sep=" "))
     }
 
     # ... seed
