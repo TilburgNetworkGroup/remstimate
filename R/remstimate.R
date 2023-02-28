@@ -25,8 +25,8 @@ remstimate <- function(reh,
                        method = c("MLE","GDADAMAX","BSIR","HMC"),
                        ncores = 1L,
                        prior = NULL,
-                       nsim = 1000,
-                       nchains = 2L,
+                       nsim = 1e03L,
+                       nchains = 1L,
                        burnin = 500L,
                        thin = 10L,  
                        init = NULL,                 
@@ -176,11 +176,71 @@ remstimate <- function(reh,
         if((parallel::detectCores() == 2L) & (ncores > 1L))
             stop("'ncores' is recommended to be set at most to 1.")
         else if((parallel::detectCores() > 2L) & (ncores > floor(parallel::detectCores()-2L)))
-            stop(paste("'ncores' is recommended to be set at most to",floor(parallel::detectCores()-2L),".",sep=" "))
+            stop("'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)")
     }
 
     # ... seed
-    if(is.null(seed) & !is.null(nchains)) seed <- sample(1:1e04,nchains)
+    if(method == "HMC"){
+        if(is.null(seed)){
+            if(!is.null(nchains)){
+                seed <- sample(1:1e06,nchains)
+            }
+            else{
+                nchains <- 2L
+                seed <- sample(1:1e06,nchains)
+            }
+        }
+        else{
+            if(is.null(nchains)){
+                nchains <- length(seed)
+            }
+            else{
+                if(length(seed) != nchains)
+                    stop("the number of chains (`nchains`) must be equal to the number of seeds (`seed`) supplied")
+            }
+        }
+        
+    }
+    if(method == "BSIR"){
+        if(is.null(seed)){
+            seed <- sample(1:1e06,nchains)
+        }
+        else if(length(seed) > 1){
+            seed <- seed[1]
+            warning("`seed` length is greater than 1. Considering only the first element")
+        }
+    }
+
+    # ... nsim
+    if(is.null(nsim) & (method %in% c("BSIR","HMC"))){
+        nsim <- 1e03L
+    }
+
+    # ... burnin
+    if(is.null(burnin) & (method == "HMC")){
+        burnin <- 500L
+    }
+    else if(method == "HMC"){
+        if(burnin > nsim)
+            stop("`burnin` value must be lower than the number of simulations (`nsim`)")
+        
+    }
+
+    # ... thin
+    if(is.null(thin) & (method == "HMC")){
+        if((burnin == 500L) & (nsim == 1e03L)){ # if the burnin and the nsim value are equal to the default ones then we set thin to its default value
+            thin <- 10L
+        }
+        else{
+            # we set a value of thin that is works fine given the nsim and the burnin value
+            if((nsim-burnin)<500L){
+                thin <- 5L # if the sequences without burnin are shorter than 500, we reduce the thinning, this is arbitrary only when thin argument is NULL
+            }
+            else{
+                thin <- 10L
+            }
+        }
+    }
 
 
     # ... creating  an empty lists
@@ -431,12 +491,6 @@ remstimate <- function(reh,
     # ... [4] with Bayesian Sampling Importance Resampling (BSIR)
     if(method == "BSIR"){
 
-        # (0) check for the 'nsim' parameter
-        if(is.null(nsim)){
-            nsim <- 5e03
-            warning("'nsim' is set to 5e03 by default")
-        }      
-
         if(model == "tie"){ # Relational Event Model (REM)
 
             bsir <- list()
@@ -620,7 +674,7 @@ remstimate <- function(reh,
                 init <- matrix(stats::runif(dim(stats)[2]*nchains,-0.5,0.5),nrow=dim(stats)[2],ncol=nchains) # runif was in (-0.1,0.1)
             }
 
-            cat("\n\n",init,"\n\n")
+            # cat("\n\n",init,"\n\n")
 
             hmc_out <- HMC(pars_init = init, 
                         nsim = (burnin+nsim), 

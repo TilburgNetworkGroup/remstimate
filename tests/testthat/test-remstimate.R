@@ -1,4 +1,4 @@
-test_that("testing input arguments", {
+test_that("testing input arguments and tie-oriented modeling", {
 
   # loading data
   data(tie_reh)
@@ -104,7 +104,7 @@ test_that("testing input arguments", {
                           stats = tie_reh_stats,
                           method = "MLE",
                           ncores = 20),
-  paste("'ncores' is recommended to be set at most to",floor(parallel::detectCores()-2),".",sep=" "),
+  "'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)",
   fixed = TRUE
   )
 
@@ -114,11 +114,114 @@ test_that("testing input arguments", {
                           method = "MLE",
                           ncores = NULL))
 
- 
+  # tests on seed, nchains, nsim, burnin and thin parameters
+
+  ## seed == NULL, nchains = 3L and method = "HMC"
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                         seed = NULL,
+                         nchains = 3L,
+                         nsim = 100,
+                         burnin = 5))
+  ## seed == NULL, nchains = NULL and method = "HMC"                      
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                         seed = NULL,
+                         nchains = NULL,
+                         nsim = 100,
+                         burnin = 5)) 
+  ## seed = c(1234,4321), nchains = 2L, method = "HMC"
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                         seed = c(1234,4321),
+                         nchains = 2L,
+                         nsim = 100,
+                         burnin = 5))          
+
+  ## seed = c(1234,4321), nchains = NULL, method = "HMC"   
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                         seed = c(1234,4321),
+                         nchains = NULL,
+                         nsim = 100,
+                         burnin = 5))      
+
+  ## seed = c(1234,4321), nchains = 5L, method = "HMC"   
+  expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                         seed = c(1234,4321),
+                         nchains = 5L,
+                         nsim = 100,
+                         burnin = 5),
+  "the number of chains (`nchains`) must be equal to the number of seeds (`seed`) supplied",
+  fixed = TRUE
+  )  
+
+  ## seed = NULL, method = "BSIR" 
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "BSIR",
+                          seed = NULL,
+                          nsim = 100)) 
+
+  ## seed = c(1234,4321), method = "BSIR"                      
+  expect_warning(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "BSIR",
+                         seed = c(1234,4321)),
+  "`seed` length is greater than 1. Considering only the first element",
+  fixed = TRUE
+  )   
+
+  ## nsim = NULL, method  = "BSIR" (or "HMC")                    
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "BSIR",
+                          nsim = NULL,
+                          seed = 1234)) 
+  ## burnin = NULL, method = "HMC" 
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                          burnin = NULL,
+                          seed = 1234)) 
+
+  ## method = "HMC", burnin > nsim      
+  expect_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                          burnin = 1e05L),
+  "`burnin` value must be lower than the number of simulations (`nsim`)",
+  fixed = TRUE
+  )          
+
+  ## burnin = 500L, nsim = 1e03L, thin = NULL, method = "HMC"
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC")) 
+
+  ## if((nsim-burnin)<500L), method = "HMC" 
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                          nsim = 100,
+                          burnin = 50))   
+
+  ## if((nsim-burnin)>=500L), method = "HMC" 
+  expect_no_error(remstimate::remstimate(reh = tie_reh,
+                          stats = tie_reh_stats,
+                          method = "HMC",
+                          nsim = 600,
+                          burnin = 50))                 
 
 })
 
-test_that("testing tie-oriented modeling", {
+test_that("testing tie-oriented modeling (methods)", {
 
   # loading data
   data(tie_reh)

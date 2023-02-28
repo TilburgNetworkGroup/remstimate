@@ -1081,8 +1081,8 @@ arma::cube HMC(arma::mat pars_init,
   arma::uword j,i;
 
   for(j = 0; j < nchains; j++){ //looping through chains
-    Rcpp::Rcout << "\n Progress chain " << j << "\n";
-    Progress p(nsim,true);
+    //Rcpp::Rcout << "\n Progress chain " << j << "\n";
+    //Progress p(nsim,true); // disabled progress bar
     arma::mat aux(pars_init.n_rows, 1,arma::fill::zeros);
     arma::mat chain_j(nsim,pars_init.n_rows,arma::fill::zeros);
     for(i = 0; i < nsim; i++){ //looping through iterations of the MCMC
@@ -1104,7 +1104,7 @@ arma::cube HMC(arma::mat pars_init,
         chain_j.row(i) = aux.col(0).t();
 
       }
-      p.increment();
+      //p.increment();
     }
     store.slice(j) = chain_j;
 
