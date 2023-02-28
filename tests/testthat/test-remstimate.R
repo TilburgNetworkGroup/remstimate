@@ -88,25 +88,26 @@ test_that("testing input arguments and tie-oriented modeling", {
 
 
   ## when parallel::detectCores() == 2 and input `ncores` is greater than 1
-  if(parallel::detectCores() ==2)
+  if(parallel::detectCores() <= 2L)
   { # run the test only if there are 2 cores in the machine
     expect_error(remstimate::remstimate(reh = tie_reh,
                           stats = tie_reh_stats,
                           method = "MLE",
-                          ncores = 10),
+                          ncores = 10L),
   "'ncores' is recommended to be set at most to 1.",
   fixed = TRUE
   )
   }
-
+  else{
   ## when parallel::detectCores() > 2 and the input `ncores` is greater than the suggested maximum value 
   expect_error(remstimate::remstimate(reh = tie_reh,
                           stats = tie_reh_stats,
                           method = "MLE",
-                          ncores = 20),
+                          ncores = 2e03L),
   "'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)",
   fixed = TRUE
   )
+  }
 
   # estimate with NULL ncores 
   expect_no_error(remstimate::remstimate(reh = tie_reh,
