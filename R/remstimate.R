@@ -6,7 +6,7 @@
 #' @param stats a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})
 #' @param method optimization method to be used: \code{MLE}, \code{GDADAMAX}, \code{BSIR}, \code{HMC}
 #' @param ncores number of threads for the parallelization (\code{default = 1}, no parallelization)
-#' @param prior prior distribution when using Bayesian methods
+#' @param prior prior distribution when using the \code{BSIR} method
 #' @param nsim  when \code{method = "HMC"} it is the number of simulations (iterations) in each chain, when \code{method = "BSIR"} is the number of samples from the proposal distribution
 #' @param nchains number of chains to generate
 #' @param burnin number of initial iterations to be added as burnin
@@ -65,12 +65,12 @@ remstimate <- function(reh,
     model_formula <- variable_names <- NULL
     if(model == "tie")
     {
-        if((class(stats)[2]=="remstats") & (class(stats)[1]=="tomstats")){
+        if(inherits(stats,c("remstats","tomstats"))){
             variable_names <- as.vector(sapply(dimnames(stats$statistics)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
             model_formula <- stats::as.formula(paste("~ ",paste(variable_names,collapse=" + ")))
             stats <- aperm(stats$statistics, perm = c(2,3,1)) # stats reshaped in [D*U*M] (this might change in the future?)
         }
-        else if((class(stats)[2]=="remstats") & (class(stats)[1]=="aomstats")){
+        else if(inherits(stats,c("remstats","aomstats"))){
             stop("'remstats' object supplied cannot work for tie-oriented modeling")
         }
         else if(is.array(stats)){
@@ -96,26 +96,26 @@ remstimate <- function(reh,
     }
     if(model == "actor") 
     {
-        if((class(stats)[2]=="remstats") & (class(stats)[1]=="aomstats")){
+        if(inherits(stats,c("remstats","aomstats"))){
             variables_rate <- as.vector(sapply(dimnames(stats$statistics$sender_stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
             variables_choice <- as.vector(sapply(dimnames(stats$statistics$receiver_stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
             variable_names <- c(variables_rate,variables_choice)
             model_formula <- list(rate_model_formula = stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + "))), choice_model_formula = stats::as.formula(paste("~ ",paste(variables_choice,collapse=" + "))))
-            stats <- list(rate = aperm(stats$statistics$sender_stats, perm = c(2,3,1)), choice = aperm(stats$statistics$receiver_stats, perm = c(2,3,1))) # stats reshaped in [D*U*M] (this might change in the future?)
+            stats <- list(sender_rate = aperm(stats$statistics$sender_stats, perm = c(2,3,1)), receiver_choice = aperm(stats$statistics$receiver_stats, perm = c(2,3,1))) # stats reshaped in [D*U*M] (this might change in the future?)
         }
-        else if((class(stats)[2]=="remstats") & (class(stats)[1]=="tomstats")){
+        else if(inherits(stats,c("remstats","tomstats"))){
             stop("'remstats' object supplied cannot work for tie-oriented modeling")
         }
-        else if(is.list(stats) & all(c("rate","choice") %in% names(stats))){
-             M_rate <- dim(stats$rate)[1]
-             N_rate <- dim(stats$rate)[2]
-             M_choice <- dim(stats$choice)[1]
-             N_choice <- dim(stats$choice)[2]
+        else if(is.list(stats) & all(c("sender_rate","receiver_choice") %in% names(stats))){
+             M_rate <- dim(stats$sender_rate)[1]
+             N_rate <- dim(stats$sender_rate)[2]
+             M_choice <- dim(stats$receiver_choice)[1]
+             N_choice <- dim(stats$receiver_choice)[2]
              if((M_rate != reh$M) & (M_choice != reh$M) & (N_rate != reh$N) & (N_choice != reh$N)){
-                 stop("numbers of rows and columns in both arrays ('rate' and 'choice') inside 'stats' must be equal to number of 'time points' and 'actors' in the network (see dim(reh))")
+                 stop("numbers of rows and columns in both arrays ('sender_rate' and 'receiver_choice') inside 'stats' must be equal to number of 'time points' and 'actors' in the network (see dim(reh))")
              }
              else{
-                 stats <- list(rate = aperm(stats$rate, perm = c(2,3,1)), choice = aperm(stats$choice, perm = c(2,3,1)))
+                 stats <- list(sender_rate = aperm(stats$sender_rate, perm = c(2,3,1)), choice = aperm(stats$receiver_choice, perm = c(2,3,1)))
              }
             model_formula <- stats::as.formula(".~.")
         }
@@ -125,11 +125,11 @@ remstimate <- function(reh,
 
         if((!is.null(init)) & (method == "GDADAMAX")){
             if(!is.list(init)){
-                    stop("'init' must be a list of two vectors named 'rate' and 'choice', each one with the starting values of the effects of the statistics according to the two different models (rate model and choice model)")
+                    stop("'init' must be a list of two vectors named 'sender_rate' and 'receiver_choice', each one with the starting values of the effects of the statistics according to the two different models (rate model and choice model)")
                 }
             else{
-                if(!all(c("rate","choice") %in% names(init))){
-                    stop("'init' must be a list of two vectors named 'rate' and 'choice', each one with the starting values of the effects of the statistics according to the two different models (rate model and choice model)")
+                if(!all(c("sender_rate","receiver_choice") %in% names(init))){
+                    stop("'init' must be a list of two vectors named 'sender_rate' and 'receiver_choice', each one with the starting values of the effects of the statistics according to the two different models (rate model and choice model)")
                 }
             }
         }
@@ -241,6 +241,11 @@ remstimate <- function(reh,
             }
         }
     }
+    else if(!is.null(thin) & (method == "HMC")){
+        if(thin <= 0){
+            stop("`thin` value must be positive. Set thin = 1 if no thinning of chains is required")
+        }
+    }
 
 
     # ... creating  an empty lists
@@ -308,19 +313,19 @@ remstimate <- function(reh,
             remstimateList$df.null <- reh$M
             remstimateList$df.model <- dim(stats)[2]
 
-            remstimateList$AIC <- 2*length(remstimateList$coef) - 2*remstimateList$loglik # AIC
-            remstimateList$AICC <- remstimateList$AIC + 2*length(remstimateList$coef)*(length(remstimateList$coef)+1)/(reh$M-length(remstimateList$coef)-1)
-            remstimateList$BIC <- length(remstimateList$coef)*log(reh$M) - 2*remstimateList$loglik # BIC
+            remstimateList$AIC <- 2*length(remstimateList$coefficients) - 2*remstimateList$loglik # AIC
+            remstimateList$AICC <- remstimateList$AIC + 2*length(remstimateList$coefficients)*(length(remstimateList$coefficients)+1)/(reh$M-length(remstimateList$coefficients)-1)
+            remstimateList$BIC <- length(remstimateList$coefficients)*log(reh$M) - 2*remstimateList$loglik # BIC
             remstimateList$converged <- optimum_obj$converged
             remstimateList$iterations <- optimum_obj$iterations                                    
         }
         if(model == "actor" ){ # Actor Oriented Model 
             if(method == "MLE"){
                 optimum_sender_rate <- trust::trust(objfun = remDerivatives, 
-                                    parinit = rep(0,dim(stats$rate)[2]), 
+                                    parinit = rep(0,dim(stats$sender_rate)[2]), 
                                     rinit = 1, 
                                     rmax = 100, 
-                                    stats = stats$rate, 
+                                    stats = stats$sender_rate, 
                                     edgelist = reh$edgelist,
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
@@ -328,13 +333,12 @@ remstimate <- function(reh,
                                     ordinal = ordinal,
                                     senderRate = TRUE,
                                     C = reh$C,
-                                    D = reh$D)
-                if(!silent) {print(optimum_sender_rate)}   # this print will be removed in the public version of the package         
+                                    D = reh$D)      
                 optimum_receiver_choice <- trust::trust(objfun = remDerivatives, 
-                                    parinit = rep(0,dim(stats$choice)[2]), 
+                                    parinit = rep(0,dim(stats$receiver_choice)[2]), 
                                     rinit = 1, 
                                     rmax = 100, 
-                                    stats = stats$choice, 
+                                    stats = stats$receiver_choice, 
                                     edgelist = reh$edgelist,
                                     omit_dyad = reh$omit_dyad, 
                                     interevent_time = reh$intereventTime,
@@ -346,10 +350,10 @@ remstimate <- function(reh,
             }
             if(method == "GDADAMAX"){
                 if(is.null(init)){
-                    init <- list("rate" = rep(0.0,dim(stats$rate)[2]),"choice" = rep(0.0,dim(stats$choice)[2]))
+                    init <- list("sender_rate" = rep(0.0,dim(stats$sender_rate)[2]),"receiver_choice" = rep(0.0,dim(stats$receiver_choice)[2]))
                 }
-                optimum_sender_rate <- GDADAMAX(pars = init$rate, 
-                                        stats = stats$rate,  
+                optimum_sender_rate <- GDADAMAX(pars = init$sender_rate, 
+                                        stats = stats$sender_rate,  
                                         edgelist = reh$edgelist,
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
@@ -362,8 +366,8 @@ remstimate <- function(reh,
                                         epochs = epochs,
                                         epsilon = epsilon)                    
                        
-                optimum_receiver_choice <- GDADAMAX(pars = init$choice,
-                                        stats = stats$choice,  
+                optimum_receiver_choice <- GDADAMAX(pars = init$receiver_choice,
+                                        stats = stats$receiver_choice,  
                                         edgelist = reh$edgelist,
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
@@ -377,7 +381,7 @@ remstimate <- function(reh,
                                         epsilon = epsilon)
                 # calculating hessian for the sender rate model
                 optimum_sender_rate$hessian <- remstimate::remDerivativesSenderRates(par = optimum_sender_rate$argument,
-                                                                    stats = stats$rate,  
+                                                                    stats = stats$sender_rate,  
                                                                     edgelist = data.matrix(reh$edgelist),
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
@@ -389,7 +393,7 @@ remstimate <- function(reh,
 
                 # calculating hessian for the receiver choice model
                 optimum_receiver_choice$hessian <- remstimate::remDerivativesReceiverChoice(par = optimum_sender_rate$argument,
-                                                                    stats = stats$choice,  
+                                                                    stats = stats$receiver_choice,  
                                                                     edgelist = data.matrix(reh$edgelist),
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
@@ -400,7 +404,6 @@ remstimate <- function(reh,
                 optimum_receiver_choice$hessian <- optimum_receiver_choice$hessian$hessian                         
             }
 
-            if(!silent) {print(optimum_receiver_choice)}   # this print will be removed in the public version of the package 
             remstimateList$sender_rate <- remstimateList$receiver_choice <- list() 
 
             # coefficients
@@ -422,8 +425,8 @@ remstimate <- function(reh,
             remstimateList$sender_rate$se <- diag(remstimateList$sender_rate$vcov)**0.5 # standard errors
             remstimateList$receiver_choice$se <- diag(remstimateList$receiver_choice$vcov)**0.5 # standard errors           
             #re-naming
-            names(remstimateList$sender_rate$coefficients) <- names(remstimateList$sender_rate$se) <- rownames(remstimateList$sender_rate$vcov) <- colnames(remstimateList$sender_rate$vcov) <- colnames(remstimateList$sender_rate$hessian) <- rownames(remstimateList$sender_rate$hessian) <- dimnames(stats$rate)[[2]]
-            names(remstimateList$receiver_choice$coefficients) <- names(remstimateList$receiver_choice$se) <- rownames(remstimateList$receiver_choice$vcov) <- colnames(remstimateList$receiver_choice$vcov) <- colnames(remstimateList$receiver_choice$hessian) <- rownames(remstimateList$receiver_choice$hessian) <- dimnames(stats$choice)[[2]]
+            names(remstimateList$sender_rate$coefficients) <- names(remstimateList$sender_rate$se) <- rownames(remstimateList$sender_rate$vcov) <- colnames(remstimateList$sender_rate$vcov) <- colnames(remstimateList$sender_rate$hessian) <- rownames(remstimateList$sender_rate$hessian) <- dimnames(stats$sender_rate)[[2]]
+            names(remstimateList$receiver_choice$coefficients) <- names(remstimateList$receiver_choice$se) <- rownames(remstimateList$receiver_choice$vcov) <- colnames(remstimateList$receiver_choice$vcov) <- colnames(remstimateList$receiver_choice$hessian) <- rownames(remstimateList$receiver_choice$hessian) <- dimnames(stats$receiver_choice)[[2]]
             # residual deviance
             remstimateList$sender_rate$residual.deviance <- -2*remstimateList$sender_rate$loglik
             remstimateList$sender_rate$residual.deviance <- -2*remstimateList$sender_rate$loglik
@@ -432,7 +435,7 @@ remstimate <- function(reh,
                                                                     parinit = c(0), 
                                                                     rinit = 1, 
                                                                     rmax = 100, 
-                                                                    stats = array(1,dim=c(dim(stats$rate)[1],1,reh$M)),  
+                                                                    stats = array(1,dim=c(dim(stats$sender_rate)[1],1,reh$M)),  
                                                                     edgelist = reh$edgelist,
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
@@ -446,7 +449,7 @@ remstimate <- function(reh,
                                                                 parinit = c(0), 
                                                                 rinit = 1, 
                                                                 rmax = 100, 
-                                                                stats = array(1,dim=c(dim(stats$choice)[1],1,reh$M)), 
+                                                                stats = array(1,dim=c(dim(stats$receiver_choice)[1],1,reh$M)), 
                                                                 edgelist = reh$edgelist,
                                                                 omit_dyad = reh$omit_dyad, 
                                                                 interevent_time = reh$intereventTime,
@@ -463,8 +466,8 @@ remstimate <- function(reh,
             remstimateList$sender_rate$df.null <- reh$M
             remstimateList$receiver_choice$df.null <- reh$M
             # df model
-            remstimateList$sender_rate$df.model <- dim(stats$rate)[2]
-            remstimateList$receiver_choice$df.model <- dim(stats$choice)[2]
+            remstimateList$sender_rate$df.model <- dim(stats$sender_rate)[2]
+            remstimateList$receiver_choice$df.model <- dim(stats$receiver_choice)[2]
             # df residual
             remstimateList$sender_rate$df.residual <- remstimateList$sender_rate$df.null - remstimateList$sender_rate$df.model
             remstimateList$receiver_choice$df.residual <- remstimateList$receiver_choice$df.null - remstimateList$receiver_choice$df.model       
@@ -515,13 +518,13 @@ remstimate <- function(reh,
             bsir$vcov <- qr.solve(mle_optimum$hessian)
             
             # proposal distribution (default proposal is a multivariate Student t): drawing nsim*3 samples
-            bsir$draws[[1]] <- mvnfast::rmvt(n = nsim*3, 
+            bsir$draws <- mvnfast::rmvt(n = nsim*3, 
                                             mu = bsir$mle, 
                                             sigma = bsir$vcov,
                                             df = 4,
                                             ncores = ncores) # df = 4 by default
                                         
-            bsir$log_proposal <- mvnfast::dmvt(X = bsir$draws[[1]],  
+            bsir$log_proposal <- mvnfast::dmvt(X = bsir$draws,  
                                                 mu = bsir$mle, 
                                                 sigma = bsir$vcov,
                                                 df = 4,
@@ -531,11 +534,11 @@ remstimate <- function(reh,
             # (2) calculate log-posterior density give by log_prior + loglik
             ## (2.1) summing log_prior (if NULL it will be non-informative) : prior by default can be a multivariate Student t and the user must specify its parameters
             if(!is.null(prior)){
-                bsir$log_prior <- prior(bsir$draws[[1]],...) 
+                bsir$log_prior <- prior(bsir$draws,...) 
                 bsir$log_posterior <- bsir$log_prior
             }
             ## (2.2) summing loglik                   
-            loglik <- apply(bsir$draws[[1]],1,function(x) (-1)*remDerivativesStandard(pars = x,
+            loglik <- apply(bsir$draws,1,function(x) (-1)*remDerivativesStandard(pars = x,
                                     stats = stats, 
                                     edgelist = data.matrix(reh$edgelist),
                                     omit_dyad = reh$omit_dyad,
@@ -553,16 +556,16 @@ remstimate <- function(reh,
             irlw <- irlw - s_irlw
             bsir$irw <- exp(irlw) # importance resampling weights (irw)
 
-            post_draws <-sample(x=1:dim(bsir$draws[[1]])[1],size=nsim,replace=TRUE,prob=exp(irlw)) # we always draw nsim (having generated 3*nsim samples from the proposal)
-            bsir$draws[[1]] <- bsir$draws[[1]][post_draws,]
+            post_draws <-sample(x=1:dim(bsir$draws)[1],size=nsim,replace=TRUE,prob=exp(irlw)) # we always draw nsim (having generated 3*nsim samples from the proposal)
+            bsir$draws <- bsir$draws[post_draws,]
             bsir$log_posterior <- bsir$log_posterior[post_draws]
-            bsir$post.mode <- bsir$draws[[1]][which.max(bsir$log_posterior),]
-            bsir$log.posterior <- max(bsir$log_posterior)
-            bsir$post.mean <- colMeans(bsir$draws[[1]])
-            bsir$vcov <- stats::cov(bsir$draws[[1]])
+            bsir$coefficients <- bsir$draws[which.max(bsir$log_posterior),]
+            bsir$loglik <- max(bsir$log_posterior)
+            bsir$post.mean <- colMeans(bsir$draws)
+            bsir$vcov <- stats::cov(bsir$draws)
             bsir$sd <- diag(bsir$vcov)**0.5
             bsir$df.null <- reh$M
-            names(bsir$post.mode) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- dimnames(stats)[[2]]
+            names(bsir$coefficients) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- dimnames(stats)[[2]]
             
             remstimateList <- bsir
         }
@@ -570,7 +573,7 @@ remstimate <- function(reh,
 
             bsir <- list()
             senderRate <- c(TRUE,FALSE) # meaning that the first BSIR will be run on the "sender rate" model and the second on the "receiver choice"
-            which_model <- c("rate","choice")
+            which_model <- c("sender_rate","receiver_choice")
             
             for(i in 1:2){
                 bsir_i <- list()
@@ -599,13 +602,13 @@ remstimate <- function(reh,
                 bsir_i$vcov <- qr.solve(mle_optimum$hessian)
                 
                 # proposal distribution (default proposal is a multivariate Student t): drawing nsim*3 samples
-                bsir_i$draws[[1]] <- mvnfast::rmvt(n = nsim*3, 
+                bsir_i$draws <- mvnfast::rmvt(n = nsim*3, 
                                                 mu = bsir_i$mle, 
                                                 sigma = bsir_i$vcov,
                                                 df = 4,
                                                 ncores = ncores) # df = 4 by default
                                             
-                bsir_i$log_proposal <- mvnfast::dmvt(X = bsir_i$draws[[1]],  
+                bsir_i$log_proposal <- mvnfast::dmvt(X = bsir_i$draws,  
                                                     mu = bsir_i$mle, 
                                                     sigma = bsir_i$vcov,
                                                     df = 4,
@@ -615,11 +618,11 @@ remstimate <- function(reh,
                 # (2) calculate log-posterior density give by log_prior + loglik
                 ## (2.1) summing log_prior (if NULL it will be non-informative) : prior by default can be a multivariate Student t and the user must specify its parameters
                 if(!is.null(prior)){
-                    bsir_i$log_prior <- prior[[which_model[i]]](bsir_i$draws[[1]],...) 
+                    bsir_i$log_prior <- prior[[which_model[i]]](bsir_i$draws,...) 
                     bsir_i$log_posterior <- bsir_i$log_prior
                 }
                 ## (2.2) summing loglik                   
-                loglik <- apply(bsir_i$draws[[1]],1,function(x) (-1)*remDerivatives(pars = x, 
+                loglik <- apply(bsir_i$draws,1,function(x) (-1)*remDerivatives(pars = x, 
                                 stats = stats[[which_model[i]]], 
                                 edgelist = reh$edgelist,
                                 omit_dyad = reh$omit_dyad,
@@ -644,16 +647,16 @@ remstimate <- function(reh,
                 #if(any(is.na(iw)|is.nan(iw)|is.na(exp(iw)))||all(exp(iw)==0)){
                 #warning("Importance weights seem to have some issues.  Carrying on as best we can.\n")
                 #}
-                post_draws <-sample(x=1:dim(bsir_i$draws[[1]])[1],size=nsim,replace=TRUE,prob=exp(irlw)) # we always draw nsim (having generated 3*nsim samples from the proposal)
-                bsir_i$draws[[1]] <- bsir_i$draws[[1]][post_draws,]
+                post_draws <-sample(x=1:dim(bsir_i$draws)[1],size=nsim,replace=TRUE,prob=exp(irlw)) # we always draw nsim (having generated 3*nsim samples from the proposal)
+                bsir_i$draws <- bsir_i$draws[post_draws,]
                 bsir_i$log_posterior <- bsir_i$log_posterior[post_draws]
-                bsir_i$post.mode <- bsir_i$draws[[1]][which.max(bsir_i$log_posterior),]
-                bsir_i$log.posterior <- max(bsir_i$log_posterior)
-                bsir_i$post.mean <- colMeans(bsir_i$draws[[1]])
-                bsir_i$vcov <- stats::cov(bsir_i$draws[[1]])
+                bsir_i$coefficients <- bsir_i$draws[which.max(bsir_i$log_posterior),]
+                bsir_i$loglik <- max(bsir_i$log_posterior)
+                bsir_i$post.mean <- colMeans(bsir_i$draws)
+                bsir_i$vcov <- stats::cov(bsir_i$draws)
                 bsir_i$sd <- diag(bsir_i$vcov)**0.5
                 bsir_i$df.null <- reh$M
-                names(bsir_i$post.mode) <- names(bsir_i$post.mean) <- rownames(bsir_i$vcov) <- colnames(bsir_i$vcov) <- names(bsir_i$sd) <- dimnames(stats[[which_model[i]]])[[2]]
+                names(bsir_i$coefficients) <- names(bsir_i$post.mean) <- rownames(bsir_i$vcov) <- colnames(bsir_i$vcov) <- names(bsir_i$sd) <- dimnames(stats[[which_model[i]]])[[2]]
                 
                 bsir[[which_model[i]]] <- bsir_i
 
@@ -671,10 +674,8 @@ remstimate <- function(reh,
 
         if(model == "tie"){ # Relational Event Model (REM)
             if(is.null(init)){
-                init <- matrix(stats::runif(dim(stats)[2]*nchains,-0.5,0.5),nrow=dim(stats)[2],ncol=nchains) # runif was in (-0.1,0.1)
+                init <- matrix(stats::runif((dim(stats)[2])*nchains,-1,1),nrow=dim(stats)[2],ncol=nchains) # runif was in (-0.1,0.1)
             }
-
-            # cat("\n\n",init,"\n\n")
 
             hmc_out <- HMC(pars_init = init, 
                         nsim = (burnin+nsim), 
@@ -689,25 +690,78 @@ remstimate <- function(reh,
                         model = model,
                         ordinal = ordinal,
                         ncores = ncores,
-                        thin = thin,
-                        L = 100, 
-                        epsilon = 0.01)
-            return(hmc_out)
+                        thin = thin)          
+            # [enhancement idea]
             #remstimateList$hmc <- hmc # output such that one can run gelman plots and statistics // define methods like remstimate.traceplot() remstimate.
                                         # A. Gelman, Carlin, et al. (2013, 267)
                                         # Stan Development Team (2016 Ch 28.) for how Stan calculates Hat, autocorrelations, and ESS.
                                         # Gelman and Rubin (1992) introduce the R-hat statistic
 
-            hmc$post.mode <- hmc_out$draws[which.max(hmc_out$log_posterior),]
+            hmc$coefficients <- hmc_out$draws[which.max(hmc_out$log_posterior),]
             hmc$post.mean <- colMeans(hmc_out$draws)
             hmc$vcov <- stats::cov(hmc_out$draws)
             hmc$sd <- diag(hmc$vcov)**0.5
-            names(hmc$post.mode) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- dimnames(stats)[[2]]
+            hmc$loglik <- max(hmc_out$log_posterior)
+            hmc$df.null <- reh$M
+            names(hmc$coefficients) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- dimnames(stats)[[2]]
             remstimateList <- c(hmc_out,hmc)
         }
         if(model == "actor"){ # Actor Oriented Model
-            # 
-            stop("HMC for Actor-Oriented Model is yet under development")
+            hmc <- list()
+            senderRate <- c(TRUE,FALSE) # meaning that the first BSIR will be run on the "sender rate" model and the second on the "receiver choice"
+            which_model <- c("sender_rate","receiver_choice")
+            epsilon_loc <- c(0.01,0.01)
+            L_loc <- c(100,100)
+            for(i in 1:2){
+                hmc_i <- list()  
+
+                # setting startng values for the HMC    
+                init_i <- matrix(NA,nrow=dim(stats[[which_model[i]]])[2],ncol=nchains)
+                noise_factor <- 1
+                for(j in 1:nchains){
+                    init_i[,j] <- stats::runif((dim(stats[[which_model[i]]])[2]),-5,5) # runif was in (-0.1,0.1)
+                    #mvnfast::rmvn(n=1,mu=rep(0,length(dim(stats[[which_model[i]]])[2]),sigma=noise_factor*diag(length(dim(stats[[which_model[i]]])[2])))
+                }
+
+          
+            
+                hmc_out_i <- HMC(pars_init = init_i, 
+                            nsim = (burnin+nsim), 
+                            nchains = nchains, 
+                            burnin = burnin, 
+                            meanPrior = rep(0,dim(stats[[which_model[i]]])[2]),
+                            sigmaPrior = diag(dim(stats[[which_model[i]]])[2]),
+                            stats = stats[[which_model[i]]],  
+                            edgelist = reh$edgelist, 
+                            omit_dyad = reh$omit_dyad,
+                            interevent_time = reh$intereventTime,
+                            model = model,
+                            senderRate = senderRate[i],
+                            N = reh$N,
+                            C = reh$C,
+                            D = reh$D,
+                            ordinal = ordinal,
+                            ncores = ncores,
+                            thin = thin,
+                            L = L_loc[i],
+                            epsilon = epsilon_loc[i])   
+                # [enhancement idea]
+                #remstimateList$hmc <- hmc # output such that one can run gelman plots and statistics // define methods like remstimate.traceplot() remstimate.
+                                            # A. Gelman, Carlin, et al. (2013, 267)
+                                            # Stan Development Team (2016 Ch 28.) for how Stan calculates Hat, autocorrelations, and ESS.
+                                            # Gelman and Rubin (1992) introduce the R-hat statistic
+
+                hmc_i$coefficients <- hmc_out_i$draws[which.max(hmc_out_i$log_posterior),]
+                hmc_i$post.mean <- colMeans(hmc_out_i$draws)
+                hmc_i$vcov <- stats::cov(hmc_out_i$draws)
+                hmc_i$sd <- diag(hmc_i$vcov)**0.5
+                hmc_i$loglik <- max(hmc_out_i$log_posterior)
+                hmc_i$df.null <- reh$M
+                names(hmc_i$coefficients) <- names(hmc_i$post.mean) <- rownames(hmc_i$vcov) <- colnames(hmc_i$vcov) <- names(hmc_i$sd) <- dimnames(stats[[which_model[i]]])[[2]]
+                hmc[[which_model[i]]] <- c(hmc_out_i,hmc_i)
+                rm(hmc_out_i,hmc_i)
+            }
+            remstimateList <-  hmc
         }
     }
 
@@ -804,12 +858,12 @@ print.remstimate<-function(x, ...){
     else{ # Bayesian
         if(attr(x,"model") == "tie"){
             cat("\nPosterior Modes:\n\n")
-            print(x$post.mode)
+            print(x$coefficients)
         }
         else if(attr(x,"model") == "actor"){
             # printing sender model 
             cat("\nPosterior Modes rate model:\n\n")
-            print(x$rate$post.mode)
+            print(x$sender_rate$coefficients)
             cat("\n")
             # write some more info here
             #
@@ -817,7 +871,7 @@ print.remstimate<-function(x, ...){
             #
             # printing receiver model
             cat("\n\nPosterior Modes choice model:\n\n")
-            print(x$choice$post.mode)
+            print(x$receiver_choice$coefficients)
             # write some more info here
             #
         }
@@ -912,7 +966,7 @@ summary.remstimate<-function (object, ...) #print.summary.remstimate
                             model.deviance = object$sender_rate$model.deviance,
                             df.residual = object$sender_rate$df.residual,
                             df.null = object$sender_rate$df.null,
-                            df.model = object$sender_rate$df.model,
+                            df.model = object$receiver_choice$df.model,
                             AIC = object$sender_rate$AIC,
                             AICC = object$sender_rate$AICC,
                             BIC = object$sender_rate$BIC
@@ -935,12 +989,12 @@ summary.remstimate<-function (object, ...) #print.summary.remstimate
     }
     if(attr(object, "approach") == "Bayesian"){ # Bayesian
         if(attr(object,"model") == "tie"){
-            coefsTab <- cbind(object$post.mode,
+            coefsTab <- cbind(object$coefficients,
             object$sd,
-            apply(object$draws[[1]],2,stats::quantile,0.025),
-            apply(object$draws[[1]],2,stats::quantile,0.5),
-            apply(object$draws[[1]],2,stats::quantile,0.975),
-            (stats::dnorm(0,mean=object$post.mode,sd=object$sd) / stats::dnorm(0,mean=0,sd=object$sd*sqrt(object$df.null)))/((stats::dnorm(0,mean=object$post.mode,sd=object$sd) / stats::dnorm(0,mean=0,sd=object$sd*sqrt(object$df.null)))+1)
+            apply(object$draws,2,stats::quantile,0.025),
+            apply(object$draws,2,stats::quantile,0.5),
+            apply(object$draws,2,stats::quantile,0.975),
+            (stats::dnorm(0,mean=object$coefficients,sd=object$sd) / stats::dnorm(0,mean=0,sd=object$sd*sqrt(object$df.null)))/((stats::dnorm(0,mean=object$coefficients,sd=object$sd) / stats::dnorm(0,mean=0,sd=object$sd*sqrt(object$df.null)))+1)
             )
             colnames(coefsTab) <- c("Post.Mode","Post.SD","Q2.5%","Q50%","Q97.5%","Pr(=0|x)")
             rownames(coefsTab) <- attr(object, "statistics")
@@ -955,7 +1009,7 @@ summary.remstimate<-function (object, ...) #print.summary.remstimate
                         prior = attr(object, "prior"),
                         nsim = attr(object, "nsim"),
                         seed = attr(object, "seed"),
-                        log.posterior = object$log.posterior
+                        loglik = object$loglik
                         ) 
             keep_HMC <- list()
             if(attr(object, "method") == "HMC"){         
@@ -967,8 +1021,58 @@ summary.remstimate<-function (object, ...) #print.summary.remstimate
             }                             
             summary_out <- do.call(c, list(keep, keep_HMC, summary_out))
         }
-        if(attr(object,"model") == "tie"){
-            # write info for the actor-oriented model here
+        if(attr(object,"model") == "actor"){
+            coefsTab <- list()
+            # summary sender model
+            coefsTab$sender_rate <- cbind(object$sender_rate$coefficients,
+            object$sender_rate$sd,
+            apply(object$sender_rate$draws,2,stats::quantile,0.025),
+            apply(object$sender_rate$draws,2,stats::quantile,0.5),
+            apply(object$sender_rate$draws,2,stats::quantile,0.975),
+            (stats::dnorm(0,mean=object$sender_rate$coefficients,sd=object$sender_rate$sd) / stats::dnorm(0,mean=0,sd=object$sender_rate$sd*sqrt(object$sender_rate$df.null)))/((stats::dnorm(0,mean=object$sender_rate$coefficients,sd=object$sender_rate$sd) / stats::dnorm(0,mean=0,sd=object$sender_rate$sd*sqrt(object$sender_rate$df.null)))+1)
+            )
+            colnames(coefsTab$sender_rate) <- c("Post.Mode","Post.SD","Q2.5%","Q50%","Q97.5%","Pr(=0|x)")
+            rownames(coefsTab$sender_rate) <- names(object$sender_rate$coefficients)
+            # summary receiver model
+            coefsTab$receiver_choice <- cbind(object$receiver_choice$coefficients,
+            object$receiver_choice$sd,
+            apply(object$receiver_choice$draws,2,stats::quantile,0.025),
+            apply(object$receiver_choice$draws,2,stats::quantile,0.5),
+            apply(object$receiver_choice$draws,2,stats::quantile,0.975),
+            (stats::dnorm(0,mean=object$receiver_choice$coefficients,sd=object$receiver_choice$sd) / stats::dnorm(0,mean=0,sd=object$receiver_choice$sd*sqrt(object$receiver_choice$df.null)))/((stats::dnorm(0,mean=object$receiver_choice$coefficients,sd=object$receiver_choice$sd) / stats::dnorm(0,mean=0,sd=object$receiver_choice$sd*sqrt(object$receiver_choice$df.null)))+1)
+            )
+            colnames(coefsTab$receiver_choice) <- c("Post.Mode","Post.SD","Q2.5%","Q50%","Q97.5%","Pr(=0|x)")
+            rownames(coefsTab$receiver_choice) <- names(object$receiver_choice$coefficients)
+            #
+            summary_out$coefsTab <- coefsTab
+            keep <- match(c("formula",
+		      "contrasts", "sender_rate", "receiver_choice", "na.action"), names(object), 0L)
+
+            keep <- list(formula = attr(object,"formula"),
+                        model = attr(object,"model"),
+                        ordinal = attr(object,"ordinal"),
+                        method = attr(object, "method"),
+                        approach = attr(object, "approach"),
+                        sender_rate = list(
+                            #residual.deviance = object$sender_rate$residual.deviance, 
+                            #null.deviance = object$sender_rate$null.deviance,
+                            #model.deviance = object$sender_rate$model.deviance,
+                            #df.residual = object$sender_rate$df.residual,
+                            df.null = object$sender_rate$df.null, #,
+                            #df.model = object$sender_rate$df.model,
+                            loglik = object$sender_rate$loglik
+                        ),
+                        receiver_choice = list(
+                            #residual.deviance = object$receiver_choice$residual.deviance, 
+                            #null.deviance = object$receiver_choice$null.deviance,
+                            #model.deviance = object$receiver_choice$model.deviance,
+                            #df.residual = object$receiver_choice$df.residual,
+                            df.null = object$receiver_choice$df.null, #,
+                            #df.model = object$receiver_choice$df.model,
+                            loglik = object$receiver_choice$loglik
+                        ),
+                        epsilon = attr(object, "epsilon")) # add other attributes from the objects?                     
+            summary_out <- do.call(c, list(keep, summary_out))
         }
     }
 
@@ -1017,13 +1121,15 @@ print.summary.remstimate <- function(x, ...)
             cat("AIC:", x$AIC, "AICC:", x$AICC, "BIC:", x$BIC, "\n")
         }
         if(x$approach == "Bayesian"){
-        cat("Log posterior:",x$log.posterior,"\n")
+        cat("Log posterior:",x$loglik,"\n")
         # cat("Prior parameters:",paste(names(x$prior.param),unlist(x$prior.param),sep="="),"\n")
         }
     }
     else if(x$model == "actor"){
         second_line <- paste("(",x$method," with ",sep="")
-        if(x$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
+        if(x$ordinal){
+            second_line <- paste(second_line,"ordinal likelihood):",sep="")
+        }
         else{
             second_line <- paste(second_line,"interval likelihood):\n\n",sep="")
         }
@@ -1035,7 +1141,7 @@ print.summary.remstimate <- function(x, ...)
         else{ # Bayesian
             cat("\nPosterior Modes rate model",second_line)
         }
-        stats::printCoefmat(x$coefsTab$sender_rate, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE, ...)
+        stats::printCoefmat(x$coefsTab$sender_rate, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE)
         if(x$approach == "Frequentist"){
             cat("Null deviance:", x$sender_rate$null.deviance, "on", x$sender_rate$df.null, "degrees of freedom\n")
             cat("Residual deviance:", x$sender_rate$residual.deviance, "on", x$sender_rate$df.residual, "degrees of freedom\n")
@@ -1043,6 +1149,10 @@ print.summary.remstimate <- function(x, ...)
                 "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$sender_rate$model.deviance, 
                     x$sender_rate$df.model), "\n")
             cat("AIC:", x$sender_rate$AIC, "AICC:", x$sender_rate$AICC, "BIC:", x$sender_rate$BIC, "\n")
+        }
+        if(x$approach == "Bayesian"){
+        cat("Log posterior:",x$sender_rate$loglik,"\n")
+        # cat("Prior parameters:",paste(names(x$sender_rate$prior.param),unlist(x$sender_rate$prior.param),sep="="),"\n")
         }
         #
         cat(paste0(rep("-", getOption("width")),collapse = ""),"\n\n")
@@ -1055,7 +1165,7 @@ print.summary.remstimate <- function(x, ...)
         else{ # Bayesian
             cat("\nPosterior Modes choice model",second_line)
         }
-        stats::printCoefmat(x$coefsTab$receiver_choice, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE, ...)
+        stats::printCoefmat(x$coefsTab$receiver_choice, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE)
         if(x$approach == "Frequentist"){
             cat("Null deviance:", x$receiver_choice$null.deviance, "on", x$receiver_choice$df.null, "degrees of freedom\n")
             cat("Residual deviance:", x$receiver_choice$residual.deviance, "on", x$receiver_choice$df.residual, "degrees of freedom\n")
@@ -1063,6 +1173,10 @@ print.summary.remstimate <- function(x, ...)
                 "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$receiver_choice$model.deviance, 
                     x$receiver_choice$df.model), "\n")
             cat("AIC:", x$receiver_choice$AIC, "AICC:", x$receiver_choice$AICC, "BIC:", x$receiver_choice$BIC, "\n")
+        }
+        if(x$approach == "Bayesian"){
+        cat("Log posterior:",x$receiver_choice$loglik,"\n")
+        # cat("Prior parameters:",paste(names(x$receiver_choice$prior.param),unlist(x$receiver_choice$prior.param),sep="="),"\n")
         }
     }
 }
@@ -1082,7 +1196,7 @@ print.summary.remstimate <- function(x, ...)
 predict.remstimate <- function(object, ...)
 {
  # write a predict method here
- stop('this function at the moment does nothing')
+ return(paste('this function at the moment does nothing'))
 }
 
 
@@ -1101,7 +1215,7 @@ predict.remstimate <- function(object, ...)
 plot.remstimate <- function(x, ...)
 {
  # write a plot method here
- stop('this function at the moment does nothing')
+ return(paste('this function at the moment does nothing'))
 }
 
 
@@ -1122,7 +1236,14 @@ aic <- function(object,...){
 #' @describeIn aic AIC (Akaike's Information Criterion) value of a 'remstimate' object
 #' @method aic remstimate
 #' @export
-aic.remstimate <- function(object,...) {if(attr(object, "approach") == "Frequentist"){object$AIC}else{stop("'approach' must be 'Frequentist'")}}
+aic.remstimate <- function(object,...) {
+    if(attr(object, "approach") == "Frequentist"){
+        return(object$AIC)
+    }
+    else{
+        stop("'approach' must be 'Frequentist'")
+    }
+}
 
 
 #######################################################################################
@@ -1143,7 +1264,14 @@ aicc <- function(object,...){
 #' @describeIn aicc AICC (Akaike's Information Corrected Criterion) value of a 'remstimate' object
 #' @method aicc remstimate
 #' @export
-aicc.remstimate <- function(object,...) {if(attr(object, "approach") == "Frequentist"){object$AICC}else{stop("'approach' must be 'Frequentist'")}}
+aicc.remstimate <- function(object,...) {
+    if(attr(object, "approach") == "Frequentist"){
+        return(object$AICC)
+    }
+    else{
+        stop("'approach' must be 'Frequentist'")
+    }
+}
 
 
 #######################################################################################
@@ -1164,7 +1292,14 @@ bic <- function(object,...){
 #' @describeIn bic BIC (Bayesian Information Criterion) value of a 'remstimate' object
 #' @method bic remstimate
 #' @export
-bic.remstimate <- function(object,...) {if(attr(object, "approach") == "Frequentist"){object$BIC}else{stop("'approach' must be 'Frequentist'")}}
+bic.remstimate <- function(object,...) {
+    if(attr(object, "approach") == "Frequentist"){
+        return(object$BIC)
+    }
+    else{
+        stop("'approach' must be 'Frequentist'")
+    }
+}
 
 
 #######################################################################################
@@ -1185,7 +1320,17 @@ waic <- function(object,...){
 #' @describeIn waic WAIC (Watanabe-Akaike's Information Criterion) value of a 'remstimate' object
 #' @method waic remstimate
 #' @export
-waic.remstimate <- function(object,...) {if(attr(object, "approach") == "Frequentist"){if(!is.null(object$WAIC)){object$WAIC}else{stop("'WAIC' value not found.")}}else{stop("'approach' must be 'Frequentist'")}}
+waic.remstimate <- function(object,...) {
+    if(attr(object, "approach") == "Frequentist"){
+        if(!is.null(object$WAIC)){
+            return(object$WAIC)
+        }
+        else{
+            return(paste("'WAIC' value not found."))
+        }
+    }
+        else{stop("'approach' must be 'Frequentist'")}   
+}
 
 
 #######################################################################################

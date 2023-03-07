@@ -4,17 +4,19 @@
 \alias{burninHMC}
 \title{burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)}
 \usage{
-burninHMC(samples, burnin, thin = 1L)
+burninHMC(samples, loglik, burnin, thin = 1L)
 }
 \arguments{
 \item{samples}{cube with final draws}
+
+\item{loglik}{matrix of values of the posterior loglikelihood at the different draws}
 
 \item{burnin}{is the number of draws to discard after running the chains}
 
 \item{thin}{is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...}
 }
 \value{
-cube with selected draws
+list of two objects: draws and loglik after burnin and thinning step
 }
 \description{
 This function performs the burn-in and the thinning at the end of the HMC

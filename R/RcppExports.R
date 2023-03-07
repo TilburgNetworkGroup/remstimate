@@ -223,13 +223,14 @@ iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, om
 #' This function performs the burn-in and the thinning at the end of the HMC
 #'
 #' @param samples cube with final draws
+#' @param loglik matrix of values of the posterior loglikelihood at the different draws
 #' @param burnin is the number of draws to discard after running the chains
 #' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 #'
-#' @return cube with selected draws
+#' @return list of two objects: draws and loglik after burnin and thinning step
 #'
-burninHMC <- function(samples, burnin, thin = 1L) {
-    .Call(`_remstimate_burninHMC`, samples, burnin, thin)
+burninHMC <- function(samples, loglik, burnin, thin = 1L) {
+    .Call(`_remstimate_burninHMC`, samples, loglik, burnin, thin)
 }
 
 #' HMC
@@ -265,16 +266,28 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
     .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D, thin, L, epsilon)
 }
 
-#' experimental_function (where to try out specific operations at C++ level)
+#' emp_dist_longest_batch
 #'
-#' the experimental function has no description
+#' This function does one iteration of the Hamiltonian Monte carlo
 #'
-#' @param x integer value
+#' @param L number of leapfrogs. Default (and recommended) value is 100.
+#' @param epsilon size of the leapfrog. Default value is 1e-02.
+#' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
+#' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
+#' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
+#' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
+#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param model either "actor" or "tie" model
+#' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
+#' @param ncores number of threads to use for the parallelization
+#' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
+#' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
+#' @param C number of event types 
+#' @param D number of dyads
 #'
-#' @return matrix
-#'
-#' @export
-experimental_function <- function(x) {
-    .Call(`_remstimate_experimental_function`, x)
+emp_dist_longest_batch <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_emp_dist_longest_batch`, L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 

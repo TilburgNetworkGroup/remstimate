@@ -31,7 +31,7 @@ remstimate(
 
 \item{ncores}{number of threads for the parallelization (\code{default = 1}, no parallelization)}
 
-\item{prior}{prior distribution when using Bayesian methods}
+\item{prior}{prior distribution when using the \code{BSIR} method}
 
 \item{nsim}{when \code{method = "HMC"} it is the number of simulations (iterations) in each chain, when \code{method = "BSIR"} is the number of samples from the proposal distribution}
 
