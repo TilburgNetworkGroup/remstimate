@@ -2,23 +2,23 @@
 #'
 #' A function for the optimization of tie-oriented (Relational Event Model) or actor-oriented (DyNAM) likelihoods
 #'
-#' @param reh an \code{reh} object (output object of the function \code{remify::reh})
-#' @param stats a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})
-#' @param method optimization method to be used: \code{MLE}, \code{GDADAMAX}, \code{BSIR}, \code{HMC}
-#' @param ncores number of threads for the parallelization (\code{default = 1}, no parallelization)
-#' @param prior prior distribution when using the \code{BSIR} method
+#' @param reh a processed relational event history (REH). It can be a \code{remify} object (output object of the function \code{remify::remify()}) or the event sequence (as \code{data.frame})
+#' @param stats a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})
+#' @param method optimization method to be used. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Samplin Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"})
+#' @param ncores number of threads for the parallelization (default value is \code{ncores = 1}, that means no parallelization)
+#' @param prior prior distribution when using the \code{"BSIR"} method
 #' @param nsim  when \code{method = "HMC"} it is the number of simulations (iterations) in each chain, when \code{method = "BSIR"} is the number of samples from the proposal distribution
-#' @param nchains number of chains to generate
-#' @param burnin number of initial iterations to be added as burnin
-#' @param thin number of steps to skip in the posterior draws of the HMC
-#' @param init vector of initial values if model = "tie", or a named list of two vectors ('rate' and 'choice') if model = "actor". This argument is used for the methods: \code{"GDADAMAX"} and \code{"HMC"} 
-#' @param epochs 1e03 by defaut. It is the number of iteration used in the methods \code{"GDADAMAX"}
-#' @param epsilon 0.001 by default. It is the inter-iteration difference of the loss function used in the methods \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.
-#' @param seed seed for reproducibility (yet to be integrated in the code)
-#' @param silent \code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out
-#' @param ... additional parameters. They can be parameters of other functions defined as input in some argument
+#' @param nchains number of chains to generate in the case of \code{method = "HMC"}
+#' @param burnin number of initial iterations to be added as burnin (for \code{method = "HMC"})
+#' @param thin number of steps to skip in the posterior draws (for \code{method = "HMC"})
+#' @param init vector of initial values if tie-oriented model, or a named list of two vectors ('rate' and 'choice') if actor-oriented model. This argument is used for the methods: \code{"GDADAMAX"} and \code{"HMC"} 
+#' @param epochs 1e03 by defaut. It is the number of iteration used in the method \code{"GDADAMAX"}
+#' @param epsilon 0.001 by default. It is the inter-iteration difference of the loss function used in the method \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.
+#' @param seed seed for reproducibility [[yet to be integrated in the code]]
+#' @param silent a \code{TRUE/FALSE} value. If \code{FALSE}, progress of optimization status will be printed out [[yet to be integrated in the code]]
+#' @param ... additional parameters. They can be parameters of other functions defined as input in some of the arguments above
 #'
-#' @return  remstimate S3 object
+#' @return  'remstimate' S3 object
 #' @export
 remstimate <- function(reh,
                        stats, 
@@ -39,15 +39,12 @@ remstimate <- function(reh,
     # ... processing input:
 
     # ... reh
-    if(is.null(reh)) stop("missing 'reh' argument.")
-    else{
-        if(!inherits(reh,"reh")){
-            if(is.data.frame(reh)){
-                reh <- remify::reh(edgelist = reh, ...)
-            }
-            else{
-                stop("Input 'reh' must be either a 'reh' object (from 'remify' package) or the event sequence (data.frame).")
-            }
+    if(!inherits(reh,"remify")){
+        if(is.data.frame(reh)){
+            reh <- remify::remify(edgelist = reh, ...)
+        }
+        else{
+            stop("'reh' must be either a 'remify' object (from the 'remify' package) or the event sequence (as data.frame).")
         }
     }
 
@@ -167,7 +164,7 @@ remstimate <- function(reh,
 
     # ... prior
     log <- TRUE
-    if(!is.null(prior)){
+    if(!is.null(prior)){ # [[ yet to be implemented in the code]]
         additional_input_args <- names(list(...)) #names(as.list(match.call()))[-1]
         args_prior <- match.arg(arg=additional_input_args,choices = methods::formalArgs(prior),several.ok = TRUE)
     }
@@ -263,7 +260,9 @@ remstimate <- function(reh,
                                             rinit = 1, 
                                             rmax = 100, 
                                             stats = stats,  
-                                            edgelist = data.matrix(reh$edgelist),
+                                            actor1 = c(0),
+                                            actor2 = c(0),
+                                            dyad = attr(reh,"dyad")-1,
                                             omit_dyad = reh$omit_dyad,
                                             interevent_time = reh$intereventTime,
                                             model = model,
@@ -276,7 +275,9 @@ remstimate <- function(reh,
                 }
                 optimum_obj <- GDADAMAX(pars = init,
                                     stats = stats,  
-                                    edgelist = reh$edgelist,
+                                    actor1 = c(0),
+                                    actor2 = c(0),
+                                    dyad = attr(reh,"dyad")-1,
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
                                     model = model,
@@ -286,7 +287,9 @@ remstimate <- function(reh,
                                     epsilon = epsilon)
                 optimum_obj$hessian <- remstimate::remDerivativesStandard(par = optimum_obj$argument,
                                                                     stats = stats,  
-                                                                    edgelist = data.matrix(reh$edgelist),
+                                                                    actor1 = c(0),
+                                                                    actor2 = c(0),
+                                                                    dyad = attr(reh,"dyad")-1,
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
                                                                     ordinal = ordinal,
@@ -329,7 +332,9 @@ remstimate <- function(reh,
                                     rinit = 1, 
                                     rmax = 100, 
                                     stats = stats$sender_rate, 
-                                    edgelist = reh$edgelist,
+                                    actor1 = reh$edgelist$actor1-1,
+                                    actor2 = c(0),
+                                    dyad = c(0),
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
                                     model = model,
@@ -342,7 +347,9 @@ remstimate <- function(reh,
                                     rinit = 1, 
                                     rmax = 100, 
                                     stats = stats$receiver_choice, 
-                                    edgelist = reh$edgelist,
+                                    actor1 = reh$edgelist$actor1-1,
+                                    actor2 = reh$edgelist$actor2-1,
+                                    dyad = c(0),
                                     omit_dyad = reh$omit_dyad, 
                                     interevent_time = reh$intereventTime,
                                     model = model,
@@ -357,7 +364,9 @@ remstimate <- function(reh,
                 }
                 optimum_sender_rate <- GDADAMAX(pars = init$sender_rate, 
                                         stats = stats$sender_rate,  
-                                        edgelist = reh$edgelist,
+                                        actor1 = reh$edgelist$actor1-1,
+                                        actor2 = c(0),
+                                        dyad = c(0),
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
                                         model = model,
@@ -371,7 +380,9 @@ remstimate <- function(reh,
                        
                 optimum_receiver_choice <- GDADAMAX(pars = init$receiver_choice,
                                         stats = stats$receiver_choice,  
-                                        edgelist = reh$edgelist,
+                                        actor1 = reh$edgelist$actor1-1,
+                                        actor2 = reh$edgelist$actor2-1,
+                                        dyad = c(0),
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
                                         model = model,
@@ -385,7 +396,9 @@ remstimate <- function(reh,
                 # calculating hessian for the sender rate model
                 optimum_sender_rate$hessian <- remstimate::remDerivativesSenderRates(par = optimum_sender_rate$argument,
                                                                     stats = stats$sender_rate,  
-                                                                    edgelist = data.matrix(reh$edgelist),
+                                                                    actor1 = reh$edgelist$actor1-1,
+                                                                    actor2 = c(0),
+                                                                    dyad = c(0),
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
                                                                     C = reh$C,
@@ -397,7 +410,9 @@ remstimate <- function(reh,
                 # calculating hessian for the receiver choice model
                 optimum_receiver_choice$hessian <- remstimate::remDerivativesReceiverChoice(par = optimum_sender_rate$argument,
                                                                     stats = stats$receiver_choice,  
-                                                                    edgelist = data.matrix(reh$edgelist),
+                                                                    actor1 = reh$edgelist$actor1-1,
+                                                                    actor2 = reh$edgelist$actor2-1,
+                                                                    dyad = c(0),
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
                                                                     N = reh$N,
@@ -439,7 +454,9 @@ remstimate <- function(reh,
                                                                     rinit = 1, 
                                                                     rmax = 100, 
                                                                     stats = array(1,dim=c(dim(stats$sender_rate)[1],1,reh$M)),  
-                                                                    edgelist = reh$edgelist,
+                                                                    actor1 = reh$edgelist$actor1-1,
+                                                                    actor2 = c(0),
+                                                                    dyad = c(0),
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
                                                                     model = model,
@@ -453,7 +470,9 @@ remstimate <- function(reh,
                                                                 rinit = 1, 
                                                                 rmax = 100, 
                                                                 stats = array(1,dim=c(dim(stats$receiver_choice)[1],1,reh$M)), 
-                                                                edgelist = reh$edgelist,
+                                                                actor1 = reh$edgelist$actor1-1,
+                                                                actor2 = reh$edgelist$actor2-1,
+                                                                dyad = c(0),
                                                                 omit_dyad = reh$omit_dyad, 
                                                                 interevent_time = reh$intereventTime,
                                                                 model = model,
@@ -511,7 +530,9 @@ remstimate <- function(reh,
                                         rinit = 1, 
                                         rmax = 100, 
                                         stats = stats,  
-                                        edgelist = data.matrix(reh$edgelist),
+                                        actor1 = c(0),
+                                        actor2 = c(0),
+                                        dyad = attr(reh,"dyad")-1,
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
                                         model = model,
@@ -543,7 +564,9 @@ remstimate <- function(reh,
             ## (2.2) summing loglik                   
             loglik <- apply(bsir$draws,1,function(x) (-1)*remDerivativesStandard(pars = x,
                                     stats = stats, 
-                                    edgelist = data.matrix(reh$edgelist),
+                                    actor1 = c(0),
+                                    actor2 = c(0),
+                                    dyad = attr(reh,"dyad")-1,
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
                                     ordinal = ordinal,
@@ -591,7 +614,9 @@ remstimate <- function(reh,
                                                     rinit = 1, 
                                                     rmax = 100, 
                                                     stats = stats[[which_model[i]]], 
-                                                    edgelist = reh$edgelist,
+                                                    actor1 = reh$edgelist$actor1-1,
+                                                    actor2 = reh$edgelist$actor2-1,
+                                                    dyad = c(0),
                                                     omit_dyad = reh$omit_dyad,
                                                     interevent_time = reh$intereventTime,
                                                     model = model,
@@ -627,7 +652,9 @@ remstimate <- function(reh,
                 ## (2.2) summing loglik                   
                 loglik <- apply(bsir_i$draws,1,function(x) (-1)*remDerivatives(pars = x, 
                                 stats = stats[[which_model[i]]], 
-                                edgelist = reh$edgelist,
+                                actor1 = reh$edgelist$actor1-1,
+                                actor2 = reh$edgelist$actor2-1,
+                                dyad = c(0),
                                 omit_dyad = reh$omit_dyad,
                                 interevent_time = reh$intereventTime,
                                 model = model,
@@ -691,7 +718,9 @@ remstimate <- function(reh,
                         meanPrior = rep(0,dim(stats)[2]),
                         sigmaPrior = diag(dim(stats)[2])*1e05,
                         stats = stats,  
-                        edgelist = reh$edgelist, 
+                        actor1 = c(0),
+                        actor2 = c(0),
+                        dyad = attr(reh,"dyad")-1, 
                         omit_dyad = reh$omit_dyad,
                         interevent_time = reh$intereventTime,
                         model = model,
@@ -744,7 +773,9 @@ remstimate <- function(reh,
                             meanPrior = rep(0,dim(stats[[which_model[i]]])[2]),
                             sigmaPrior = diag(dim(stats[[which_model[i]]])[2]),
                             stats = stats[[which_model[i]]],  
-                            edgelist = reh$edgelist, 
+                            actor1 = reh$edgelist$actor1-1,
+                            actor2 = reh$edgelist$actor2-1,
+                            dyad = c(0), 
                             omit_dyad = reh$omit_dyad,
                             interevent_time = reh$intereventTime,
                             model = model,

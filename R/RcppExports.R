@@ -23,7 +23,7 @@ errorMessage <- function(cond) {
 #'
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param dyad is the vector of observed dyads from the 'remify' object (attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param ordinal boolean that indicate whether to use the ordinal or interval timing likelihood
@@ -33,9 +33,8 @@ errorMessage <- function(cond) {
 #'
 #' @return list of values: loglik, gradient, hessian
 #'
-#' @export
-remDerivativesStandard <- function(pars, stats, edgelist, omit_dyad, interevent_time, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE) {
-    .Call(`_remstimate_remDerivativesStandard`, pars, stats, edgelist, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
+remDerivativesStandard <- function(pars, stats, dyad, omit_dyad, interevent_time, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesStandard`, pars, stats, dyad, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
 }
 
 #' remDerivativesSenderRates
@@ -44,7 +43,7 @@ remDerivativesStandard <- function(pars, stats, edgelist, omit_dyad, interevent_
 #'
 #' @param pars is a vector of parameters
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions N*U with statistics of interest by column and senders by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param C number of event types 
@@ -56,9 +55,8 @@ remDerivativesStandard <- function(pars, stats, edgelist, omit_dyad, interevent_
 #'
 #' @return list of values: loglik, grad, fisher information
 #'
-#' @export
-remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal = FALSE, gradient = TRUE, hessian = TRUE) {
-    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, edgelist, omit_dyad, interevent_time, C, D, ordinal, gradient, hessian)
+remDerivativesSenderRates <- function(pars, stats, actor1, omit_dyad, interevent_time, C, D, ordinal = FALSE, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, actor1, omit_dyad, interevent_time, C, D, ordinal, gradient, hessian)
 }
 
 #' remDerivativesReceiverChoice
@@ -67,7 +65,8 @@ remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, intereve
 #'
 #' @param pars is a vector of parameters
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist, output from remify, (note: indices of the actors must start from 0)
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
 #' @param omit_dyad, list object that takes care of the dynamic rikset (if defined)
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param N the number of actors
@@ -79,9 +78,8 @@ remDerivativesSenderRates <- function(pars, stats, edgelist, omit_dyad, intereve
 #'
 #' @return list of values: loglik, grad, fisher
 #'
-#' @export
-remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, interevent_time, N, C, D, gradient = TRUE, hessian = TRUE) {
-    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, edgelist, omit_dyad, interevent_time, N, C, D, gradient, hessian)
+remDerivativesReceiverChoice <- function(pars, stats, actor1, actor2, omit_dyad, interevent_time, N, C, D, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, actor1, actor2, omit_dyad, interevent_time, N, C, D, gradient, hessian)
 }
 
 #' remDerivatives 
@@ -90,7 +88,9 @@ remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, inter
 #'
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+#' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
@@ -107,9 +107,8 @@ remDerivativesReceiverChoice <- function(pars, stats, edgelist, omit_dyad, inter
 #'
 #' @return list of values: loglik, gradient, hessian
 #'
-#' @export
-remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
-    .Call(`_remstimate_remDerivatives`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, gradient, hessian, senderRate, N, C, D)
+remDerivatives <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_remDerivatives`, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, gradient, hessian, senderRate, N, C, D)
 }
 
 #' GDADAMAX
@@ -118,7 +117,9 @@ remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, mo
 #'
 #' @param pars parameters
 #' @param stats array of statistics
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+#' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time vector of interevent times (inside the reh object)
 #' @param model either "actor" or "tie" model
@@ -139,8 +140,8 @@ remDerivatives <- function(pars, stats, edgelist, omit_dyad, interevent_time, mo
 #' @return optimization with GDADAM
 #'
 #' @export
-GDADAMAX <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, senderRate = TRUE, gradient = TRUE, hessian = FALSE, N = NULL, C = NULL, D = NULL, ncores = 1L, epochs = 1e03L, learning_rate = 0.002, beta1 = 0.9, beta2 = 0.999, epsilon = 0.01) {
-    .Call(`_remstimate_GDADAMAX`, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, senderRate, gradient, hessian, N, C, D, ncores, epochs, learning_rate, beta1, beta2, epsilon)
+GDADAMAX <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, senderRate = TRUE, gradient = TRUE, hessian = FALSE, N = NULL, C = NULL, D = NULL, ncores = 1L, epochs = 1e03L, learning_rate = 0.002, beta1 = 0.9, beta2 = 0.999, epsilon = 0.01) {
+    .Call(`_remstimate_GDADAMAX`, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, senderRate, gradient, hessian, N, C, D, ncores, epochs, learning_rate, beta1, beta2, epsilon)
 }
 
 #' logPostHMC
@@ -151,7 +152,9 @@ GDADAMAX <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, o
 #' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+#' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
@@ -164,8 +167,8 @@ GDADAMAX <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, o
 #'
 #' @return value of log-posterior density
 #'
-logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
-    .Call(`_remstimate_logPostHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
+logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_logPostHMC`, meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 
 #' logPostGradientHMC
@@ -176,7 +179,9 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, 
 #' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+#' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
@@ -190,8 +195,8 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, 
 #' @return value of log-posterior gradient
 #'
 #' @export
-logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
-    .Call(`_remstimate_logPostGradientHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
+logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_logPostGradientHMC`, meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 
 #' iterHMC
@@ -204,7 +209,9 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omi
 #' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+#' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
@@ -215,8 +222,8 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omi
 #' @param C number of event types 
 #' @param D number of dyads
 #'
-iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
-    .Call(`_remstimate_iterHMC`, L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
+iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_iterHMC`, L, epsilon, meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 
 #' burninHMC (to check whether this function experiences issues with the definition of int rows and the following codings)
@@ -245,7 +252,9 @@ burninHMC <- function(samples, loglik, burnin, thin = 1L) {
 #' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
 #' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+#' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param 
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -263,8 +272,8 @@ burninHMC <- function(samples, loglik, burnin, thin = 1L) {
 #'
 #' @return posterior draws
 #'
-HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL, thin = 1L, L = 100L, epsilon = 0.01) {
-    .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D, thin, L, epsilon)
+HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL, thin = 1L, L = 100L, epsilon = 0.01) {
+    .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D, thin, L, epsilon)
 }
 
 #' emp_dist_longest_batch
@@ -277,7 +286,9 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
 #' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-#' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+#' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+#' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+#' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
@@ -289,7 +300,7 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
 #' @param D number of dyads
 #'
 #' @export
-emp_dist_longest_batch <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
-    .Call(`_remstimate_emp_dist_longest_batch`, L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
+emp_dist_longest_batch <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
+    .Call(`_remstimate_emp_dist_longest_batch`, L, epsilon, meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
 

@@ -7,7 +7,7 @@
 remDerivativesStandard(
   pars,
   stats,
-  edgelist,
+  dyad,
   omit_dyad,
   interevent_time,
   ordinal = FALSE,
@@ -21,7 +21,7 @@ remDerivativesStandard(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.}
 
-\item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
+\item{dyad}{is the vector of observed dyads from the 'remify' object (attr(remify,"dyad"))}
 
 \item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined}
 

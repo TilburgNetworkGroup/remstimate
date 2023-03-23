@@ -7,7 +7,8 @@
 remDerivativesReceiverChoice(
   pars,
   stats,
-  edgelist,
+  actor1,
+  actor2,
   omit_dyad,
   interevent_time,
   N,
@@ -22,7 +23,9 @@ remDerivativesReceiverChoice(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.}
 
-\item{edgelist, }{output from remify, (note: indices of the actors must start from 0)}
+\item{actor1}{vector of actor1's (column reh$edgelist$actor1)}
+
+\item{actor2}{vector of actor2's (column reh$edgelist$actor2)}
 
 \item{omit_dyad, }{list object that takes care of the dynamic rikset (if defined)}
 

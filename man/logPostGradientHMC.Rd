@@ -9,7 +9,9 @@ logPostGradientHMC(
   sigmaPrior,
   pars,
   stats,
-  edgelist,
+  actor1,
+  actor2,
+  dyad,
   omit_dyad,
   interevent_time,
   model,
@@ -30,7 +32,11 @@ logPostGradientHMC(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.}
 
-\item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
+\item{actor1}{vector of actor1's (column reh$edgelist$actor1)}
+
+\item{actor2}{vector of actor2's (column reh$edgelist$actor2)}
+
+\item{dyad}{vector of dyad (from the attribute attr(remify,"dyad"))}
 
 \item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined}
 

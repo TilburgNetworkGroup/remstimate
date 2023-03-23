@@ -23,38 +23,38 @@ remstimate(
 )
 }
 \arguments{
-\item{reh}{an \code{reh} object (output object of the function \code{remify::reh})}
+\item{reh}{a processed relational event history (REH). It can be a \code{remify} object (output object of the function \code{remify::remify()}) or the event sequence (as \code{data.frame})}
 
-\item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statictis with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})}
+\item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})}
 
-\item{method}{optimization method to be used: \code{MLE}, \code{GDADAMAX}, \code{BSIR}, \code{HMC}}
+\item{method}{optimization method to be used. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Samplin Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"})}
 
-\item{ncores}{number of threads for the parallelization (\code{default = 1}, no parallelization)}
+\item{ncores}{number of threads for the parallelization (default value is \code{ncores = 1}, that means no parallelization)}
 
-\item{prior}{prior distribution when using the \code{BSIR} method}
+\item{prior}{prior distribution when using the \code{"BSIR"} method}
 
 \item{nsim}{when \code{method = "HMC"} it is the number of simulations (iterations) in each chain, when \code{method = "BSIR"} is the number of samples from the proposal distribution}
 
-\item{nchains}{number of chains to generate}
+\item{nchains}{number of chains to generate in the case of \code{method = "HMC"}}
 
-\item{burnin}{number of initial iterations to be added as burnin}
+\item{burnin}{number of initial iterations to be added as burnin (for \code{method = "HMC"})}
 
-\item{thin}{number of steps to skip in the posterior draws of the HMC}
+\item{thin}{number of steps to skip in the posterior draws (for \code{method = "HMC"})}
 
-\item{init}{vector of initial values if model = "tie", or a named list of two vectors ('rate' and 'choice') if model = "actor". This argument is used for the methods: \code{"GDADAMAX"} and \code{"HMC"}}
+\item{init}{vector of initial values if tie-oriented model, or a named list of two vectors ('rate' and 'choice') if actor-oriented model. This argument is used for the methods: \code{"GDADAMAX"} and \code{"HMC"}}
 
-\item{epochs}{1e03 by defaut. It is the number of iteration used in the methods \code{"GDADAMAX"}}
+\item{epochs}{1e03 by defaut. It is the number of iteration used in the method \code{"GDADAMAX"}}
 
-\item{epsilon}{0.001 by default. It is the inter-iteration difference of the loss function used in the methods \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.}
+\item{epsilon}{0.001 by default. It is the inter-iteration difference of the loss function used in the method \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.}
 
-\item{seed}{seed for reproducibility (yet to be integrated in the code)}
+\item{seed}{seed for reproducibility [[yet to be integrated in the code]]}
 
-\item{silent}{\code{TRUE/FALSE} if \code{FALSE}, progress of optimization status will be printed out}
+\item{silent}{a \code{TRUE/FALSE} value. If \code{FALSE}, progress of optimization status will be printed out [[yet to be integrated in the code]]}
 
-\item{...}{additional parameters. They can be parameters of other functions defined as input in some argument}
+\item{...}{additional parameters. They can be parameters of other functions defined as input in some of the arguments above}
 }
 \value{
-remstimate S3 object
+'remstimate' S3 object
 }
 \description{
 A function for the optimization of tie-oriented (Relational Event Model) or actor-oriented (DyNAM) likelihoods

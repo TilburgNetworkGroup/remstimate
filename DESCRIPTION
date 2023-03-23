@@ -1,8 +1,8 @@
 Type: Package
 Package: remstimate
 Title: optimization tools for tie-oriented and actor-oriented relational event models
-Version: 2.0.0
-Date: 2022-09-20
+Version: 2.1.0
+Date: 2023-04-01
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
@@ -47,7 +47,7 @@ Imports:
     methods,
     mvnfast,
     Rcpp,
-    remify (>= 2.0.0),
+    remify (>= 3.0.0),
     trust,
     parallel,
     remstats (>= 3.0.0)
@@ -57,7 +57,7 @@ LinkingTo:
     RcppProgress,
     remify
 Remotes:
-    TilburgNetworkGroup/remify,
+    TilburgNetworkGroup/remify@remify3.0.0,
     TilburgNetworkGroup/remstats
 Encoding: UTF-8
 LazyData: true

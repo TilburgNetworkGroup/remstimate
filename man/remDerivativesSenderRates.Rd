@@ -7,7 +7,7 @@
 remDerivativesSenderRates(
   pars,
   stats,
-  edgelist,
+  actor1,
   omit_dyad,
   interevent_time,
   C,
@@ -22,7 +22,7 @@ remDerivativesSenderRates(
 
 \item{stats}{is cube of M slices. Each slice is a matrix of dimensions N*U with statistics of interest by column and senders by row.}
 
-\item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
+\item{actor1}{vector of actor1's (column reh$edgelist$actor1)}
 
 \item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined}
 

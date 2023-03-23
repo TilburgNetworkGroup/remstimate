@@ -22,7 +22,7 @@
 //'
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param dyad is the vector of observed dyads from the 'remify' object (attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param ordinal boolean that indicate whether to use the ordinal or interval timing likelihood
@@ -32,11 +32,10 @@
 //'
 //' @return list of values: loglik, gradient, hessian
 //'
-//' @export
 // [[Rcpp::export]]
 Rcpp::List remDerivativesStandard(const arma::vec &pars,
                                           const arma::cube &stats,
-                                          const arma::mat &edgelist, 
+                                          const arma::uvec &dyad, 
                                           const Rcpp::List &omit_dyad,
                                           const arma::vec &interevent_time, // change to intereventTime
                                           bool ordinal = false,
@@ -71,7 +70,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
     if(!ordinal){ // interval likelihood
       omp_set_dynamic(0);         // disabling dynamic teams
       omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,edgelist,gradient,hessian,interevent_time)
+      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
       for(m = 0; m < M; m++){
           arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
           log_lambda = stats_m.t() * pars;
@@ -79,7 +78,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
           if(riskset_time_m!=(-1)){ // if the riskset_time_vec[m]=riskset_time_m is different from, then a dynamic riskset is observed
             for(d = 0; d < D; d++){
               if(riskset_mat(riskset_time_m,d)){ // ignoring impossible events that are not in risk set // [[try without ==1 ]]
-                  if(edgelist(m,1) == d){ // if the event occurred
+                  if(dyad(m) == d){ // if the event occurred
                       loglik[m] += log_lambda.at(d);
                       grad.col(m) += stats_m.col(d);
                   }
@@ -102,7 +101,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
           }
           else{ // loop over all dyad (because for all the time points the riskset is fixed)
             for(d = 0; d < D; d++){
-              if(edgelist(m,1) == d){ // if event occured
+              if(dyad(m) == d){ // if event occured
                   loglik[m] += log_lambda.at(d);
                   grad.col(m) += stats_m.col(d);
               }
@@ -126,7 +125,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
     else{ // ordinal likelihood
       omp_set_dynamic(0);         // disabling dynamic teams
       omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,edgelist,gradient,hessian,interevent_time)
+      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
       for(m = 0; m < M; m++){
         arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
         log_lambda = stats_m.t() * pars;
@@ -137,7 +136,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
         if(riskset_time_m!=(-1)){ // if the riskset_time_vec[m]=riskset_time_m is different from, then a dynamic riskset is observed
           for(d = 0; d < D; d++){
             if(riskset_mat(riskset_time_m,d)){ // ignoring impossible events that are not in risk set // [[try without ==1 ]]
-              if(edgelist(m,1) == d){ // if event occured
+              if(dyad(m) == d){ // if event occured
                   loglik[m] += log_lambda.at(d);
               }
               double lambda_d = exp(log_lambda.at(d));
@@ -159,7 +158,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
         }
       else{ // loop over all the dyads
         for(d = 0; d < D; d++){
-          if(edgelist(m,1) == d){ // if event occured
+          if(dyad(m) == d){ // if event occured
               loglik[m] += log_lambda.at(d);
           }
           double lambda_d = exp(log_lambda.at(d));
@@ -214,7 +213,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 //'
 //' @param pars is a vector of parameters
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions N*U with statistics of interest by column and senders by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param C number of event types 
@@ -226,12 +225,11 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 //'
 //' @return list of values: loglik, grad, fisher information
 //'
-//' @export
 // [[Rcpp::export]]
 Rcpp::List remDerivativesSenderRates(
         const arma::vec &pars,
         const arma::cube &stats,
-        const arma::mat &edgelist, 
+        const arma::uvec &actor1,         
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
         int C,
@@ -277,8 +275,7 @@ Rcpp::List remDerivativesSenderRates(
       lambda_s = arma::exp(stats_m.t() * pars);
 
       //actors in remify edgelist are 0 indexed hence no -1
-      dyad_m = remify::getDyadComposition(edgelist(m,1),C,N,D);
-      int sender = dyad_m[0];
+      arma::uword sender = actor1(m);
       // int type = dyad[2]; // when type will be integrated in the function
 
       //reset internal variables
@@ -380,7 +377,8 @@ Rcpp::List remDerivativesSenderRates(
 //'
 //' @param pars is a vector of parameters
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist, output from remify, (note: indices of the actors must start from 0)
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
 //' @param omit_dyad, list object that takes care of the dynamic rikset (if defined)
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param N the number of actors
@@ -392,12 +390,12 @@ Rcpp::List remDerivativesSenderRates(
 //'
 //' @return list of values: loglik, grad, fisher
 //'
-//' @export
 //[[Rcpp::export]]
 Rcpp::List remDerivativesReceiverChoice(
         const arma::vec &pars,
         const arma::cube &stats,
-        const arma::mat &edgelist,
+        const arma::uvec &actor1,
+        const arma::uvec &actor2,
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
         int N,
@@ -407,7 +405,7 @@ Rcpp::List remDerivativesReceiverChoice(
         bool hessian  = true){
 
     arma::uword P_d = stats.n_cols; // number of parameters for dyad stats
-    arma::uword M = edgelist.n_rows; // number of events
+    arma::uword M = actor2.n_elem; // number of events
     int n;
 
     // variables for internal computation
@@ -442,10 +440,9 @@ Rcpp::List remDerivativesReceiverChoice(
       //this is exp(beta^T X) dot product
       lambda_d = arma::exp(stats_m.t() * pars);
 
-      //actors in remify edgelist are 0 indexed hence no -1
-      dyad_m = remify::getDyadComposition(edgelist(m,1),C,N,D);
-      int sender = dyad_m[0]; 
-      int receiver = dyad_m[1];
+      //actors
+      arma::uword sender = actor1(m); 
+      arma::uword receiver = actor2(m);
       //int type = dyad_m[2]; // when type will be integrated in the function
 
       //reset internal variables
@@ -522,7 +519,9 @@ Rcpp::List remDerivativesReceiverChoice(
 //'
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+//' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
@@ -539,11 +538,12 @@ Rcpp::List remDerivativesReceiverChoice(
 //'
 //' @return list of values: loglik, gradient, hessian
 //'
-//' @export
 // [[Rcpp::export]]
 Rcpp::List remDerivatives(const arma::vec &pars,
                                   const arma::cube &stats,
-                                  const arma::mat &edgelist,
+                                  const arma::uvec &actor1,
+                                  const arma::uvec &actor2,
+                                  const arma::uvec &dyad,
                                   const Rcpp::List &omit_dyad,
                                   const arma::vec &interevent_time,
                                   std::string model,
@@ -556,25 +556,23 @@ Rcpp::List remDerivatives(const arma::vec &pars,
                                   Rcpp::Nullable<int> C = R_NilValue,
                                   Rcpp::Nullable<int> D = R_NilValue){
   Rcpp::List out;
-  // each routine should include a parameter 'fast' if the fast version can be useb
   std::vector<std::string> models = {"tie","actor"};
-
   std::vector<std::string>::iterator itr = std::find(models.begin(), models.end(), model);
   auto which_model = std::distance(models.begin(), itr);
 
   switch (which_model)
   {
-  case 0: { out = remDerivativesStandard(pars,stats,edgelist,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
+  case 0: { out = remDerivativesStandard(pars,stats,dyad,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
     break;}
 
   case 1: { 
       switch (senderRate){ // both likelihood miss paralellization
         case 0 : {
-                  out = remDerivativesReceiverChoice(pars,stats,edgelist,omit_dyad,interevent_time,Rcpp::as<int>(N),Rcpp::as<int>(C),Rcpp::as<int>(D),gradient,hessian);  // add gradient and hessian switch
+                  out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),Rcpp::as<int>(C),Rcpp::as<int>(D),gradient,hessian);
                   break;
                   }
         case 1 : {
-                  out = remDerivativesSenderRates(pars,stats,edgelist,omit_dyad,interevent_time,Rcpp::as<int>(C),Rcpp::as<int>(D),ordinal,gradient,hessian); // add gradient and hessian switch
+                  out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,Rcpp::as<int>(C),Rcpp::as<int>(D),ordinal,gradient,hessian);
                   break;
                   }
       }
@@ -602,7 +600,9 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 //'
 //' @param pars parameters
 //' @param stats array of statistics
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+//' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time vector of interevent times (inside the reh object)
 //' @param model either "actor" or "tie" model
@@ -626,7 +626,9 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 // [[Rcpp::export]]
 Rcpp::List GDADAMAX(const arma::vec &pars,
                   const arma::cube &stats,
-                  const arma::mat &edgelist,
+                  const arma::uvec &actor1,
+                  const arma::uvec &actor2,
+                  const arma::uvec &dyad,
                   const Rcpp::List &omit_dyad,
                   const arma::vec &interevent_time,
                   std::string model,
@@ -660,7 +662,7 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
 
 
   while(i <= (epochs-1)){
-    Rcpp::List derv = remDerivatives(pars_loc,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,gradient,hessian,senderRate,N,C,D);
+    Rcpp::List derv = remDerivatives(pars_loc,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,gradient,hessian,senderRate,N,C,D);
 
     // calculate loglik and gradient with the previous iteration
     loglik = derv["value"];
@@ -706,8 +708,11 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
     reason = "max epochs condition reached";
   }
 
-  return Rcpp::List::create(Rcpp::Named("value") = loglik, Rcpp::Named("argument") = pars_loc, Rcpp::Named("gradient") = grad,Rcpp::Named("iterations_loglik") = iterations_loglik(arma::span(0,i-1)), Rcpp::Named("iterations_pars") = iterations_pars(arma::span::all,arma::span(0,i-1)),Rcpp::Named("iterations") = i, Rcpp::Named("converged") = reason);
-    
+  return Rcpp::List::create(Rcpp::Named("value") = loglik, 
+                            Rcpp::Named("argument") = pars_loc, 
+                            Rcpp::Named("gradient") = grad,Rcpp::Named("iterations_loglik") = iterations_loglik(arma::span(0,i-1)), 
+                            Rcpp::Named("iterations_pars") = iterations_pars(arma::span::all,arma::span(0,i-1)),
+                            Rcpp::Named("iterations") = i, Rcpp::Named("converged") = reason);
 }
 
 // /////////////////////////////////////////////////////////////////////////////////
@@ -729,7 +734,9 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
 //' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+//' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
@@ -747,7 +754,9 @@ double logPostHMC(const arma::vec &meanPrior,
                   const arma::mat &sigmaPrior,
                   const arma::vec &pars,
                   const arma::cube &stats,
-                  const arma::mat &edgelist,
+                  const arma::uvec &actor1,
+                  const arma::uvec &actor2,
+                  const arma::uvec &dyad,
                   const Rcpp::List &omit_dyad,
                   const arma::vec &interevent_time,
                   std::string model,
@@ -758,7 +767,7 @@ double logPostHMC(const arma::vec &meanPrior,
                   Rcpp::Nullable<int> C = R_NilValue,
                   Rcpp::Nullable<int> D = R_NilValue){
 
-  Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,C,D);
+  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,C,D);
   double derv_0 = Rcpp::as<double>(derv[0]);                
   double prior =  arma::accu(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
   return (prior + derv_0); 
@@ -773,7 +782,9 @@ double logPostHMC(const arma::vec &meanPrior,
 //' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+//' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
@@ -792,7 +803,9 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               const arma::mat &sigmaPrior,
                               const arma::vec &pars,
                               const arma::cube &stats,
-                              const arma::mat &edgelist,
+                              const arma::uvec &actor1,
+                              const arma::uvec &actor2,
+                              const arma::uvec &dyad,
                               const Rcpp::List &omit_dyad,
                               const arma::vec &interevent_time,
                               std::string model,
@@ -802,7 +815,7 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               Rcpp::Nullable<int> N = R_NilValue,
                               Rcpp::Nullable<int> C = R_NilValue,
                               Rcpp::Nullable<int> D = R_NilValue){
-  Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N,C,D);
+  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N,C,D);
   arma::vec gprior = inv(sigmaPrior)*(pars - meanPrior); // the sign is already changed here
   arma::vec glp = Rcpp::as<arma::vec>(derv[1]);
   return (glp + gprior); 
@@ -819,7 +832,9 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 //' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+//' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
@@ -837,7 +852,9 @@ arma::field<arma::vec> iterHMC(arma::uword L,
                   const arma::mat &sigmaPrior,
                   const arma::vec &pars,
                   const arma::cube &stats,
-                  const arma::mat &edgelist,
+                  const arma::uvec &actor1,
+                  const arma::uvec &actor2,
+                  const arma::uvec &dyad,
                   const Rcpp::List &omit_dyad,
                   const arma::vec &interevent_time,
                   std::string model,
@@ -861,17 +878,17 @@ arma::field<arma::vec> iterHMC(arma::uword L,
   arma::vec betaP = pars; // new proposed beta (starting value is current beta)
 
   //leapfrog algorithm, updates via Hamiltonian equations
-  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
   for(arma::uword i = 1; i <= L; i++){
     betaP += (epsilon * rP);
-    if(i != L) rP -= (epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
+    if(i != L) rP -= (epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
   }
-  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
   rP *= (-1);
 
   //computes final quantities for the acceptance rate
-  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
   double K = 0.5 * arma::accu(arma::pow(rC,2));
   double propK = 0.5 * arma::accu(arma::pow(rP,2));
 
@@ -945,7 +962,9 @@ Rcpp::List burninHMC(const arma::cube& samples, const arma::mat& loglik, arma::u
 //' @param meanPrior is a vector of prior means with the same dimension as the vector of parameters
 //' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+//' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param 
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -971,7 +990,9 @@ Rcpp::List HMC(arma::mat pars_init,
                 const arma::vec& meanPrior,
                 const arma::mat& sigmaPrior,
                 const arma::cube &stats,
-                const arma::mat &edgelist,
+                const arma::uvec &actor1,
+                const arma::uvec &actor2,
+                const arma::uvec &dyad,
                 const Rcpp::List &omit_dyad,
                 const arma::vec &interevent_time,
                 std::string model,
@@ -992,12 +1013,12 @@ Rcpp::List HMC(arma::mat pars_init,
     arma::mat chain_j(pars_init.n_rows,nsim,arma::fill::zeros);
     arma::vec chain_j_loglik(nsim,arma::fill::zeros);
     //[i=0] this step only get the first sample out of the starting value
-    arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+    arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
     chain_j.col(0) = iter_i_hmc[0]; // saving draws
     chain_j_loglik(0) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
     for(i = 1; i < nsim; i++){ //looping through iterations of the MCMC
         //Then the next step will always be based on the previous one
-        arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+        arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
         chain_j.col(i) = iter_i_hmc[0]; // saving draws
         chain_j_loglik(i) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
     }
@@ -1030,7 +1051,9 @@ Rcpp::List HMC(arma::mat pars_init,
 //' @param sigmaPrior is a matrix, I have been using a diagonal matrix here with the same dimension as the vector os parameters
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
-//' @param edgelist is a matrix [M*3] of [time/dyad/weight]
+//' @param actor1 vector of actor1's (column reh$edgelist$actor1)
+//' @param actor2 vector of actor2's (column reh$edgelist$actor2)
+//' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
@@ -1049,7 +1072,9 @@ arma::vec emp_dist_longest_batch(arma::uword L,
                   const arma::mat &sigmaPrior,
                   const arma::vec &pars,
                   const arma::cube &stats,
-                  const arma::mat &edgelist,
+                  const arma::uvec &actor1,
+                  const arma::uvec &actor2,
+                  const arma::uvec &dyad,
                   const Rcpp::List &omit_dyad,
                   const arma::vec &interevent_time,
                   std::string model,
@@ -1077,18 +1102,18 @@ arma::vec emp_dist_longest_batch(arma::uword L,
     arma::uword l = 0;
     double condition_while = arma::accu(beta_diff.t()*r0);
     while(condition_while>=0){
-      arma::vec dd= logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      arma::vec dd= logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       Rcpp::Rcout << "postgr: " << dd.t() << "\n";
       //Rcpp::Rcout << "beta_diff: " << beta_diff.t() << "\n r0:" << r0 << "\n";
       l+=1;
       // START compute leapfrog L=1
       // starting value for r0
-      r0 -= 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      r0 -= 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       // iteration L=1
       beta0 += epsilon * r0;
-      r0 -= epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      r0 -= epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       // updating r0 for the output
-      r0 += 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      r0 += 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       // END compute leapfrog
       if(l == L){
         beta_star = beta0;
@@ -1104,19 +1129,19 @@ arma::vec emp_dist_longest_batch(arma::uword L,
     // (3) if longest batch L_k is less than L_0, then compute leapfrog on L_0 - L_k
     if(L_k < L){ // compute leapfrog
       // START compute leapfrog
-      r_star -= 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      r_star -= 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       for(i = 1; i <= (L-L_k); i++){
         beta_star += epsilon * r_star;
-        r_star -= epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+        r_star -= epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       }
-      r_star += 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      r_star += 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       // END compute leapfrog
     }
     r_star = - r_star;
     // (4) set next iteration values with probability p, see randomUnif
     //computes final quantities for the acceptance rate
-    double U = logPostHMC(meanPrior,sigmaPrior,beta_k,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-    double propU = logPostHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+    double U = logPostHMC(meanPrior,sigmaPrior,beta_k,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+    double propU = logPostHMC(meanPrior,sigmaPrior,beta_star,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
     double K = 0.5 * arma::accu(r_k.t() * r_k);
     double propK = 0.5 * arma::accu(r_star.t() * r_star); 
 
