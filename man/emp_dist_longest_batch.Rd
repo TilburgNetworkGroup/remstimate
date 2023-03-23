@@ -57,5 +57,5 @@ emp_dist_longest_batch(
 \item{D}{number of dyads}
 }
 \description{
-This function does one iteration of the Hamiltonian Monte carlo
+This function tunes the parameter L for the leapfrog step in the HMC method
 }

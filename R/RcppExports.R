@@ -152,7 +152,7 @@ GDADAMAX <- function(pars, stats, edgelist, omit_dyad, interevent_time, model, o
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -177,7 +177,7 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, 
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -189,6 +189,7 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, 
 #'
 #' @return value of log-posterior gradient
 #'
+#' @export
 logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
     .Call(`_remstimate_logPostGradientHMC`, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }
@@ -204,7 +205,7 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, edgelist, omi
 #' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 #' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 #' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param interevent_time the time difference between the current time point and the previous event time.
+#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param model either "actor" or "tie" model
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -268,7 +269,7 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
 
 #' emp_dist_longest_batch
 #'
-#' This function does one iteration of the Hamiltonian Monte carlo
+#' This function tunes the parameter L for the leapfrog step in the HMC method
 #'
 #' @param L number of leapfrogs. Default (and recommended) value is 100.
 #' @param epsilon size of the leapfrog. Default value is 1e-02.
@@ -287,6 +288,7 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
 #' @param C number of event types 
 #' @param D number of dyads
 #'
+#' @export
 emp_dist_longest_batch <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
     .Call(`_remstimate_emp_dist_longest_batch`, L, epsilon, meanPrior, sigmaPrior, pars, stats, edgelist, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D)
 }

@@ -42,8 +42,23 @@ test_that("testing input arguments and tie-oriented modeling", {
                           ncores = 1L),
   "The `method` specified is not available or it is mistyped.",
   fixed = TRUE
-  )  
+  )
 
+  ## directed = FALSE and model = "actor"
+  data(ao_reh) # loading ao data
+  rate_model <- ~ 1 + remstats::indegreeSender() # linear predictor for the rate model
+  choice_model <- ~ remstats::inertia() + remstats::reciprocity() # linear predictror for the choice model
+  ## calculate statistics
+  ao_reh_stats <- remstats::remstats(edgelist = ao_reh, sender_effects = rate_model, 
+  receiver_effects = choice_model)
+  attr(ao_reh,"directed") <- FALSE
+  expect_error(remstimate::remstimate(reh = ao_reh,
+                          stats = ao_reh_stats,
+                          method = "MLE",
+                          ncores = 1L),
+  "actor-oriented modeling can't operate on undirected networks",                      
+  fixed = TRUE
+  )
   ## tests on the stats object
 
   # [ ... here ... ]

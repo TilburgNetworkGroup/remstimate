@@ -60,6 +60,9 @@ remstimate <- function(reh,
     # ... type of likelihood
     ordinal <- attr(reh,"ordinal")
 
+    # ... directed / undirected network
+    if((model == "actor") & !attr(reh,"directed")){stop("actor-oriented modeling can't operate on undirected networks")}
+
     # ... stats 
     # check if 'stats' is an object of class 'remstats'
     model_formula <- variable_names <- NULL
@@ -674,15 +677,19 @@ remstimate <- function(reh,
 
         if(model == "tie"){ # Relational Event Model (REM)
             if(is.null(init)){
-                init <- matrix(stats::runif((dim(stats)[2])*nchains,-1,1),nrow=dim(stats)[2],ncol=nchains) # runif was in (-0.1,0.1)
+
+                init <- matrix(stats::runif((dim(stats)[2])*nchains,-0.1,0.1),nrow=dim(stats)[2],ncol=nchains) # runif was in (-0.1,0.1)
+                #init <- matrix(rep(.GlobalEnv$mle_hmc,nchains),nrow=dim(stats)[2],ncol=nchains,byrow=FALSE) + matrix(runif(dim(stats)[2]*nchains,-1,1),nrow=dim(stats)[2],ncol=nchains,byrow=FALSE)
+                #init[,1] <- .GlobalEnv$mle_hmc
             }
+            .GlobalEnv$init_hmc <- init # temporary
 
             hmc_out <- HMC(pars_init = init, 
                         nsim = (burnin+nsim), 
                         nchains = nchains, 
                         burnin = burnin, 
                         meanPrior = rep(0,dim(stats)[2]),
-                        sigmaPrior = diag(dim(stats)[2]),
+                        sigmaPrior = diag(dim(stats)[2])*1e05,
                         stats = stats,  
                         edgelist = reh$edgelist, 
                         omit_dyad = reh$omit_dyad,
@@ -690,18 +697,23 @@ remstimate <- function(reh,
                         model = model,
                         ordinal = ordinal,
                         ncores = ncores,
-                        thin = thin)          
+                        thin = thin,
+                        L = .GlobalEnv$L_hmc, # temporary
+                        epsilon = .GlobalEnv$epsilon_hmc, # temporary,
+                        N = reh$N,
+                        C = reh$C,
+                        D = reh$D)          
             # [enhancement idea]
             #remstimateList$hmc <- hmc # output such that one can run gelman plots and statistics // define methods like remstimate.traceplot() remstimate.
                                         # A. Gelman, Carlin, et al. (2013, 267)
                                         # Stan Development Team (2016 Ch 28.) for how Stan calculates Hat, autocorrelations, and ESS.
                                         # Gelman and Rubin (1992) introduce the R-hat statistic
 
-            hmc$coefficients <- hmc_out$draws[which.max(hmc_out$log_posterior),]
+            hmc$coefficients <- hmc_out$draws[which.min(hmc_out$log_posterior),] # log_posterior is a vector of posterior nloglik
             hmc$post.mean <- colMeans(hmc_out$draws)
             hmc$vcov <- stats::cov(hmc_out$draws)
             hmc$sd <- diag(hmc$vcov)**0.5
-            hmc$loglik <- max(hmc_out$log_posterior)
+            hmc$loglik <- min(hmc_out$log_posterior)
             hmc$df.null <- reh$M
             names(hmc$coefficients) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- dimnames(stats)[[2]]
             remstimateList <- c(hmc_out,hmc)

@@ -730,7 +730,7 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -759,9 +759,9 @@ double logPostHMC(const arma::vec &meanPrior,
                   Rcpp::Nullable<int> D = R_NilValue){
 
   Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,C,D);
-  double derv_0 = Rcpp::as<double>(derv[0]);                       
-  double prior = - sum(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
-  return -(prior + derv_0); 
+  double derv_0 = Rcpp::as<double>(derv[0]);                
+  double prior =  arma::accu(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
+  return (prior + derv_0); 
 }
 
 
@@ -774,7 +774,7 @@ double logPostHMC(const arma::vec &meanPrior,
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -786,6 +786,7 @@ double logPostHMC(const arma::vec &meanPrior,
 //'
 //' @return value of log-posterior gradient
 //'
+//' @export
 // [[Rcpp::export]]
 arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               const arma::mat &sigmaPrior,
@@ -802,12 +803,12 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               Rcpp::Nullable<int> C = R_NilValue,
                               Rcpp::Nullable<int> D = R_NilValue){
   Rcpp::List derv = remDerivatives(pars,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N,C,D);
-  arma::vec gprior =  - 0.5 * inv(sigmaPrior) * (pars - meanPrior);
-  arma::vec glp = Rcpp::as<arma::vec>(derv[1]); 
-  return (glp + gprior);
+  arma::vec gprior = inv(sigmaPrior)*(pars - meanPrior); // the sign is already changed here
+  arma::vec glp = Rcpp::as<arma::vec>(derv[1]);
+  return (glp + gprior); 
 }
 
-
+                                  
 //' iterHMC
 //'
 //' This function does one iteration of the Hamiltonian Monte carlo
@@ -819,7 +820,7 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 //' @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats')
 //' @param stats is cube of M slices. Each slice is a matrix of dimensions D*U with statistics of interest by column and dyads by row.
 //' @param edgelist is a matrix [M*3] of [time/dyad/weight]
-//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param interevent_time the time difference between the current time point and the previous event time.
+//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param model either "actor" or "tie" model
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
@@ -847,52 +848,47 @@ arma::field<arma::vec> iterHMC(arma::uword L,
                   Rcpp::Nullable<int> C = R_NilValue,
                   Rcpp::Nullable<int> D = R_NilValue){
 
-  arma::vec accept; //vector to store sample
   arma::uword P = pars.size(); //number of parameters
+  arma::field<arma::vec> out(2); // output object
 
+  // proposing a new value for the momentum variable
+  arma::vec rP = arma::randn(P); 
+  // current momentum variable
+  arma::vec rC = rP;
+  //Rcpp::Rcout << "rnorm" << rP.t() << "\n";
   
-  //arma::vec r = arma::randn(P); //Rcpp::rnorm(P, 0.0, 1.0); rv's to use in the hamiltonian equations
-  Rcpp::RNGScope scope_1; // we use the RNG from Rcpp because the armadillo's returns a warning in R and does not work properly (I will check into it)
-  Rcpp::NumericVector r_cpp_random = Rcpp::rnorm(P,0.0,1.0);
-  arma::vec r = Rcpp::as<arma::vec>(r_cpp_random);
-
-  arma::vec betaC = pars;
-  arma::vec betaP = pars;
-  arma::vec rC = r;
-  arma::vec loglik(1);
-  arma::field<arma::vec> out(2);
+  arma::vec betaC = pars; // current beta
+  arma::vec betaP = pars; // new proposed beta (starting value is current beta)
 
   //leapfrog algorithm, updates via Hamiltonian equations
-  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
   for(arma::uword i = 1; i <= L; i++){
-    betaP = betaP + r * epsilon;
-    if(i != L) r = r - epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+    betaP += (epsilon * rP);
+    if(i != L) rP -= (epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
   }
-  r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-  r = -r;
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
+  rP *= (-1);
 
   //computes final quantities for the acceptance rate
   double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
   double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-  double K = 0.5 * sum(rC.t() * rC);
-  double propK = 0.5 * sum(r.t() * r);
+  double K = 0.5 * arma::accu(arma::pow(rC,2));
+  double propK = 0.5 * arma::accu(arma::pow(rP,2));
 
-  //Accepting or rejection the proposal
-  //arma::vec randomUnif = arma::randu(1);
-  Rcpp::RNGScope scope_2;
-  Rcpp::NumericVector randomUnif = Rcpp::runif(1,0.0,1.0);
-  if(randomUnif[0] < exp((-propU - propK)/(-U - K))){
-    accept = betaP;
-    loglik(0) = propU;
+  //Accepting or rejecting the proposal
+  arma::vec randomUnif = arma::randu(1);
+  //Rcpp::Rcout << "randomunif: " << randomUnif.t() << "\n";
+  if(randomUnif(0) < exp(U - propU + propK - K)){   // before it was: exp( (-propU - propK)/(-U - K) ) .. exp(propH)/exp(H)
+    out(0) = betaP;
+    out(1) = propU;
     // propU;
   } else {
-    accept = betaC;
-    loglik(0) = U;
+    out(0) = betaC;
+    out(1) = U;
     // U;
   }
 
-  out[0] = accept;
-  out[1] = loglik;
+  Rcpp::Rcout << "accepted value: " << out(0) << "\n";
 
   return out;
 }
@@ -993,21 +989,19 @@ Rcpp::List HMC(arma::mat pars_init,
   arma::uword j,i;
   Rcpp::List out = Rcpp::List::create(); // output object
   for(j = 0; j < nchains; j++){ //looping through chains
-    arma::mat chain_j(nsim,pars_init.n_rows,arma::fill::zeros);
+    arma::mat chain_j(pars_init.n_rows,nsim,arma::fill::zeros);
     arma::vec chain_j_loglik(nsim,arma::fill::zeros);
     //[i=0] this step only get the first sample out of the starting value
     arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-    arma::vec aux = iter_i_hmc[0]; 
-    chain_j.row(0) = aux.t(); // saving draws
+    chain_j.col(0) = iter_i_hmc[0]; // saving draws
     chain_j_loglik(0) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
     for(i = 1; i < nsim; i++){ //looping through iterations of the MCMC
         //Then the next step will always be based on the previous one
-        iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,aux,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-        aux = iter_i_hmc[0]; // updating the aux which will be the previous step in the next iteration
-        chain_j.row(i) = aux.t(); // saving draws
+        arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+        chain_j.col(i) = iter_i_hmc[0]; // saving draws
         chain_j_loglik(i) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
     }
-    array_of_draws.slice(j) = chain_j;
+    array_of_draws.slice(j) = chain_j.t();
     matrix_of_loglik.col(j) = chain_j_loglik;
   }
   //this step performs the burn-in and thinning
@@ -1026,10 +1020,9 @@ Rcpp::List HMC(arma::mat pars_init,
 
 
 
-
 //' emp_dist_longest_batch
 //'
-//' This function does one iteration of the Hamiltonian Monte carlo
+//' This function tunes the parameter L for the leapfrog step in the HMC method
 //'
 //' @param L number of leapfrogs. Default (and recommended) value is 100.
 //' @param epsilon size of the leapfrog. Default value is 1e-02.
@@ -1048,6 +1041,7 @@ Rcpp::List HMC(arma::mat pars_init,
 //' @param C number of event types 
 //' @param D number of dyads
 //'
+//' @export
 // [[Rcpp::export]]
 arma::vec emp_dist_longest_batch(arma::uword L,
                   double epsilon,
@@ -1065,78 +1059,74 @@ arma::vec emp_dist_longest_batch(arma::uword L,
                   Rcpp::Nullable<int> N = R_NilValue,
                   Rcpp::Nullable<int> C = R_NilValue,
                   Rcpp::Nullable<int> D = R_NilValue){
-
-  arma::vec accept; //vector to store sample
   arma::uword P = pars.size(); //number of parameters
-  arma::vec betaC = pars;
-  arma::vec betaP = pars;
-  arma::vec L_vec(L);
+  arma::vec beta_k = pars; // starting point (theta_0)
+  arma::vec L_vec(L,arma::fill::zeros);
   arma::uword i,k;
 
-  for(k = 1; k <=(L-1); k++){
+  for(k = 0; k < L; k++){
     // (1) generate momentum
-    Rcpp::RNGScope scope_1; 
-    Rcpp::NumericVector r_cpp_random = Rcpp::rnorm(P,0.0,1.0);
-    arma::vec r = Rcpp::as<arma::vec>(r_cpp_random);
-    arma::vec rC = r;
+    arma::vec r_k = arma::randn(P);
+    arma::vec r_star = r_k;
+    arma::vec beta_star = beta_k;
     // (2) compute longest batch
-    arma::mat inv_sigmaPrior = inv(sigmaPrior);
-    betaC = betaP;
-    arma::vec beta0 = betaC;
-    arma::vec beta_diff = (betaC-beta0);
-    arma::vec condition_while_p = beta_diff.t()*inv_sigmaPrior*r;
-    double condition_while = condition_while_p(0);
+    //arma::mat inv_sigmaPrior = inv(sigmaPrior);
+    arma::vec beta0 = beta_k;
+    arma::vec r0 = r_k;
+    arma::vec beta_diff = (beta0-beta_k);
     arma::uword l = 0;
+    double condition_while = arma::accu(beta_diff.t()*r0);
     while(condition_while>=0){
+      arma::vec dd= logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      Rcpp::Rcout << "postgr: " << dd.t() << "\n";
+      //Rcpp::Rcout << "beta_diff: " << beta_diff.t() << "\n r0:" << r0 << "\n";
       l+=1;
       // START compute leapfrog L=1
-      r -= 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-      betaC += epsilon * arma::inv(sigmaPrior) * r;
-      r -= epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-      r += 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      // starting value for r0
+      r0 -= 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      // iteration L=1
+      beta0 += epsilon * r0;
+      r0 -= epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      // updating r0 for the output
+      r0 += 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta0,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       // END compute leapfrog
-      arma::vec beta_diff = (betaC-beta0);
-      arma::vec condition_while_p = beta_diff.t()*inv_sigmaPrior*r;
-      double condition_while = condition_while_p(0);
       if(l == L){
-        betaP = betaC;
+        beta_star = beta0;
+        r_star = r0;
         break;
       }
+      arma::vec beta_diff = (beta0-beta_k);
+      condition_while = arma::accu(beta_diff.t()*r0);
     }
     //(betaP,r,l)
     arma::uword L_k = l;
-    L_vec(k-1) = l;
+    L_vec(k) = L_k;
     // (3) if longest batch L_k is less than L_0, then compute leapfrog on L_0 - L_k
     if(L_k < L){ // compute leapfrog
       // START compute leapfrog
-      r = r - 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      r_star -= 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       for(i = 1; i <= (L-L_k); i++){
-        betaP = betaP + epsilon * arma::inv(sigmaPrior) * r;
-        r = r - epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+        beta_star += epsilon * r_star;
+        r_star -= epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       }
-      r = r + 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      r_star += 0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
       // END compute leapfrog
-      continue;
-      
     }
+    r_star = - r_star;
     // (4) set next iteration values with probability p, see randomUnif
     //computes final quantities for the acceptance rate
-    double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-    double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-    double K = 0.5 * sum(rC.t() * rC);
-    double propK = 0.5 * sum(r.t() * r);
+    double U = logPostHMC(meanPrior,sigmaPrior,beta_k,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+    double propU = logPostHMC(meanPrior,sigmaPrior,beta_star,stats,edgelist,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+    double K = 0.5 * arma::accu(r_k.t() * r_k);
+    double propK = 0.5 * arma::accu(r_star.t() * r_star); 
 
     //Accepting or rejection the proposal
-    //arma::vec randomUnif = arma::randu(1);
-    Rcpp::RNGScope scope_2;
-    Rcpp::NumericVector randomUnif = Rcpp::runif(1,0.0,1.0);
-    if(randomUnif[0] < exp((-propU - propK)/(-U - K))){
-      betaP = betaP;
-      r = -r;
+    arma::vec randomUnif = arma::randu(1);
+    if(randomUnif[0] < exp(U - propU + propK - K)){
+      beta_k = beta_star;
       // propU;
     } else {
-      betaP = betaC;
-      r = rC;
+      beta_k = beta_k;
       // U;
     }
   }

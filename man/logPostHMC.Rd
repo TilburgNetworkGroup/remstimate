@@ -32,7 +32,7 @@ logPostHMC(
 
 \item{edgelist}{is a matrix [M*3] of [time/dyad/weight]}
 
-\item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.}
+\item{omit_dyad}{is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined}
 
 \item{interevent_time}{the time difference between the current time point and the previous event time.}
 
