@@ -309,7 +309,9 @@ remstimate <- function(reh,
                                         rinit = 1, 
                                         rmax = 100, 
                                         stats = array(1,dim=c(reh$D,1,reh$M)),  
-                                        edgelist = reh$edgelist,
+                                        actor1 = c(0),
+                                        actor2 = c(0),
+                                        dyad = attr(reh,"dyad")-1,
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
                                         model = model,
@@ -704,8 +706,14 @@ remstimate <- function(reh,
 
         if(model == "tie"){ # Relational Event Model (REM)
             if(is.null(init)){
-
+                beta_0 <- log(reh$M) - log(sum(reh$intereventTime)*reh$D) # MLE intercept under null model
                 init <- matrix(stats::runif((dim(stats)[2])*nchains,-0.1,0.1),nrow=dim(stats)[2],ncol=nchains) # runif was in (-0.1,0.1)
+                if(.GlobalEnv$with_intercept_hmc){
+                    init[1,] <- init[1,] + beta_0
+                }
+                else{
+                    init <- init + beta_0
+                }
                 #init <- matrix(rep(.GlobalEnv$mle_hmc,nchains),nrow=dim(stats)[2],ncol=nchains,byrow=FALSE) + matrix(runif(dim(stats)[2]*nchains,-1,1),nrow=dim(stats)[2],ncol=nchains,byrow=FALSE)
                 #init[,1] <- .GlobalEnv$mle_hmc
             }
