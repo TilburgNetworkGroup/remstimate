@@ -1,4 +1,4 @@
-# remstimate
+# remstimate <img align="right" width="185" src='man/figures/remstimate-logo.svg'>
 
 [![github-repo-status](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![R-package-version](https://img.shields.io/github/r-package/v/TilburgNetworkGroup/remstimate)](https://www.github.com/TilburgNetworkGroup/remstimate)
