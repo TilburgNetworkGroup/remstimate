@@ -5,4 +5,4 @@
 #' @useDynLib remstimate, .registration = TRUE
 #' @import remify remstats
 #' @importFrom Rcpp sourceCpp
-"_PACKAGE"
+NULL

@@ -11,6 +11,14 @@
 //#include <progress.hpp> // progress bar
 //#include <progress_bar.hpp> // progress bar
 
+// a function for setting the seed at R level
+//void set_seed(double seed) {
+//    Rcpp::Environment base_env("package:base");
+//    Rcpp::Function set_seed_r = base_env["set.seed"];
+//    set_seed_r(std::floor(std::fabs(seed)));
+//}
+
+
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(BEGIN)              remDerivatives               (BEGIN)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
@@ -441,8 +449,8 @@ Rcpp::List remDerivativesReceiverChoice(
       lambda_d = arma::exp(stats_m.t() * pars);
 
       //actors
-      arma::uword sender = actor1(m); 
-      arma::uword receiver = actor2(m);
+      int sender = actor1(m); 
+      int receiver = actor2(m);
       //int type = dyad_m[2]; // when type will be integrated in the function
 
       //reset internal variables
@@ -687,7 +695,7 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
     // updating exponentially weighted infinity norm
     arma::vec inf_norm_prev = inf_norm;
     arma::vec abs_grad = arma::abs(grad);
-    for(int p=0; p<P; p++){
+    for(arma::uword p=0; p<P; p++){
       arma::vec inf_norm_both = {beta2*inf_norm_prev(p),abs_grad(p)};
       inf_norm(p) = arma::max(inf_norm_both);
     }
@@ -869,7 +877,8 @@ arma::field<arma::vec> iterHMC(arma::uword L,
   arma::field<arma::vec> out(2); // output object
 
   // proposing a new value for the momentum variable
-  arma::vec rP = arma::randn(P); 
+  Rcpp::NumericVector draw = Rcpp::rnorm(P);
+  arma::vec rP = Rcpp::as<arma::vec>(draw); //arma::randn(P); 
   // current momentum variable
   arma::vec rC = rP;
   //Rcpp::Rcout << "rnorm" << rP.t() << "\n";
@@ -893,9 +902,10 @@ arma::field<arma::vec> iterHMC(arma::uword L,
   double propK = 0.5 * arma::accu(arma::pow(rP,2));
 
   //Accepting or rejecting the proposal
-  arma::vec randomUnif = arma::randu(1);
+  //arma::vec randomUnif = arma::randu(1);
+  Rcpp::NumericVector randomUnif = Rcpp::runif(1);
   //Rcpp::Rcout << "randomunif: " << randomUnif.t() << "\n";
-  if(randomUnif(0) < exp(U - propU + propK - K)){   // before it was: exp( (-propU - propK)/(-U - K) ) .. exp(propH)/exp(H)
+  if(randomUnif[0] < exp(U - propU + propK - K)){   // before it was: exp( (-propU - propK)/(-U - K) ) .. exp(propH)/exp(H)
     out(0) = betaP;
     out(1) = propU;
     // propU;
@@ -905,7 +915,7 @@ arma::field<arma::vec> iterHMC(arma::uword L,
     // U;
   }
 
-  Rcpp::Rcout << "accepted value: " << out(0) << "\n";
+  //Rcpp::Rcout << "accepted value: " << out(0) << "\n";
 
   return out;
 }
@@ -1009,6 +1019,8 @@ Rcpp::List HMC(arma::mat pars_init,
   arma::mat matrix_of_loglik(nsim,nchains); // matrix of posterior loglikelihood values across chains
   arma::uword j,i;
   Rcpp::List out = Rcpp::List::create(); // output object
+
+  // starting generating chains
   for(j = 0; j < nchains; j++){ //looping through chains
     arma::mat chain_j(pars_init.n_rows,nsim,arma::fill::zeros);
     arma::vec chain_j_loglik(nsim,arma::fill::zeros);
@@ -1016,6 +1028,7 @@ Rcpp::List HMC(arma::mat pars_init,
     arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
     chain_j.col(0) = iter_i_hmc[0]; // saving draws
     chain_j_loglik(0) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
+    //Rcpp::Rcout << "first value of the chain: " << chain_j.col(0) << "\n";
     for(i = 1; i < nsim; i++){ //looping through iterations of the MCMC
         //Then the next step will always be based on the previous one
         arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);

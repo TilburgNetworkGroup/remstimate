@@ -38,7 +38,7 @@
 #' choice_model <- ~ remstats::inertia() + remstats::reciprocity()
 #' 
 #' ## calculate statistics
-#' ao_reh_stats <- remstats::remstats(edgelist = ao_reh, sender_effects = rate_model, 
+#' ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, 
 #' receiver_effects = choice_model)
 #' 
 #' ## estimate model using method = "MLE"
@@ -86,7 +86,7 @@
 #' tie_model <- ~ 1 + remstats::indegreeSender() + remstats::inertia() + remstats::reciprocity() 
 #' 
 #' ## calculate statistics
-#' tie_reh_stats <- remstats::remstats(edgelist = tie_reh, tie_effects = tie_model)
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
 #' 
 #' ## estimate model using method = "MLE"
 #' mle_tie <- remstimate::remstimate(reh = tie_reh, stats = tie_reh_stats, method = "MLE")

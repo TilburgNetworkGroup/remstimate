@@ -1,4 +1,6 @@
-# NEWS (last update on December 11, 2020)
+# NEWS (last update on April 13, 2023)
+
+
 
 _20/04/2020_ :
 * created repository with first commit;
@@ -31,3 +33,9 @@ _11/12/2020_ :
 
 _20/02/2022_:
 * The new version of `remstimate 2.0.0` is adapted to the latest changes coming from `remify 2.0.0` and it can estimate a Tie-Oriented model as well as an Actor-Oriented model. Models can be estimated by means of different methods: _MLE_, _GDADAMAX_ (replacing the former _GD_ and _GDADAM_), _BSIR_ and _HMC_. Methods like _BSIR_ and _HMC_ are ready-to-use but still under a continuous development in order to improve the user-experience.
+
+
+_13/04/2023_ `remstimate 2.1.0`:
+* NEWS to be updated
+
+_[ ... ]_

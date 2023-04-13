@@ -38,7 +38,7 @@ rate_model <- ~ 1 + remstats::indegreeSender()
 choice_model <- ~ remstats::inertia() + remstats::reciprocity()
 
 ## calculate statistics
-ao_reh_stats <- remstats::remstats(edgelist = ao_reh, sender_effects = rate_model, 
+ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, 
 receiver_effects = choice_model)
 
 ## estimate model using method = "MLE"

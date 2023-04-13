@@ -15,15 +15,20 @@ The `remstimate` package provides a set of functions that perform necessary calc
 
 
 ## Installation
-Install the package in R using `devtools`:
+Install the package in R using `devtools` or `remotes`:
 
 ```
+# via `devtools`
 devtools::install_github(repo = "TilburgNetworkGroup/remstimate")
+
+# via `remotes`
+remotes::install_github(repo = "TilburgNetworkGroup/remstimate")
 ```
 
 
 ## Vignettes
-Not yet available
+
+Not yet available.
 
 
 ## Author

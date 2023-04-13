@@ -16,46 +16,105 @@ remstimate(
   thin = 10L,
   init = NULL,
   epochs = 1000L,
-  epsilon = 0.001,
-  seed = sample(1:10000, nchains),
+  L = 50L,
+  epsilon = ifelse(method == "GDADAMAX", 0.001, 0.002),
+  seed = NULL,
   silent = TRUE,
   ...
 )
 }
 \arguments{
-\item{reh}{a processed relational event history (REH). It can be a \code{remify} object (output object of the function \code{remify::remify()}) or the event sequence (as \code{data.frame})}
+\item{reh}{a \code{remify} object of the processed relational event history. Output object of the function \code{remify::remify()}.}
 
-\item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list of two arrays named \code{rate} and \code{choice} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{rate}, receivers in the array \code{choice})}
+\item{stats}{a \code{remstats} object: when \code{model="tie"}, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if \code{model="actor"}, \code{stats} is a list that can contain up to two arrays named \code{sender_stats} and \code{receiver_stats} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{sender_stats}, receivers in the array \code{receiver_stats}). Therefore, it is possible to only estimate the sender rate model or only the receiver choice model, by using the correct naming of the arrays.}
 
-\item{method}{optimization method to be used. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Samplin Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"})}
+\item{method}{the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}).}
 
-\item{ncores}{number of threads for the parallelization (default value is \code{ncores = 1}, that means no parallelization)}
+\item{ncores}{[\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization)}
 
-\item{prior}{prior distribution when using the \code{"BSIR"} method}
+\item{prior}{[\emph{optional}] prior distribution when \code{method} is \code{"BSIR"}. Default value is \code{NULL}, which means that no prior is assumed.}
 
-\item{nsim}{when \code{method = "HMC"} it is the number of simulations (iterations) in each chain, when \code{method = "BSIR"} is the number of samples from the proposal distribution}
+\item{nsim}{[\emph{optional}] when \code{method} is \code{"HMC"}, \code{nsim} is the number of simulations (iterations) in each chain, when \code{method} is \code{"BSIR"}, then \code{nsim} is the number of samples from the proposal distribution. Default value is \code{1000}.}
 
-\item{nchains}{number of chains to generate in the case of \code{method = "HMC"}}
+\item{nchains}{[\emph{optional}] number of chains to generate in the case of \code{method = "HMC"}. Default value is \code{1}.}
 
-\item{burnin}{number of initial iterations to be added as burnin (for \code{method = "HMC"})}
+\item{burnin}{[\emph{optional}] number of initial iterations to be added as burnin for \code{method = "HMC"}. Default value is \code{500}.}
 
-\item{thin}{number of steps to skip in the posterior draws (for \code{method = "HMC"})}
+\item{thin}{[\emph{optional}] number of steps to skip in the posterior draws for \code{method = "HMC"}. Default value is \code{10}.}
 
-\item{init}{vector of initial values if tie-oriented model, or a named list of two vectors ('rate' and 'choice') if actor-oriented model. This argument is used for the methods: \code{"GDADAMAX"} and \code{"HMC"}}
+\item{init}{[\emph{optional}] vector of initial values if tie-oriented model, or a named list of two vectors ('sender_model' and 'receiver_model') if both models of the actor-oriented framework are specified. \code{init} can also be a list of only one vector (named 'sender_model' or 'receiver_model'), if the interest is to estimate one specific model of the actor-oriented framework. \code{init} is used for the methods \code{"GDADAMAX"} and \code{"HMC"}. If \code{init} is \code{NULL}, then it will be assigned internally.}
 
-\item{epochs}{1e03 by defaut. It is the number of iteration used in the method \code{"GDADAMAX"}}
+\item{epochs}{[\emph{optional}] It is the number of iteration used in the method \code{"GDADAMAX"}. Default value is \code{1000}.}
 
-\item{epsilon}{0.001 by default. It is the inter-iteration difference of the loss function used in the method \code{"GDADAMAX"} and it is used as stop-rule within the algorithm.}
+\item{L}{[\emph{optional}] number of leap-frog steps to use in the method \code{"HMC"}. Default value is \code{50}.}
 
-\item{seed}{seed for reproducibility [[yet to be integrated in the code]]}
+\item{epsilon}{[\emph{optional}] It is a parameter used in two methods: if \code{method} is \code{"GDADAMAX"}, it represents the inter-iteration difference of the loss function and it is used as stop-rule within the algorithm (default value is \code{0.001}), if \code{method} is \code{"HMC"} it is a parameter used in the leap-frog algorithm and it is proportional to the step size (default value is \code{0.002}).}
 
-\item{silent}{a \code{TRUE/FALSE} value. If \code{FALSE}, progress of optimization status will be printed out [[yet to be integrated in the code]]}
+\item{seed}{[\emph{optional}] seed value for reproducibility. If \code{NULL}, seed will be assigned by the machine and saved in the output object.}
 
-\item{...}{additional parameters. They can be parameters of other functions defined as input in some of the arguments above}
+\item{silent}{[\emph{optional}-not-yet-implemented] a \code{TRUE/FALSE} value. If \code{FALSE}, progress of optimization status will be printed out.}
+
+\item{...}{additional parameters. They can be parameters of other functions defined as input in some of the arguments above. (e.g., arguments of the \code{prior} distribution)}
 }
 \value{
 'remstimate' S3 object
 }
 \description{
-A function for the optimization of tie-oriented (Relational Event Model) or actor-oriented (DyNAM) likelihoods
+A function for the optimization of tie-oriented and actor-oriented likelihood. There are four optimization algorithms: two Frequentists, Maximum Likelihood Estimation (\code{MLE}) and Adaptive Gradient Descent (\code{GDADAMAX}), and two Bayesian, Bayesian Sampling Importance Resampling (\code{BSIR}) and Hamiltonian Monte Carlo (\code{HMC}).
+}
+\examples{
+
+# ------------------------------------ #
+#       tie-oriented model: "MLE"      #
+# ------------------------------------ #
+
+# loading data
+data(tie_reh)
+  
+# specifying linear predictor
+tie_model <- ~ 1 + 
+               remstats::indegreeSender()+
+               remstats::inertia()+
+               remstats::reciprocity() 
+
+# calculating statistics
+tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+                                    tie_effects = tie_model)
+
+# running estimation
+tie_mle <- remstimate::remstimate(reh = tie_reh,
+                                  stats = tie_reh_stats,
+                                  method = "MLE",
+                                  ncores = 1)
+# summary
+summary(tie_mle)
+
+# ------------------------------------ #
+#      actor-oriented model: "MLE"     #
+# ------------------------------------ #
+
+# loading data
+data(ao_reh)
+  
+# specifying linear predictor (for sender rate and receiver choice model)
+rate_model <- ~ 1 + remstats::indegreeSender()
+choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+
+# calculating statistics
+ao_reh_stats <- remstats::remstats(reh = ao_reh, 
+                                   sender_effects = rate_model, 
+                                   receiver_effects = choice_model)
+
+# running estimation
+ao_mle <- remstimate::remstimate(reh = ao_reh,
+                                 stats = ao_reh_stats,
+                                 method = "MLE",
+                                 ncores = 1)
+# summary
+summary(ao_mle)
+
+# ------------------------------------ #
+#   for more examples check vignettes  #
+# ------------------------------------ #
+
 }

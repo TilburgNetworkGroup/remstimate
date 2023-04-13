@@ -57,8 +57,8 @@ LinkingTo:
     RcppProgress,
     remify
 Remotes:
-    TilburgNetworkGroup/remify@remify3.0.0,
-    TilburgNetworkGroup/remstats
+    TilburgNetworkGroup/remify,
+    TilburgNetworkGroup/remstats@v3.1.0
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
