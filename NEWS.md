@@ -37,5 +37,3 @@ _20/02/2022_:
 
 _13/04/2023_ `remstimate 2.1.0`:
 * NEWS to be updated
-
-_[ ... ]_

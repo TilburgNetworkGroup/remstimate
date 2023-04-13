@@ -40,7 +40,7 @@ remstimate(
 
 \item{burnin}{[\emph{optional}] number of initial iterations to be added as burnin for \code{method = "HMC"}. Default value is \code{500}.}
 
-\item{thin}{[\emph{optional}] number of steps to skip in the posterior draws for \code{method = "HMC"}. Default value is \code{10}.}
+\item{thin}{[\emph{optional}] number of steps to skip in the posterior draws for \code{method = "HMC"}. Default value is \code{10}. If \code{nsim<100}, thin is set to \code{1}}
 
 \item{init}{[\emph{optional}] vector of initial values if tie-oriented model, or a named list of two vectors ('sender_model' and 'receiver_model') if both models of the actor-oriented framework are specified. \code{init} can also be a list of only one vector (named 'sender_model' or 'receiver_model'), if the interest is to estimate one specific model of the actor-oriented framework. \code{init} is used for the methods \code{"GDADAMAX"} and \code{"HMC"}. If \code{init} is \code{NULL}, then it will be assigned internally.}
 
@@ -48,7 +48,7 @@ remstimate(
 
 \item{L}{[\emph{optional}] number of leap-frog steps to use in the method \code{"HMC"}. Default value is \code{50}.}
 
-\item{epsilon}{[\emph{optional}] It is a parameter used in two methods: if \code{method} is \code{"GDADAMAX"}, it represents the inter-iteration difference of the loss function and it is used as stop-rule within the algorithm (default value is \code{0.001}), if \code{method} is \code{"HMC"} it is a parameter used in the leap-frog algorithm and it is proportional to the step size (default value is \code{0.002}).}
+\item{epsilon}{[\emph{optional}] It is a parameter used in two methods: if \code{method} is \code{"GDADAMAX"}, it represents the inter-iteration difference of the loss function and it is used as stop-rule within the algorithm (default value is \code{0.001}), if \code{method} is \code{"HMC"} (default value is \code{0.002}), it is a parameter used in the leap-frog algorithm and it is proportional to the step size.}
 
 \item{seed}{[\emph{optional}] seed value for reproducibility. If \code{NULL}, seed will be assigned by the machine and saved in the output object.}
 
