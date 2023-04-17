@@ -18,7 +18,6 @@ test_that("testing actor-oriented modeling", {
   expect_no_error(ao_mle)
   expect_no_error(print(ao_mle))
   expect_no_error(summary(ao_mle))
-  expect_no_error(print(summary(ao_mle)))
   expect_no_error(predict(ao_mle))
   expect_no_error(plot(ao_mle))
   expect_no_error(aic(ao_mle))
@@ -36,7 +35,6 @@ test_that("testing actor-oriented modeling", {
   expect_no_error(ao_gdadamax)
   expect_no_error(print(ao_gdadamax))
   expect_no_error(summary(ao_gdadamax))
-  expect_no_error(print(summary(ao_gdadamax)))
   expect_no_error(predict(ao_gdadamax))
   expect_no_error(plot(ao_gdadamax))
   expect_no_error(aic(ao_gdadamax))
@@ -56,7 +54,6 @@ test_that("testing actor-oriented modeling", {
   expect_no_error(ao_bsir_no_prior)
   expect_no_error(print(ao_bsir_no_prior))
   expect_no_error(summary(ao_bsir_no_prior))
-  expect_no_error(print(summary(ao_bsir_no_prior)))
   expect_no_error(predict(ao_bsir_no_prior))
   expect_no_error(plot(ao_bsir_no_prior))
   expect_error(aic(ao_bsir_no_prior),
@@ -85,7 +82,6 @@ test_that("testing actor-oriented modeling", {
   expect_no_error(ao_hmc)
   expect_no_error(print(ao_hmc))
   expect_no_error(summary(ao_hmc))
-  expect_no_error(print(summary(ao_hmc)))
   expect_no_error(predict(ao_hmc))
   expect_no_error(plot(ao_hmc))
   expect_error(aic(ao_hmc),

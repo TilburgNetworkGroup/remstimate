@@ -17,7 +17,6 @@ test_that("testing tie-oriented modeling (methods)", {
   expect_no_error(tie_mle)
   expect_no_error(print(tie_mle))
   expect_no_error(summary(tie_mle))
-  expect_no_error(print(summary(tie_mle)))
   expect_no_error(predict(tie_mle))
   expect_no_error(plot(tie_mle))
   expect_no_error(aic(tie_mle))
@@ -34,7 +33,6 @@ test_that("testing tie-oriented modeling (methods)", {
   expect_no_error(tie_gdadamax)
   expect_no_error(print(tie_gdadamax))
   expect_no_error(summary(tie_gdadamax))
-  expect_no_error(print(summary(tie_gdadamax)))
   expect_no_error(predict(tie_gdadamax))
   expect_no_error(plot(tie_gdadamax))
   expect_no_error(aic(tie_gdadamax))
@@ -54,7 +52,6 @@ test_that("testing tie-oriented modeling (methods)", {
   expect_no_error(tie_bsir_no_prior)
   expect_no_error(print(tie_bsir_no_prior))
   expect_no_error(summary(tie_bsir_no_prior))
-  expect_no_error(print(summary(tie_bsir_no_prior)))
   expect_no_error(predict(tie_bsir_no_prior))
   expect_no_error(plot(tie_bsir_no_prior))
   expect_error(aic(tie_bsir_no_prior),
@@ -83,7 +80,6 @@ test_that("testing tie-oriented modeling (methods)", {
   expect_no_error(tie_hmc)
   expect_no_error(print(tie_hmc))
   expect_no_error(summary(tie_hmc))
-  expect_no_error(print(summary(tie_hmc)))
   expect_no_error(predict(tie_hmc))
   expect_no_error(plot(tie_hmc))
   expect_error(aic(tie_hmc),

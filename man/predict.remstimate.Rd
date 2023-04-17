@@ -14,3 +14,8 @@
 \description{
 A function that returns predictions given a 'remstimate' object.
 }
+\examples{
+
+# No examples available at the moment
+
+}

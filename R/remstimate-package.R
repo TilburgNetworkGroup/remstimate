@@ -1,8 +1,7 @@
 #' @keywords internal
-#' if there will be functions defined in this file keywords internal won't create the .rd documentation
 #' @docType package
-#' @aliases remstimate-package
 #' @useDynLib remstimate, .registration = TRUE
 #' @import remify remstats
 #' @importFrom Rcpp sourceCpp
-NULL
+#' @aliases remstimate-package
+"_PACKAGE"

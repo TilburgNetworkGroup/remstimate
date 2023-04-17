@@ -22,3 +22,32 @@ A function that returns the AIC (Akaike's Information Criterion) value in a 'rem
 \item \code{aic(remstimate)}: AIC (Akaike's Information Criterion) value of a 'remstimate' object
 
 }}
+\examples{
+
+# ------------------------------------ #
+#       tie-oriented model: "MLE"      #
+# ------------------------------------ #
+
+# loading data
+data(tie_reh)
+  
+# specifying linear predictor
+tie_model <- ~ 1 + 
+               remstats::indegreeSender()+
+               remstats::inertia()+
+               remstats::reciprocity() 
+
+# calculating statistics
+tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+                                    tie_effects = tie_model)
+
+# running estimation
+tie_mle <- remstimate::remstimate(reh = tie_reh,
+                                  stats = tie_reh_stats,
+                                  method = "MLE",
+                                  ncores = 1)
+
+# AIC
+aic(tie_mle) #
+
+}

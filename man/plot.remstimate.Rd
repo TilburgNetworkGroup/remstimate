@@ -14,3 +14,8 @@
 \description{
 A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
 }
+\examples{
+
+# No examples available at the moment
+
+}

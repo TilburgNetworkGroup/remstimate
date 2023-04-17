@@ -22,3 +22,8 @@ A function that returns the WAIC (Watanabe-Akaike's Information Criterion) value
 \item \code{waic(remstimate)}: WAIC (Watanabe-Akaike's Information Criterion) value of a 'remstimate' object
 
 }}
+\examples{
+
+# No examples available at the moment
+
+}

@@ -910,6 +910,68 @@ remstimate <- function(reh,
 #' @param ... further arguments to be passed to the print method
 #' @method print remstimate
 #' @export
+#' 
+#' @examples
+#' 
+#' # ------------------------------------ #
+#' #       method 'print' for the         #
+#' #       tie-oriented model: "BSIR"     #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(tie_reh)
+#'   
+#' # specifying linear predictor
+#' tie_model <- ~ 1 + 
+#'                remstats::indegreeSender()+
+#'                remstats::inertia()+
+#'                remstats::reciprocity() 
+#' 
+#' # calculating statistics
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+#'                                     tie_effects = tie_model)
+#' 
+#' # running estimation
+#' tie_mle <- remstimate::remstimate(reh = tie_reh,
+#'                                   stats = tie_reh_stats,
+#'                                   method = "BSIR",
+#'                                   nsim = 100,
+#'                                   ncores = 1)
+#' 
+#' # print
+#' tie_mle
+#' 
+#' # ------------------------------------ #
+#' #      method 'print' for the          #
+#' #      actor-oriented model: "BSIR"    #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(ao_reh)
+#'   
+#' # specifying linear predictor (for sender rate and receiver choice model)
+#' rate_model <- ~ 1 + remstats::indegreeSender()
+#' choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+#' 
+#' # calculating statistics
+#' ao_reh_stats <- remstats::remstats(reh = ao_reh, 
+#'                                    sender_effects = rate_model, 
+#'                                    receiver_effects = choice_model)
+#' 
+#' # running estimation
+#' ao_mle <- remstimate::remstimate(reh = ao_reh,
+#'                                  stats = ao_reh_stats,
+#'                                  method = "BSIR",
+#'                                  nsim = 100,
+#'                                  ncores = 1)
+#' 
+#' # print
+#' ao_mle
+#' 
+#' # ------------------------------------ #
+#' #   for more examples check vignettes  #
+#' # ------------------------------------ #
+#' 
 print.remstimate<-function(x, ...){
     if (is.null(attr(x,"formula"))) 
         stop("invalid 'remstimate' object:  no 'formula' attribute")
@@ -972,14 +1034,76 @@ print.remstimate<-function(x, ...){
 
 
 # summary.remstimate
-#' @title summary.remstimate
+#' @title Generate the summary of a remstimate object
 #' @rdname summary.remstimate
-#' @description A function that arranges a summary of a 'remstimate' object
+#' @description A function that prints out the summary of a remstimate object
 #' @param object is a \code{remstimate} object 
 #' @param ... further arguments to be passed to the 'summary' method
 #' @method summary remstimate
 #' @export
-summary.remstimate<-function (object, ...) #print.summary.remstimate
+#' 
+#' @examples
+#' 
+#' # ------------------------------------ #
+#' #       method 'summary' for the       #
+#' #       tie-oriented model: "BSIR"     #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(tie_reh)
+#'   
+#' # specifying linear predictor
+#' tie_model <- ~ 1 + 
+#'                remstats::indegreeSender()+
+#'                remstats::inertia()+
+#'                remstats::reciprocity() 
+#' 
+#' # calculating statistics
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+#'                                     tie_effects = tie_model)
+#' 
+#' # running estimation
+#' tie_mle <- remstimate::remstimate(reh = tie_reh,
+#'                                   stats = tie_reh_stats,
+#'                                   method = "BSIR",
+#'                                   nsim = 100,
+#'                                   ncores = 1)
+#' 
+#' # summary
+#' summary(tie_mle)
+#' 
+#' # ------------------------------------ #
+#' #      method 'summary' for the        #
+#' #      actor-oriented model: "BSIR"    #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(ao_reh)
+#'   
+#' # specifying linear predictor (for sender rate and receiver choice model)
+#' rate_model <- ~ 1 + remstats::indegreeSender()
+#' choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+#' 
+#' # calculating statistics
+#' ao_reh_stats <- remstats::remstats(reh = ao_reh, 
+#'                                    sender_effects = rate_model, 
+#'                                    receiver_effects = choice_model)
+#' 
+#' # running estimation
+#' ao_mle <- remstimate::remstimate(reh = ao_reh,
+#'                                  stats = ao_reh_stats,
+#'                                  method = "BSIR",
+#'                                  nsim = 100,
+#'                                  ncores = 1)
+#' 
+#' # summary
+#' summary(ao_mle)
+#' 
+#' # ------------------------------------ #
+#' #   for more examples check vignettes  #
+#' # ------------------------------------ #
+#' 
+summary.remstimate<-function (object, ...)
 {
     # (codings are based on the structure of summary.lm() and summary.glm() from package 'stats')
     if (!inherits(object, "remstimate")) 
@@ -1170,111 +1294,94 @@ summary.remstimate<-function (object, ...) #print.summary.remstimate
     }
 
     if(length(summary_out)==0) stop("invalid 'remstimate' object")
-    class(summary_out) <- "summary.remstimate"
-    return(summary_out)
-}
 
-
-#######################################################################################
-#######################################################################################
-
-
-# print.summary.remstimate (the Bayesian part is missing in this method)
-#' @title print.summary.remstimate
-#' @rdname print.summary.remstimate
-#' @description A function that prints out a summary of a 'remstimate' object.
-#' @param x is a \code{summary.remstimate} object 
-#' @param ... further arguments to be passed to the 'print.summary' method
-#' @method print summary.remstimate
-#' @export
-print.summary.remstimate <- function(x, ...)
-{
-    cat("Relational Event Model",paste("(",x$model," oriented)",sep=""),"\n\n")
-    if(x$model == "tie"){
-        cat("Call:\n",deparse(x$formula),"\n\n",sep="")
-        second_line <- paste("(",x$method," with ",sep="")
-        if(x$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
+    cat("Relational Event Model",paste("(",summary_out$model," oriented)",sep=""),"\n\n")
+    if(summary_out$model == "tie"){
+        cat("Call:\n",deparse(summary_out$formula),"\n\n",sep="")
+        second_line <- paste("(",summary_out$method," with ",sep="")
+        if(summary_out$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
         else{
             second_line <- paste(second_line,"interval likelihood):\n\n",sep="")
         }
-        if(x$approach == "Frequentist"){
+        if(summary_out$approach == "Frequentist"){
             cat("\nCoefficients",second_line)
         }
         else{ # Bayesian
             cat("\nPosterior Modes",second_line)
         }
-        stats::printCoefmat(x$coefsTab, P.values = TRUE, signif.stars = FALSE, ...) 
-        if(x$approach == "Frequentist"){
-            cat("Null deviance:", x$null.deviance, "on", x$df.null, "degrees of freedom\n")
-            cat("Residual deviance:", x$residual.deviance, "on", x$df.residual, "degrees of freedom\n")
-            cat("Chi-square:", x$model.deviance, "on", x$df.model, 
-                "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$model.deviance, 
-                    x$df.model), "\n")
-            cat("AIC:", x$AIC, "AICC:", x$AICC, "BIC:", x$BIC, "\n")
+        stats::printCoefmat(summary_out$coefsTab, P.values = TRUE, signif.stars = FALSE, ...) 
+        if(summary_out$approach == "Frequentist"){
+            cat("Null deviance:", summary_out$null.deviance, "on", summary_out$df.null, "degrees of freedom\n")
+            cat("Residual deviance:", summary_out$residual.deviance, "on", summary_out$df.residual, "degrees of freedom\n")
+            cat("Chi-square:", summary_out$model.deviance, "on", summary_out$df.model, 
+                "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$model.deviance, 
+                    summary_out$df.model), "\n")
+            cat("AIC:", summary_out$AIC, "AICC:", summary_out$AICC, "BIC:", summary_out$BIC, "\n")
         }
-        if(x$approach == "Bayesian"){
-        cat("Log posterior:",x$loglik,"\n")
-        # cat("Prior parameters:",paste(names(x$prior.param),unlist(x$prior.param),sep="="),"\n")
+        if(summary_out$approach == "Bayesian"){
+        cat("Log posterior:",summary_out$loglik,"\n")
+        # cat("Prior parameters:",paste(names(summary_out$prior.param),unlist(summary_out$prior.param),sep="="),"\n")
         }
     }
-    else if(x$model == "actor"){
-        second_line <- paste("(",x$method," with ",sep="")
-        if(x$ordinal){
+    else if(summary_out$model == "actor"){
+        second_line <- paste("(",summary_out$method," with ",sep="")
+        if(summary_out$ordinal){
             second_line <- paste(second_line,"ordinal likelihood):",sep="")
         }
         else{
             second_line <- paste(second_line,"interval likelihood):\n\n",sep="")
         }
-        if(!is.null(x$sender_model)){
+        if(!is.null(summary_out$sender_model)){
             # sender rate summary
-            cat("Call rate model **for sender**:\n\n\t",deparse(x$formula$rate_model_formula),"\n\n",sep="")
-            if(x$approach == "Frequentist"){
+            cat("Call rate model **for sender**:\n\n\t",deparse(summary_out$formula$rate_model_formula),"\n\n",sep="")
+            if(summary_out$approach == "Frequentist"){
                 cat("\nCoefficients rate model",second_line)
             }
             else{ # Bayesian
                 cat("\nPosterior Modes rate model",second_line)
             }
-            stats::printCoefmat(x$coefsTab$sender_model, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE)
-            if(x$approach == "Frequentist"){
-                cat("Null deviance:", x$sender_model$null.deviance, "on", x$sender_model$df.null, "degrees of freedom\n")
-                cat("Residual deviance:", x$sender_model$residual.deviance, "on", x$sender_model$df.residual, "degrees of freedom\n")
-                cat("Chi-square:", x$sender_model$model.deviance, "on", x$sender_model$df.model, 
-                    "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$sender_model$model.deviance, 
-                        x$sender_model$df.model), "\n")
-                cat("AIC:", x$sender_model$AIC, "AICC:", x$sender_model$AICC, "BIC:", x$sender_model$BIC, "\n")
+            stats::printCoefmat(summary_out$coefsTab$sender_model, P.values = ifelse(summary_out$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE)
+            if(summary_out$approach == "Frequentist"){
+                cat("Null deviance:", summary_out$sender_model$null.deviance, "on", summary_out$sender_model$df.null, "degrees of freedom\n")
+                cat("Residual deviance:", summary_out$sender_model$residual.deviance, "on", summary_out$sender_model$df.residual, "degrees of freedom\n")
+                cat("Chi-square:", summary_out$sender_model$model.deviance, "on", summary_out$sender_model$df.model, 
+                    "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$sender_model$model.deviance, 
+                        summary_out$sender_model$df.model), "\n")
+                cat("AIC:", summary_out$sender_model$AIC, "AICC:", summary_out$sender_model$AICC, "BIC:", summary_out$sender_model$BIC, "\n")
             }
-            if(x$approach == "Bayesian"){
-            cat("Log posterior:",x$sender_model$loglik,"\n")
-            # cat("Prior parameters:",paste(names(x$sender_model$prior.param),unlist(x$sender_model$prior.param),sep="="),"\n")
+            if(summary_out$approach == "Bayesian"){
+            cat("Log posterior:",summary_out$sender_model$loglik,"\n")
+            # cat("Prior parameters:",paste(names(summary_out$sender_model$prior.param),unlist(summary_out$sender_model$prior.param),sep="="),"\n")
             }
         }
-        if(!is.null(x$sender_model) & !is.null(x$receiver_model)){ # if both models are estimated, separate the two print by a "-"
+        if(!is.null(summary_out$sender_model) & !is.null(summary_out$receiver_model)){ # if both models are estimated, separate the two print by a "-"
             cat(paste0(rep("-", getOption("width")),collapse = ""),"\n\n")
         }
-        if(!is.null(x$receiver_model)){
+        if(!is.null(summary_out$receiver_model)){
             # receiver choice summary 
-            cat("Call choice model **for receiver**:\n\n\t",deparse(x$formula$choice_model_formula),"\n\n",sep="") 
-                    if(x$approach == "Frequentist"){
+            cat("Call choice model **for receiver**:\n\n\t",deparse(summary_out$formula$choice_model_formula),"\n\n",sep="") 
+                    if(summary_out$approach == "Frequentist"){
                 cat("\nCoefficients choice model",second_line)
             }
             else{ # Bayesian
                 cat("\nPosterior Modes choice model",second_line)
             }
-            stats::printCoefmat(x$coefsTab$receiver_model, P.values = ifelse(x$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE)
-            if(x$approach == "Frequentist"){
-                cat("Null deviance:", x$receiver_model$null.deviance, "on", x$receiver_model$df.null, "degrees of freedom\n")
-                cat("Residual deviance:", x$receiver_model$residual.deviance, "on", x$receiver_model$df.residual, "degrees of freedom\n")
-                cat("Chi-square:", x$receiver_model$model.deviance, "on", x$receiver_model$df.model, 
-                    "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(x$receiver_model$model.deviance, 
-                        x$receiver_model$df.model), "\n")
-                cat("AIC:", x$receiver_model$AIC, "AICC:", x$receiver_model$AICC, "BIC:", x$receiver_model$BIC, "\n")
+            stats::printCoefmat(summary_out$coefsTab$receiver_model, P.values = ifelse(summary_out$approach == "Frequentist",TRUE,FALSE), signif.stars = FALSE)
+            if(summary_out$approach == "Frequentist"){
+                cat("Null deviance:", summary_out$receiver_model$null.deviance, "on", summary_out$receiver_model$df.null, "degrees of freedom\n")
+                cat("Residual deviance:", summary_out$receiver_model$residual.deviance, "on", summary_out$receiver_model$df.residual, "degrees of freedom\n")
+                cat("Chi-square:", summary_out$receiver_model$model.deviance, "on", summary_out$receiver_model$df.model, 
+                    "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$receiver_model$model.deviance, 
+                        summary_out$receiver_model$df.model), "\n")
+                cat("AIC:", summary_out$receiver_model$AIC, "AICC:", summary_out$receiver_model$AICC, "BIC:", summary_out$receiver_model$BIC, "\n")
             }
-            if(x$approach == "Bayesian"){
-            cat("Log posterior:",x$receiver_model$loglik,"\n")
-            # cat("Prior parameters:",paste(names(x$receiver_model$prior.param),unlist(x$receiver_model$prior.param),sep="="),"\n")
+            if(summary_out$approach == "Bayesian"){
+            cat("Log posterior:",summary_out$receiver_model$loglik,"\n")
+            # cat("Prior parameters:",paste(names(summary_out$receiver_model$prior.param),unlist(summary_out$receiver_model$prior.param),sep="="),"\n")
             }
         }
     }
+
 }
 
 #######################################################################################
@@ -1289,6 +1396,11 @@ print.summary.remstimate <- function(x, ...)
 #' @param ... further arguments to be passed to the 'predict' method depending on the estimator used
 #' @method predict remstimate
 #' @export
+#' 
+#' @examples 
+#' 
+#' # No examples available at the moment
+#' 
 predict.remstimate <- function(object, ...)
 {
  # write a predict method here
@@ -1308,6 +1420,11 @@ predict.remstimate <- function(object, ...)
 #' @param ... further arguments to be passed to the 'predict' method depending on the estimator used
 #' @method plot remstimate
 #' @export
+#' 
+#' @examples 
+#' 
+#' # No examples available at the moment
+#' 
 plot.remstimate <- function(x, ...)
 {
  # write a plot method here
@@ -1324,6 +1441,35 @@ plot.remstimate <- function(x, ...)
 #' @param object is a \code{remstimate} object 
 #' @param ... further arguments to be passed to the 'aic' method
 #' @export
+#' 
+#' @examples
+#' 
+#' # ------------------------------------ #
+#' #       tie-oriented model: "MLE"      #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(tie_reh)
+#'   
+#' # specifying linear predictor
+#' tie_model <- ~ 1 + 
+#'                remstats::indegreeSender()+
+#'                remstats::inertia()+
+#'                remstats::reciprocity() 
+#' 
+#' # calculating statistics
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+#'                                     tie_effects = tie_model)
+#' 
+#' # running estimation
+#' tie_mle <- remstimate::remstimate(reh = tie_reh,
+#'                                   stats = tie_reh_stats,
+#'                                   method = "MLE",
+#'                                   ncores = 1)
+#' 
+#' # AIC
+#' aic(tie_mle) #
+#' 
 aic <- function(object,...){
   UseMethod("aic")
 }
@@ -1364,6 +1510,35 @@ aic.remstimate <- function(object,...) {
 #' @param object is a \code{remstimate} object 
 #' @param ... further arguments to be passed to the 'aicc' method
 #' @export
+#' 
+#' @examples
+#' 
+#' # ------------------------------------ #
+#' #       tie-oriented model: "MLE"      #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(tie_reh)
+#'   
+#' # specifying linear predictor
+#' tie_model <- ~ 1 + 
+#'                remstats::indegreeSender()+
+#'                remstats::inertia()+
+#'                remstats::reciprocity() 
+#' 
+#' # calculating statistics
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+#'                                     tie_effects = tie_model)
+#' 
+#' # running estimation
+#' tie_mle <- remstimate::remstimate(reh = tie_reh,
+#'                                   stats = tie_reh_stats,
+#'                                   method = "MLE",
+#'                                   ncores = 1)
+#' 
+#' # AICC
+#' aicc(tie_mle) 
+#' 
 aicc <- function(object,...){
   UseMethod("aicc")
 }
@@ -1404,6 +1579,35 @@ aicc.remstimate <- function(object,...) {
 #' @param object is a \code{remstimate} object 
 #' @param ... further arguments to be passed to the 'bic' method
 #' @export
+#' 
+#' @examples
+#' 
+#' # ------------------------------------ #
+#' #       tie-oriented model: "MLE"      #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(tie_reh)
+#'   
+#' # specifying linear predictor
+#' tie_model <- ~ 1 + 
+#'                remstats::indegreeSender()+
+#'                remstats::inertia()+
+#'                remstats::reciprocity() 
+#' 
+#' # calculating statistics
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+#'                                     tie_effects = tie_model)
+#' 
+#' # running estimation
+#' tie_mle <- remstimate::remstimate(reh = tie_reh,
+#'                                   stats = tie_reh_stats,
+#'                                   method = "MLE",
+#'                                   ncores = 1)
+#' 
+#' # BIC
+#' bic(tie_mle) 
+#' 
 bic <- function(object,...){
   UseMethod("bic")
 }
@@ -1444,6 +1648,11 @@ bic.remstimate <- function(object,...) {
 #' @param object is a \code{remstimate} object 
 #' @param ... further arguments to be passed to the 'waic' method
 #' @export
+#' 
+#' @examples 
+#' 
+#' # No examples available at the moment
+#' 
 waic <- function(object,...){
   UseMethod("waic")
 }
