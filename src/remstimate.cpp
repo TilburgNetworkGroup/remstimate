@@ -1,13 +1,14 @@
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
 #include <iostream>
-#include <omp.h>
+// #include <omp.h>
 #include <RcppArmadilloExtensions/sample.h> // used for the sample function inside RcppArmadillo
 #include <typeinfo>
 #include <map>
 #include <iterator>
 #include <string>
 #include <remify.h>
+#include "myomp.h"
 //#include <progress.hpp> // progress bar
 //#include <progress_bar.hpp> // progress bar
 
@@ -36,7 +37,7 @@
 // [[Rcpp::export]]
 Rcpp::List remDerivativesStandard(const arma::vec &pars,
                                           const arma::cube &stats,
-                                          const arma::uvec &dyad, 
+                                          const arma::uvec &dyad,
                                           const Rcpp::List &omit_dyad,
                                           const arma::vec &interevent_time, // change to intereventTime
                                           bool ordinal = false,
@@ -57,7 +58,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 
     // initializing two empty objects for the two omit_dyad list objects
     // they will be filled only if omit_dyad has length >0 (i.e. it is not an empy list)
-    arma::vec riskset_time_vec(M); 
+    arma::vec riskset_time_vec(M);
     arma::mat riskset_mat;
     if(omit_dyad.size()>0){
       riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
@@ -154,7 +155,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
                   }
                 }
               }
-            }    
+            }
           }
         }
       else{ // loop over all the dyads
@@ -175,7 +176,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
                 hess_m(l,k) = hess_m(k,l);
               }
             }
-          }   
+          }
         }
       }
       loglik[m] -= log(surv);
@@ -217,7 +218,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 //' @param actor1 vector of actor1's (column reh$edgelist$actor1)
 //' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 //' @param interevent_time the time difference between the current time point and the previous event time.
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //' @param ordinal boolean, true if the likelihood to use is the ordinal one, interval otherwise
 //' @param gradient boolean true/false whether to return gradient value
@@ -230,7 +231,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 Rcpp::List remDerivativesSenderRates(
         const arma::vec &pars,
         const arma::cube &stats,
-        const arma::uvec &actor1,         
+        const arma::uvec &actor1,
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
         int C,
@@ -256,8 +257,8 @@ Rcpp::List remDerivativesSenderRates(
     arma::mat fisher(P,P,arma::fill::zeros);
     arma::vec grad(P,arma::fill::zeros);
 
-    // omit_dyad 
-    arma::vec riskset_time_vec(M); 
+    // omit_dyad
+    arma::vec riskset_time_vec(M);
     arma::mat riskset_mat;
 
     if(omit_dyad.size()>0){
@@ -295,7 +296,7 @@ Rcpp::List remDerivativesSenderRates(
 
       // changes in the riskset at m-th event
       if(riskset_time_m!=(-1)){
-        sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s); 
+        sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s);
         if(ordinal){
           loglik-= std::log(sum_lambda);
           if(gradient | hessian){
@@ -310,15 +311,15 @@ Rcpp::List remDerivativesSenderRates(
                   fisher_m += (expected_stat_m * expected_stat_m.t());
                   fisher_m -= (lambda_s(n) / sum_lambda) *( stats_m.col(n) * (stats_m.col(n).t()));
                   fisher += fisher_m;
-                }   
+                }
               }
             }
           }
-        } 
+        }
         else{
           loglik -=  sum_lambda * interevent_time(m);
           if(gradient){
-            grad -= interevent_time(m) * stats_m * (riskset_mat.row(riskset_time_m).t() % lambda_s); 
+            grad -= interevent_time(m) * stats_m * (riskset_mat.row(riskset_time_m).t() % lambda_s);
           }
           if(hessian){
             for(n = 0; n < N; n++){         //loop throughout all actors
@@ -346,7 +347,7 @@ Rcpp::List remDerivativesSenderRates(
               }
             }
           }
-        } 
+        }
         else{
           loglik -=  sum_lambda * interevent_time(m);
           if(gradient){
@@ -383,7 +384,7 @@ Rcpp::List remDerivativesSenderRates(
 //' @param omit_dyad, list object that takes care of the dynamic rikset (if defined)
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param N the number of actors
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
@@ -422,8 +423,8 @@ Rcpp::List remDerivativesReceiverChoice(
     arma::mat fisher(P_d,P_d,arma::fill::zeros);
     arma::vec grad(P_d,arma::fill::zeros);
 
-    // omit_dyad 
-    arma::vec riskset_time_vec(M); 
+    // omit_dyad
+    arma::vec riskset_time_vec(M);
     arma::mat riskset_mat;
     if(omit_dyad.size()>0){
       riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
@@ -442,7 +443,7 @@ Rcpp::List remDerivativesReceiverChoice(
       lambda_d = arma::exp(stats_m.t() * pars);
 
       //actors
-      int sender = actor1(m); 
+      int sender = actor1(m);
       int receiver = actor2(m);
       //int type = dyad_m[2]; // when type will be integrated in the function
 
@@ -457,7 +458,7 @@ Rcpp::List remDerivativesReceiverChoice(
       int riskset_time_m = riskset_time_vec(m);
 
       // changes in the riskset at m-th event
-      if(riskset_time_m!=(-1)){ 
+      if(riskset_time_m!=(-1)){
         for(n = 0; n<N; n++){
             dyad = remify::getDyadIndex(sender,n,0,N,true);
             if(n!=sender && riskset_mat(riskset_time_m,dyad) == 1){ // dynamic riskset
@@ -474,7 +475,7 @@ Rcpp::List remDerivativesReceiverChoice(
       }
       else{ // no changes in the riskset at m-th event
         for(n = 0;n<N; n++){ //loop throught all actors
-          if(n!=sender){ // 
+          if(n!=sender){ //
               //loglik
               denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
               if(hessian){
@@ -501,7 +502,7 @@ Rcpp::List remDerivativesReceiverChoice(
         fisher_m /= denom;
         fisher_m += (expected_stat_m * expected_stat_m.t());
         fisher += fisher_m;
-      }     
+      }
     }
 
     if(gradient && !hessian){
@@ -514,7 +515,7 @@ Rcpp::List remDerivativesReceiverChoice(
 }
 
 
-//' remDerivatives 
+//' remDerivatives
 //'
 //' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
 //'
@@ -534,7 +535,7 @@ Rcpp::List remDerivativesReceiverChoice(
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //'
 //' @return list of values: loglik, gradient, hessian
@@ -561,25 +562,15 @@ Rcpp::List remDerivatives(const arma::vec &pars,
   std::vector<std::string>::iterator itr = std::find(models.begin(), models.end(), model);
   auto which_model = std::distance(models.begin(), itr);
 
-  switch (which_model)
-  {
-  case 0: { out = remDerivativesStandard(pars,stats,dyad,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
-    break;}
-
-  case 1: { 
-      switch (senderRate){ // both likelihood miss paralellization
-        case 0 : {
-                  out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),Rcpp::as<int>(C),Rcpp::as<int>(D),gradient,hessian);
-                  break;
-                  }
-        case 1 : {
-                  out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,Rcpp::as<int>(C),Rcpp::as<int>(D),ordinal,gradient,hessian);
-                  break;
-                  }
-      }
+  if (which_model == 0) {
+    out = remDerivativesStandard(pars,stats,dyad,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
+  } else {
+    if (senderRate == 0){ // both likelihood miss paralellization
+      out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),Rcpp::as<int>(C),Rcpp::as<int>(D),gradient,hessian);
+    } else {
+      out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,Rcpp::as<int>(C),Rcpp::as<int>(D),ordinal,gradient,hessian);
     }
   }
-
   return out;
 }
 
@@ -612,7 +603,7 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 //' @param gradient boolean true/false whether to return gradient value
 //' @param hessian boolean true/false whether to return hessian value
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //' @param ncores number of threads to use for the parallelization
 //' @param epochs number of epochs
@@ -647,9 +638,9 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
                   double beta2 = 0.999,
                   double epsilon = 0.01){
 
-  // link ref: https://machinelearningmastery.com/gradient-descent-optimization-with-adamax-from-scratch/   (cite properly original papers)               
+  // link ref: https://machinelearningmastery.com/gradient-descent-optimization-with-adamax-from-scratch/   (cite properly original papers)
   arma::uword P = pars.n_elem;
-  double  alpha = 0.002; 
+  double  alpha = 0.002;
   double loglik,loglik_prev;
   int i = 0;
   arma::vec moment(P,arma::fill::zeros);
@@ -709,9 +700,9 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
     reason = "max epochs condition reached";
   }
 
-  return Rcpp::List::create(Rcpp::Named("value") = loglik, 
-                            Rcpp::Named("argument") = pars_loc, 
-                            Rcpp::Named("gradient") = grad,Rcpp::Named("iterations_loglik") = iterations_loglik(arma::span(0,i-1)), 
+  return Rcpp::List::create(Rcpp::Named("value") = loglik,
+                            Rcpp::Named("argument") = pars_loc,
+                            Rcpp::Named("gradient") = grad,Rcpp::Named("iterations_loglik") = iterations_loglik(arma::span(0,i-1)),
                             Rcpp::Named("iterations_pars") = iterations_pars(arma::span::all,arma::span(0,i-1)),
                             Rcpp::Named("iterations") = i, Rcpp::Named("converged") = reason);
 }
@@ -745,7 +736,7 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
 //' @param ncores number of threads to use for the parallelization
 //' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //'
 //' @return value of log-posterior density
@@ -769,9 +760,9 @@ double logPostHMC(const arma::vec &meanPrior,
                   Rcpp::Nullable<int> D = R_NilValue){
 
   Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,C,D);
-  double derv_0 = Rcpp::as<double>(derv[0]);                
+  double derv_0 = Rcpp::as<double>(derv[0]);
   double prior =  arma::accu(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
-  return (prior + derv_0); 
+  return (prior + derv_0);
 }
 
 
@@ -793,7 +784,7 @@ double logPostHMC(const arma::vec &meanPrior,
 //' @param ncores number of threads to use for the parallelization
 //' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //'
 //' @return value of log-posterior gradient
@@ -819,10 +810,10 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
   Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N,C,D);
   arma::vec gprior = inv(sigmaPrior)*(pars - meanPrior); // the sign is already changed here
   arma::vec glp = Rcpp::as<arma::vec>(derv[1]);
-  return (glp + gprior); 
+  return (glp + gprior);
 }
 
-                                  
+
 //' iterHMC
 //'
 //' This function does one iteration of the Hamiltonian Monte carlo
@@ -843,7 +834,7 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 //' @param ncores number of threads to use for the parallelization
 //' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //'
 // [[Rcpp::export]]
@@ -871,11 +862,11 @@ arma::field<arma::vec> iterHMC(arma::uword L,
 
   // proposing a new value for the momentum variable
   Rcpp::NumericVector draw = Rcpp::rnorm(P);
-  arma::vec rP = Rcpp::as<arma::vec>(draw); //arma::randn(P); 
+  arma::vec rP = Rcpp::as<arma::vec>(draw); //arma::randn(P);
   // current momentum variable
   arma::vec rC = rP;
   //Rcpp::Rcout << "rnorm" << rP.t() << "\n";
-  
+
   arma::vec betaC = pars; // current beta
   arma::vec betaP = pars; // new proposed beta (starting value is current beta)
 
@@ -937,7 +928,7 @@ Rcpp::List burninHMC(const arma::cube& samples, const arma::mat& loglik, arma::u
 
   for(i = 0; i < nchains; i++){
 
-    arma::uword num = burnin; 
+    arma::uword num = burnin;
 
     for(j = 0; j < rows; j++){
 
@@ -968,7 +959,7 @@ Rcpp::List burninHMC(const arma::cube& samples, const arma::mat& loglik, arma::u
 //' @param actor1 vector of actor1's (column reh$edgelist$actor1)
 //' @param actor2 vector of actor2's (column reh$edgelist$actor2)
 //' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
-//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param 
+//' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param
 //' @param interevent_time the time difference between the current time point and the previous event time.
 //' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 //' @param model either "actor" or "tie" model
@@ -976,7 +967,7 @@ Rcpp::List burninHMC(const arma::cube& samples, const arma::mat& loglik, arma::u
 //' @param ncores number of threads to use for the parallelization
 //' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 //' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-//' @param C number of event types 
+//' @param C number of event types
 //' @param D number of dyads
 //' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 //' @param L number of leapfrogs. Default (and recommended) value is 100.
@@ -1007,7 +998,7 @@ Rcpp::List HMC(arma::mat pars_init,
                 Rcpp::Nullable<int> D = R_NilValue,
                 arma::uword thin = 1,
                 arma::uword L = 100,
-                double epsilon = 0.01){ 
+                double epsilon = 0.01){
   arma::cube array_of_draws(nsim, pars_init.n_rows, nchains); // array of draws from the posterior distribution (chains are by slice)
   arma::mat matrix_of_loglik(nsim,nchains); // matrix of posterior loglikelihood values across chains
   arma::uword j,i;
@@ -1033,11 +1024,11 @@ Rcpp::List HMC(arma::mat pars_init,
   }
   //this step performs the burn-in and thinning
   Rcpp::List processed_chains = burninHMC(array_of_draws,matrix_of_loglik,burnin,thin); // it would be ideal to make burninHMC return a matrix
-  
+
   out["draws"] = processed_chains[0];
   out["log_posterior"] = processed_chains[1];
 
-  return out; 
+  return out;
 }
 
 

@@ -2,3 +2,5 @@
 .Rproj.user
 .Rhistory
 .DS_Store
+*.o
+*.so

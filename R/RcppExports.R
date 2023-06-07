@@ -46,7 +46,7 @@ remDerivativesStandard <- function(pars, stats, dyad, omit_dyad, interevent_time
 #' @param actor1 vector of actor1's (column reh$edgelist$actor1)
 #' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined
 #' @param interevent_time the time difference between the current time point and the previous event time.
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #' @param ordinal boolean, true if the likelihood to use is the ordinal one, interval otherwise
 #' @param gradient boolean true/false whether to return gradient value
@@ -70,7 +70,7 @@ remDerivativesSenderRates <- function(pars, stats, actor1, omit_dyad, interevent
 #' @param omit_dyad, list object that takes care of the dynamic rikset (if defined)
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param N the number of actors
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
@@ -82,7 +82,7 @@ remDerivativesReceiverChoice <- function(pars, stats, actor1, actor2, omit_dyad,
     .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, actor1, actor2, omit_dyad, interevent_time, N, C, D, gradient, hessian)
 }
 
-#' remDerivatives 
+#' remDerivatives
 #'
 #' function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values
 #'
@@ -102,7 +102,7 @@ remDerivativesReceiverChoice <- function(pars, stats, actor1, actor2, omit_dyad,
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
 #' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #'
 #' @return list of values: loglik, gradient, hessian
@@ -128,7 +128,7 @@ remDerivatives <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interev
 #' @param gradient boolean true/false whether to return gradient value
 #' @param hessian boolean true/false whether to return hessian value
 #' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #' @param ncores number of threads to use for the parallelization
 #' @param epochs number of epochs
@@ -162,7 +162,7 @@ GDADAMAX <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_ti
 #' @param ncores number of threads to use for the parallelization
 #' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 #' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #'
 #' @return value of log-posterior density
@@ -189,7 +189,7 @@ logPostHMC <- function(meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad,
 #' @param ncores number of threads to use for the parallelization
 #' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 #' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #'
 #' @return value of log-posterior gradient
@@ -219,7 +219,7 @@ logPostGradientHMC <- function(meanPrior, sigmaPrior, pars, stats, actor1, actor
 #' @param ncores number of threads to use for the parallelization
 #' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 #' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #'
 iterHMC <- function(L, epsilon, meanPrior, sigmaPrior, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
@@ -255,7 +255,7 @@ burninHMC <- function(samples, loglik, burnin, thin = 1L) {
 #' @param actor1 vector of actor1's (column reh$edgelist$actor1)
 #' @param actor2 vector of actor2's (column reh$edgelist$actor2)
 #' @param dyad vector of dyad (from the attribute attr(remify,"dyad"))
-#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param 
+#' @param omit_dyad is a list of two objects: vector "time" and matrix "riskset". Two object for handling changing risksets. NULL if no change is defined//' @param interevent_time the time difference between the current time point and the previous event time.//' @param
 #' @param interevent_time the time difference between the current time point and the previous event time.
 #' @param ordinal whether to use(TRUE) the ordinal likelihood or not (FALSE) then using the interval likelihood
 #' @param model either "actor" or "tie" model
@@ -263,7 +263,7 @@ burninHMC <- function(samples, loglik, burnin, thin = 1L) {
 #' @param ncores number of threads to use for the parallelization
 #' @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false)
 #' @param N number of actors. This argument is used only in the ReceiverChoice likelihood (model = "actor")
-#' @param C number of event types 
+#' @param C number of event types
 #' @param D number of dyads
 #' @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 #' @param L number of leapfrogs. Default (and recommended) value is 100.
