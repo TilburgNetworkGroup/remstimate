@@ -184,13 +184,12 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
 
 ## when parallel::detectCores() == 2 and input `ncores` is greater than 1
 ncores_loc <- if(parallel::detectCores() <= 2L) 10L else 2e03L
-expected_message_loc <- if(parallel::detectCores() <= 2L) "'ncores' is recommended to be set at most to 1." else "'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)"
 # run the test only if there are 2 cores in the machine
 expect_error(remstimate::remstimate(reh = tie_reh,
                       stats = tie_reh_stats,
                       method = "MLE",
                       ncores = ncores_loc),
-expected_message_loc,
+"'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)",
 fixed = TRUE
 )
 
