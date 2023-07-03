@@ -1,0 +1,57 @@
+
+/* Tooltip container */
+.hovertip {
+    display:inline-block;
+    position:relative;
+    border-bottom:1px dotted #666;
+    text-align:left;
+}
+
+
+.hovertip .hovertiptext {
+    min-width:200px; 
+    top:50%;
+    left:100%;
+    margin-left:20px;
+    transform:translate(0, -50%);
+    padding:10px 20px;
+    color:#000000;
+    background-color:#FFFFFF;
+    font-weight:normal;
+    font-size:13px;
+    border-radius:8px;
+    position:absolute;
+    z-index:99999999;
+    box-sizing:border-box;
+    border:1px solid #387cb4;
+    box-shadow:0 1px 8px rgba(0,0,0,0.5);
+    visibility:hidden; opacity:0; 
+    transition:opacity 0.8s;
+}
+
+.hovertip:hover .hovertiptext {
+    visibility:visible; opacity:1;
+}
+
+.hovertip .hovertiptext i {
+    position:absolute;
+    top:50%;
+    right:100%;
+    margin-top:-12px;
+    width:12px;
+    height:24px;
+    overflow:hidden;
+}
+
+.hovertip .hovertiptext i::after {
+    content:'';
+    position:absolute;
+    width:12px;
+    height:12px;
+    left:0;
+    top:50%;
+    transform:translate(50%,-50%) rotate(-45deg);
+    background-color:#FFFFFF;
+    border:1px solid #387cb4;
+    box-shadow:0 1px 8px rgba(0,0,0,0.5);
+}

@@ -4,10 +4,12 @@
 \alias{plot.remstimate}
 \title{plot.remstimate}
 \usage{
-\method{plot}{remstimate}(x, ...)
+\method{plot}{remstimate}(x, reh, ...)
 }
 \arguments{
 \item{x}{is a \code{remstimate} object}
+
+\item{reh}{'remify' object}
 
 \item{...}{further arguments to be passed to the 'predict' method depending on the estimator used}
 }
