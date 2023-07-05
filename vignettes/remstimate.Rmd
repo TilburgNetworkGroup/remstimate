@@ -203,7 +203,7 @@ In the tab pills below, we show the estimation of the parameters using all the m
 
 ```{r}
   # plot
-  plot(tie_mle,tie_reh)
+  plot(tie_mle,tie_reh,stats=tie_reh_stats)
 ```
 
 
@@ -225,7 +225,7 @@ In the tab pills below, we show the estimation of the parameters using all the m
   predict(tie_gd)
 
   # plot
-  plot(tie_gd,tie_reh)
+  plot(tie_gd,tie_reh,stats=tie_reh_stats)
 
   # aic
   aic(tie_gd)
@@ -259,7 +259,7 @@ In the tab pills below, we show the estimation of the parameters using all the m
   predict(tie_bsir)
 
   # plot
-  plot(tie_bsir,tie_reh)
+  plot(tie_bsir,tie_reh,stats=tie_reh_stats)
 ```
 
 #### prior (_argument_)
@@ -285,7 +285,7 @@ In the tab pills below, we show the estimation of the parameters using all the m
   predict(tie_hmc)
 
   # plot
-  plot(tie_hmc,tie_reh)
+  plot(tie_hmc,tie_reh,stats=tie_reh_stats)
 ```
 
 ## actor-oriented  {.tabset .tabset-fade .tabset-pills}
