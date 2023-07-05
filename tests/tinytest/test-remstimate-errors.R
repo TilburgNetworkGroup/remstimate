@@ -298,3 +298,15 @@ attr(tie_mle, "model") <- "actor"
 expect_error(plot(tie_mle,tie_reh),
 "'x' and 'reh' have different attribute 'model'",
 fixed = TRUE)
+
+# stats
+attr(tie_mle, "model") <- "tie"
+expect_error(plot(x = tie_mle, reh = tie_reh,residuals = NULL),
+"'stats' must be provided if argument 'residuals' is NULL",
+fixed = TRUE)
+
+# residuals object
+expect_error(plot(x = tie_mle, reh = tie_reh,residuals = list(a = "foo")),
+"'residuals' must be an object of class 'remstimate' 'residuals'",
+fixed = TRUE)
+ 

@@ -4,15 +4,19 @@
 \alias{residuals.remstimate}
 \title{residuals.remstimate}
 \usage{
-\method{residuals}{remstimate}(object, ...)
+\method{residuals}{remstimate}(object, reh, stats, ...)
 }
 \arguments{
 \item{object}{is a \code{remstimate} object}
 
+\item{reh}{is a \code{remify} object (the same used with \code{remstimate::remstimate()})}
+
+\item{stats}{is a \code{remstats} object (the same used with \code{remstimate::remstimate()})}
+
 \item{...}{further arguments to be passed to the 'residuals' method depending on the estimator used}
 }
 \description{
-A function that extracts model residuals (Schoenfeld's residuals - add citation) from a 'remstimate' object.
+A function that extracts model diagnostics (Schoenfeld's residuals - add citation) from a 'remstimate' object.
 }
 \examples{
 

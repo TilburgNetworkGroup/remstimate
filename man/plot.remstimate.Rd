@@ -4,14 +4,16 @@
 \alias{plot.remstimate}
 \title{plot.remstimate}
 \usage{
-\method{plot}{remstimate}(x, reh, ...)
+\method{plot}{remstimate}(x, reh, residuals = NULL, ...)
 }
 \arguments{
 \item{x}{is a \code{remstimate} object}
 
 \item{reh}{'remify' object}
 
-\item{...}{further arguments to be passed to the 'predict' method depending on the estimator used}
+\item{residuals}{is a \code{"remstimate" "residuals"} object}
+
+\item{...}{further arguments to be passed to the 'plot' method depending: for instance the remstats object with statistics ('stats')}
 }
 \description{
 A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.

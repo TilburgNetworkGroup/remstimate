@@ -19,7 +19,7 @@ bibliography: remstimate-references.bib
 link-citations: true
 vignette: >
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteIndexEntry{Transform processed relational event sequences to different formats}
+  %\VignetteIndexEntry{A tutorial on the estimation methods for tie-oriented and actor-oriented models}
   %\VignetteEncoding{UTF-8}
 ---
 

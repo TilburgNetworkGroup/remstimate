@@ -8,7 +8,7 @@ remstimate(
   reh,
   stats,
   method = c("MLE", "GDADAMAX", "BSIR", "HMC"),
-  ncores = 1L,
+  ncores = attr(reh, "ncores"),
   prior = NULL,
   nsim = 1000L,
   nchains = 1L,

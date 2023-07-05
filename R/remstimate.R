@@ -80,7 +80,7 @@
 remstimate <- function(reh,
                        stats, 
                        method = c("MLE","GDADAMAX","BSIR","HMC"),
-                       ncores = 1L,
+                       ncores = attr(reh,"ncores"),
                        prior = NULL,
                        nsim = 1e03L,
                        nchains = 1L,
@@ -136,7 +136,7 @@ remstimate <- function(reh,
     if((model == "actor") & !attr(reh,"directed")){stop("actor-oriented modeling can't operate on undirected networks")}
 
     # ... ncores
-    if(is.null(ncores)) ncores <- 1L
+    if(is.null(ncores)) ncores <- attr(reh,"ncores")
     else if(((parallel::detectCores() > 2L) & (ncores > floor(parallel::detectCores()-2L))) | ((parallel::detectCores() == 2L) & (ncores > 1L))){
             stop("'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)")
     }
@@ -146,7 +146,7 @@ remstimate <- function(reh,
     if(model == "tie")
     {
         if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
-            variable_names <- dimnames(stats)[[3]] #as.vector(sapply(dimnames(stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
+            variable_names <- dimnames(stats)[[3]]
             model_formula <- stats::as.formula(paste("~ ",paste(variable_names,collapse=" + ")))
             stats <- aperm(stats, perm = c(2,3,1)) # stats reshaped in [D*U*M]
             # is there a baseline term?
@@ -167,7 +167,7 @@ remstimate <- function(reh,
         if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
             variables_rate <- variables_choice <- NULL
             if(!is.null(stats$sender_stats)){ # sender model is specified
-                variables_rate <- dimnames(stats$sender_stats)[[3]] #as.vector(sapply(dimnames(stats$sender_stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
+                variables_rate <- dimnames(stats$sender_stats)[[3]]
                 model_formula[["rate_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + ")))
                 stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
                 # is there a baseline term?
@@ -179,7 +179,7 @@ remstimate <- function(reh,
                 stats$receiver_stats <- aperm(stats$receiver_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
             }
             # vector of variable names and list of model formulas
-            variable_names <- c(variables_rate,variables_choice)
+            variable_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
         }
         else if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
             stop("'remstats' object supplied cannot work for tie-oriented modeling")
@@ -432,27 +432,7 @@ remstimate <- function(reh,
             # standard errors
             remstimateList$se <- diag(remstimateList$vcov)**0.5 # standard errors
             # re-naming
-            names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- dimnames(stats)[[2]]
-            # residuals
-            select_vars <- if(is.null(where_is_baseline)) 1:length(variable_names) else c(1:length(variable_names))[-where_is_baseline]
-            baseline_value <- if(is.null(where_is_baseline)) 0 else as.vector(optimum_obj$argument)[where_is_baseline]
-            stats_loc <- if(length(select_vars)==1) array(stats[,select_vars,],dim=c(dim(stats)[1],1,dim(stats)[3])) else stats[,select_vars,]
-            remstimateList$diagnostics <- list()
-            remstimateList$diagnostics$residuals <- computeDiagnostics(pars = as.vector(optimum_obj$argument)[select_vars],
-                                                    stats = stats_loc,
-                                                    actor1 = c(0),
-                                                    actor2 = c(0),
-                                                    dyad = attr(reh,"dyad")-1,
-                                                    omit_dyad = reh$omit_dyad,
-                                                    model = attr(reh,"model"),
-                                                    ncores = ncores,
-                                                    baseline = baseline_value,
-                                                    N = reh$N)
-            colnames(remstimateList$diagnostics$residuals$standardized_residuals) <- variable_names[select_vars]     
-            colnames(remstimateList$diagnostics$residuals$smoothing_weights) <- colnames(remstimateList$diagnostics$residuals$standardized_residuals)
-            # lambdas (event rates)
-            remstimateList$diagnostics$rates <- remstimateList$diagnostics$residuals$rates   
-            remstimateList$diagnostics$residuals$rates <- NULL                             
+            names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- dimnames(stats)[[2]]                           
             # residual.deviance
             remstimateList$residual.deviance <- -2*remstimateList$loglik        
             # null.deviance
@@ -566,32 +546,7 @@ remstimate <- function(reh,
                     # standard errors
                     remstimateList[[which_model[i]]]$se <- diag(remstimateList[[which_model[i]]]$vcov)**0.5 # standard errors         
                     # re-naming
-                    names(remstimateList[[which_model[i]]]$coefficients) <- names(remstimateList[[which_model[i]]]$se) <- rownames(remstimateList[[which_model[i]]]$vcov) <- colnames(remstimateList[[which_model[i]]]$vcov) <- colnames(remstimateList[[which_model[i]]]$hessian) <- rownames(remstimateList[[which_model[i]]]$hessian) <- if(i == 1) variables_rate else variables_choice
-                    # residuals
-                    baseline_value <- 0
-                    select_vars <- c(1:dim(stats[[which_stats[i]]])[2])
-                    if(senderRate[i]){ # only for sender model
-                        baseline_value <- if(is.null(where_is_baseline)) 0 else as.vector(optimum_model[[which_model[i]]]$argument)[where_is_baseline]
-                        select_vars <- if(is.null(where_is_baseline)) c(1:dim(stats[[which_stats[i]]])[2]) else c(1:dim(stats[[which_stats[i]]])[2])[-where_is_baseline]
-                    }
-                    stats_loc <- if(length(select_vars)==1) array(stats[[which_stats[i]]][,select_vars,],dim=c(dim(stats[[which_stats[i]]])[1],1,dim(stats[[which_stats[i]]])[3])) else stats[[which_stats[i]]][,select_vars,]
-                    remstimateList[[which_model[i]]]$diagnostics <- list()
-                    remstimateList[[which_model[i]]]$diagnostics$residuals <- computeDiagnostics(pars = as.vector(optimum_model[[which_model[i]]]$argument)[select_vars],
-                                                            stats = stats_loc,
-                                                            actor1 = reh$edgelist$actor1-1,
-                                                            actor2 = reh$edgelist$actor2-1,
-                                                            dyad = c(0),
-                                                            omit_dyad = reh$omit_dyad,
-                                                            model = attr(reh,"model"),
-                                                            N = reh$N,
-                                                            senderRate = senderRate[i],
-                                                            ncores = ncores,
-                                                            baseline = baseline_value)                                      
-                    colnames(remstimateList[[which_model[i]]]$diagnostics$residuals$standardized_residuals) <- if(senderRate[i]) variables_rate[select_vars] else variables_choice[select_vars]
-                    colnames(remstimateList[[which_model[i]]]$diagnostics$residuals$smoothing_weights) <- colnames(remstimateList[[which_model[i]]]$diagnostics$residuals$standardized_residuals)
-                    # lambdas (event rates)
-                    remstimateList[[which_model[i]]]$diagnostics$rates <- remstimateList[[which_model[i]]]$diagnostics$residuals$rates   
-                    remstimateList[[which_model[i]]]$diagnostics$residuals$rates <- NULL         
+                    names(remstimateList[[which_model[i]]]$coefficients) <- names(remstimateList[[which_model[i]]]$se) <- rownames(remstimateList[[which_model[i]]]$vcov) <- colnames(remstimateList[[which_model[i]]]$vcov) <- colnames(remstimateList[[which_model[i]]]$hessian) <- rownames(remstimateList[[which_model[i]]]$hessian) <- if(i == 1) variables_rate else variables_choice        
                     # residual deviance
                     remstimateList[[which_model[i]]]$residual.deviance <- -2*remstimateList[[which_model[i]]]$loglik
                     # null deviance                                    
@@ -729,28 +684,7 @@ remstimate <- function(reh,
             bsir$df.null <- reh$M
             bsir$df.model <- dim(stats)[2]
             bsir$df.residual <- bsir$df.null - bsir$df.model
-            names(bsir$coefficients) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- dimnames(stats)[[2]]
-            # residuals
-            select_vars <- if(is.null(where_is_baseline)) 1:length(variable_names) else c(1:length(variable_names))[-where_is_baseline]
-            stats_loc <- if(length(select_vars)==1) array(stats[,select_vars,],dim=c(dim(stats)[1],1,dim(stats)[3])) else stats[,select_vars,]
-            baseline_value <- if(is.null(where_is_baseline)) 0 else bsir$coefficients[where_is_baseline]
-            bsir$diagnostics <- list()
-            bsir$diagnostics$residuals <- computeDiagnostics(pars = bsir$coefficients[select_vars],
-                                                    stats = stats_loc,
-                                                    actor1 = c(0),
-                                                    actor2 = c(0),
-                                                    dyad = attr(reh,"dyad")-1,
-                                                    omit_dyad = reh$omit_dyad,
-                                                    model = attr(reh,"model"),
-                                                    ncores = ncores,
-                                                    baseline = baseline_value,
-                                                    N = reh$N)
-            colnames(bsir$diagnostics$residuals$standardized_residuals) <- variable_names[select_vars]  
-            colnames(bsir$diagnostics$residuals$smoothing_weights) <- colnames(bsir$diagnostics$residuals$standardized_residuals)  
-            # lambdas (event rates)
-            bsir$diagnostics$rates <- bsir$diagnostics$residuals$rates   
-            bsir$diagnostics$residuals$rates <- NULL  
-
+            names(bsir$coefficients) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- dimnames(stats)[[2]] 
             remstimateList <- bsir
         }
         if(model == "actor"){ # Actor-oriented Model
@@ -841,32 +775,7 @@ remstimate <- function(reh,
                     bsir_i$df.null <- reh$M
                     bsir_i$df.model <- dim(stats[[which_stats[i]]])[2]
                     bsir_i$df.residual <- bsir_i$df.null - bsir_i$df.model
-                    names(bsir_i$coefficients) <- names(bsir_i$post.mean) <- rownames(bsir_i$vcov) <- colnames(bsir_i$vcov) <- names(bsir_i$sd) <- if(i == 1) variables_rate else variables_choice
-                    # residuals
-                    baseline_value <- 0
-                    select_vars <- c(1:dim(stats[[which_stats[i]]])[2])
-                    if(senderRate[i]){
-                        baseline_value <- if(is.null(where_is_baseline)) 0 else bsir_i$coefficients[where_is_baseline]
-                        select_vars <- if(is.null(where_is_baseline)) c(1:dim(stats[[which_stats[i]]])[2]) else c(1:dim(stats[[which_stats[i]]])[2])[-where_is_baseline]
-                    }
-                    stats_loc <- if(length(select_vars)==1) array(stats[[which_stats[i]]][,select_vars,],dim=c(dim(stats[[which_stats[i]]])[1],1,dim(stats[[which_stats[i]]])[3])) else stats[[which_stats[i]]][,select_vars,]
-                    bsir_i$diagnostics <- list()
-                    bsir_i$diagnostics$residuals <- computeDiagnostics(pars = bsir_i$coefficients[select_vars],
-                                                            stats = stats_loc,
-                                                            actor1 = reh$edgelist$actor1-1,
-                                                            actor2 = reh$edgelist$actor2-1,
-                                                            dyad = c(0),
-                                                            omit_dyad = reh$omit_dyad,
-                                                            model = attr(reh,"model"),
-                                                            N = reh$N,
-                                                            senderRate = senderRate[i],
-                                                            ncores = ncores,
-                                                            baseline = baseline_value)
-                    colnames(bsir_i$diagnostics$residuals$standardized_residuals) <- if(senderRate[i]) variables_rate[select_vars] else variables_choice[select_vars]
-                    colnames(bsir_i$diagnostics$residuals$smoothing_weights) <- colnames(bsir_i$diagnostics$residuals$standardized_residuals)
-                    # lambdas (event rates)
-                    bsir_i$diagnostics$rates <- bsir_i$diagnostics$residuals$rates   
-                    bsir_i$diagnostics$residuals$rates <- NULL         
+                    names(bsir_i$coefficients) <- names(bsir_i$post.mean) <- rownames(bsir_i$vcov) <- colnames(bsir_i$vcov) <- names(bsir_i$sd) <- if(i == 1) variables_rate else variables_choice   
                     bsir[[which_model[i]]] <- bsir_i
                     # freeing some memory
                     rm(bsir_i,mle_optimum,loglik,irlw,s_irlw,post_draws)
@@ -918,26 +827,6 @@ remstimate <- function(reh,
             hmc$df.model <- dim(stats)[2]
             hmc$df.residual <- hmc$df.null - hmc$df.model
             names(hmc$coefficients) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- dimnames(stats)[[2]]
-            # residuals
-            select_vars <- if(is.null(where_is_baseline)) 1:length(variable_names) else c(1:length(variable_names))[-where_is_baseline]
-            stats_loc <- if(length(select_vars)==1) array(stats[,select_vars,],dim=c(dim(stats)[1],1,dim(stats)[3])) else stats[,select_vars,]
-            baseline_value <- if(is.null(where_is_baseline)) 0 else hmc$coefficients[where_is_baseline]
-            hmc$diagnostics <- list()
-            hmc$diagnostics$residuals <- computeDiagnostics(pars = hmc$coefficients[select_vars],
-                                                    stats = stats_loc,
-                                                    actor1 = c(0),
-                                                    actor2 = c(0),
-                                                    dyad = attr(reh,"dyad")-1,
-                                                    omit_dyad = reh$omit_dyad,
-                                                    model = attr(reh,"model"),
-                                                    ncores = ncores,
-                                                    baseline = baseline_value,
-                                                    N = reh$N)
-            colnames(hmc$diagnostics$residuals$standardized_residuals) <- variable_names[select_vars]     
-            colnames(hmc$diagnostics$residuals$smoothing_weights) <- colnames(hmc$diagnostics$residuals$standardized_residuals)
-            # lambdas (event rates)
-            hmc$diagnostics$rates <- hmc$diagnostics$residuals$rates   
-            hmc$diagnostics$residuals$rates <- NULL  
 
             remstimateList <- c(hmc_out,hmc)
         }
@@ -982,33 +871,7 @@ remstimate <- function(reh,
                     hmc_i$df.null <- reh$M
                     hmc_i$df.model <- dim(stats[[which_stats[i]]])[2]
                     hmc_i$df.residual <- hmc_i$df.null - hmc_i$df.model
-                    names(hmc_i$coefficients) <- names(hmc_i$post.mean) <- rownames(hmc_i$vcov) <- colnames(hmc_i$vcov) <- names(hmc_i$sd) <- if(i == 1) variables_rate else variables_choice
-                    # residuals
-                    baseline_value <- 0
-                    select_vars <- c(1:dim(stats[[which_stats[i]]])[2])
-                    if(senderRate[i]){
-                        baseline_value <- if(is.null(where_is_baseline)) 0 else hmc_i$coefficients[where_is_baseline]
-                        select_vars <- if(is.null(where_is_baseline)) c(1:dim(stats[[which_stats[i]]])[2]) else c(1:dim(stats[[which_stats[i]]])[2])[-where_is_baseline]
-                    }
-                    stats_loc <- if(length(select_vars)==1) array(stats[[which_stats[i]]][,select_vars,],dim=c(dim(stats[[which_stats[i]]])[1],1,dim(stats[[which_stats[i]]])[3])) else stats[[which_stats[i]]][,select_vars,]
-                    hmc_i$diagnostics <- list()
-                    hmc_i$diagnostics$residuals <- computeDiagnostics(pars = hmc_i$coefficients[select_vars],
-                                                            stats = stats_loc,
-                                                            actor1 = reh$edgelist$actor1-1,
-                                                            actor2 = reh$edgelist$actor2-1,
-                                                            dyad = c(0),
-                                                            omit_dyad = reh$omit_dyad,
-                                                            model = attr(reh,"model"),
-                                                            N = reh$N,
-                                                            senderRate = senderRate[i],
-                                                            ncores = ncores,
-                                                            baseline = baseline_value)
-                    colnames(hmc_i$diagnostics$residuals$standardized_residuals) <- if(senderRate[i]) variables_rate[select_vars] else variables_choice[select_vars]
-                    colnames(hmc_i$diagnostics$residuals$smoothing_weights) <- colnames(hmc_i$diagnostics$residuals$standardized_residuals)
-                    # lambdas (event rates)
-                    hmc_i$diagnostics$rates <- hmc_i$diagnostics$residuals$rates   
-                    hmc_i$diagnostics$residuals$rates <- NULL  
-
+                    names(hmc_i$coefficients) <- names(hmc_i$post.mean) <- rownames(hmc_i$vcov) <- colnames(hmc_i$vcov) <- names(hmc_i$sd) <- if(i == 1) variables_rate else variables_choice  
                     hmc[[which_model[i]]] <- c(hmc_out_i,hmc_i)
                     rm(hmc_out_i,hmc_i)
                 }
@@ -1055,6 +918,10 @@ remstimate <- function(reh,
             attr(str_out, "init") <- init 
         }
     }
+    # additional attributes useful for remstimate methods
+    attr(str_out,"where_is_baseline") <- where_is_baseline
+    attr(str_out,"ncores") <- ncores
+    
     return(str_out)
 }
 
@@ -1546,12 +1413,13 @@ summary.remstimate<-function (object, ...)
 #######################################################################################
 #######################################################################################
 
-
 # residuals.remstimate
 #' @title residuals.remstimate
 #' @rdname residuals.remstimate
-#' @description A function that extracts model residuals (Schoenfeld's residuals - add citation) from a 'remstimate' object.
+#' @description A function that extracts model diagnostics (Schoenfeld's residuals - add citation) from a 'remstimate' object.
 #' @param object is a \code{remstimate} object 
+#' @param reh is a \code{remify} object (the same used with \code{remstimate::remstimate()})
+#' @param stats is a \code{remstats} object (the same used with \code{remstimate::remstimate()})
 #' @param ... further arguments to be passed to the 'residuals' method depending on the estimator used
 #' @method residuals remstimate
 #' @export
@@ -1560,16 +1428,84 @@ summary.remstimate<-function (object, ...)
 #' 
 #' # No examples available at the moment
 #' 
-residuals.remstimate <- function(object, ...)
+residuals.remstimate <- function(object, reh, stats, ...)
 {
- # return residuals
- if(attr(object,"model") == "tie"){
-    return(object$diagnostics$residuals)
- }
- else{
-    return(list(sender_model = object$sender_model$diagnostics$residuals, receiver_model = object$receiver_model$diagnostics$residuals))
- }
+    
+    if(attr(object,"model") == "tie"){ # tie-oriented modeling
+        stats <- aperm(stats, perm = c(2,3,1))
+        # check on variables names from object and stats (throw an error if they do not match)
+        # check on reh and object characteristics (throw an error if they do not match)
+        variable_names <- attr(object, "statistics")
+        where_is_baseline <- attr(object,"where_is_baseline")
 
+        select_vars <- if(is.null(where_is_baseline)) 1:length(variable_names) else c(1:length(variable_names))[-where_is_baseline]
+        baseline_value <- if(is.null(where_is_baseline)) 0 else as.vector(object$coefficients)[where_is_baseline]
+        stats <- if(length(select_vars)==1) array(stats[,select_vars,],dim=c(dim(stats)[1],1,dim(stats)[3])) else stats[,select_vars,]
+        diagnostics <- list()
+        diagnostics$residuals <- computeDiagnostics(pars = as.vector(object$coefficients)[select_vars],
+                                                stats = stats,
+                                                actor1 = c(0),
+                                                actor2 = c(0),
+                                                dyad = attr(reh,"dyad")-1,
+                                                omit_dyad = reh$omit_dyad,
+                                                model = attr(reh,"model"),
+                                                ncores = attr(object,"ncores"),
+                                                baseline = baseline_value,
+                                                N = reh$N #,
+                                                #which = "residuals" # or "rates"
+                                                )
+        colnames(diagnostics$residuals$standardized_residuals) <- variable_names[select_vars]     
+        colnames(diagnostics$residuals$smoothing_weights) <- colnames(diagnostics$residuals$standardized_residuals)
+
+        # lambdas (event rates) : this will have to be calculated only for plot on waiting times (qq-plot) and top% plot
+        diagnostics$rates <- diagnostics$residuals$rates   
+        diagnostics$residuals$rates <- NULL  
+        class(diagnostics) <- c("remstimate","residuals")
+        return(diagnostics) 
+    }
+    else if(attr(object,"model") == "actor"){ # actor-oriented modeling
+        # check on variables names from object and stats (throw an error if they do not match)
+        # check on reh and object characteristics (throw an error if they do not match)
+        variable_names <- attr(object, "statistics")
+        where_is_baseline <- attr(object,"where_is_baseline")
+        senderRate <- c(TRUE,FALSE)
+        which_model <- c("sender_model","receiver_model")
+        which_stats <- c("sender_stats","receiver_stats") 
+        diagnostics <- list()
+        # residuals
+        for(i in 1:2){
+            if(!is.null(stats[[which_stats[i]]])){
+                stats[[which_stats[i]]] <- aperm(stats[[which_stats[i]]], perm = c(2,3,1))
+                diagnostics[[which_model[i]]] <- list()
+                baseline_value <- 0
+                select_vars <- c(1:dim(stats[[which_stats[i]]])[2])
+                if(senderRate[i]){ # only for sender model
+                    baseline_value <- if(is.null(where_is_baseline)) 0 else as.vector(object[[which_model[i]]]$coefficients)[where_is_baseline]
+                    select_vars <- if(is.null(where_is_baseline)) c(1:dim(stats[[which_stats[i]]])[2]) else c(1:dim(stats[[which_stats[i]]])[2])[-where_is_baseline]
+                }
+                stats[[which_stats[i]]] <- if(length(select_vars)==1) array(stats[[which_stats[i]]][,select_vars,],dim=c(dim(stats[[which_stats[i]]])[1],1,dim(stats[[which_stats[i]]])[3])) else stats[[which_stats[i]]][,select_vars,]
+                diagnostics[[which_model[i]]] <- list()
+                diagnostics[[which_model[i]]]$residuals <- computeDiagnostics(pars = as.vector(object[[which_model[i]]]$coefficients)[select_vars],
+                                                        stats = stats[[which_stats[i]]],
+                                                        actor1 = reh$edgelist$actor1-1,
+                                                        actor2 = reh$edgelist$actor2-1,
+                                                        dyad = c(0),
+                                                        omit_dyad = reh$omit_dyad,
+                                                        model = attr(reh,"model"),
+                                                        N = reh$N,
+                                                        senderRate = senderRate[i],
+                                                        ncores = attr(object,"ncores"),
+                                                        baseline = baseline_value)                                      
+                colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals) <- if(senderRate[i]) variable_names[["sender_model"]][select_vars] else variable_names[["receiver_model"]][select_vars]
+                colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <- colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals)
+                # lambdas (event rates)
+                diagnostics[[which_model[i]]]$rates <- diagnostics[[which_model[i]]]$residuals$rates   
+                diagnostics[[which_model[i]]]$residuals$rates <- NULL 
+            }
+        }
+        class(diagnostics) <- c("remstimate","residuals")
+        return(diagnostics) 
+    }
 }
 
 
@@ -1593,8 +1529,12 @@ residuals.remstimate <- function(object, ...)
 predict.remstimate <- function(object, ...)
 {
     # write a predict method here
-    # - in-sample predictive performance 
-    # - out-of-sample predictions
+    # - in-sample predictive performance : the function knows that the model was estimated on the events that the user wants to predict
+    # - out-of-sample predictions : the function knows that the model was not estimated on the events that the user wants to predict
+
+    # A-steps ahead A = 1, ... 
+    # if in-sample, comparison with actual observed dyads
+    #if out-of-sample, find comparison measures
     return(paste('this function at the moment does nothing'))
 }
 
@@ -1608,7 +1548,8 @@ predict.remstimate <- function(object, ...)
 #' @description A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
 #' @param x is a \code{remstimate} object
 #' @param reh 'remify' object 
-#' @param ... further arguments to be passed to the 'predict' method depending on the estimator used
+#' @param residuals is a \code{"remstimate" "residuals"} object
+#' @param ... further arguments to be passed to the 'plot' method depending: for instance the remstats object with statistics ('stats')
 #' @method plot remstimate
 #' @export
 #' 
@@ -1616,16 +1557,30 @@ predict.remstimate <- function(object, ...)
 #' 
 #' # No examples available at the moment
 #' 
-plot.remstimate <- function(x, reh, ...)
+plot.remstimate <- function(x, reh, residuals = NULL, ...)
 {
     if(attr(x,"model") != attr(reh,"model")){
         stop("'x' and 'reh' have different attribute 'model'")
     }
+
+    if(is.null(residuals)){
+        additional_input_args <- list(...) # check for stats argument
+        if(!any(names(additional_input_args) %in% "stats")){
+            stop("'stats' must be provided if argument 'residuals' is NULL")
+        }
+        else{
+            residuals <- residuals(object = x, reh = reh, stats = additional_input_args$stats)
+        }
+    }
+    else if(!all(inherits(residuals,c("remstimate","residuals"),TRUE))){
+            stop("'residuals' must be an object of class 'remstimate' 'residuals'")
+    }
+
     if(attr(x,"model") == "tie"){ # tie-oriented modeling
 
         # (1) waiting times vs. theoretical distribution
         if(!attr(reh,"ordinal")){
-            sum_rates <- lapply(x$diagnostics$rates,sum)
+            sum_rates <- lapply(residuals$rates,sum)
             observed <- sort(reh$intereventTime*unlist(sum_rates))
             theoretical <- stats::qexp(p = c(1:reh$M)/reh$M, rate = 1)
             plot(theoretical,observed, xlab = "Theoretical Quantiles", 
@@ -1635,12 +1590,11 @@ plot.remstimate <- function(x, reh, ...)
         }
 
         # (2) standardized Schoenfeld's residuals
-        resids <- residuals(x)
-        P <- dim(resids$standardized_residuals)[2] # number of statistics
-        #m_exclude <- (reh$M-dim(resids$standardized_residuals)[1])
+        P <- dim(residuals$residuals$standardized_residuals)[2] # number of statistics
+        #m_exclude <- (reh$M-dim(residuals$residuals$standardized_residuals)[1])
         for(p in 1:P){
             t_p <- reh$edgelist$time #[-c(1:m_exclude)]
-            y_p <- resids$standardized_residuals[,p]
+            y_p <- residuals$residuals$standardized_residuals[,p]
             qrt_p <- quantile(y_p, probs=c(0.25,0.75))
             lb_p <- qrt_p[1] - diff(qrt_p)*3
             ub_p <- qrt_p[2] + diff(qrt_p)*3
@@ -1648,18 +1602,18 @@ plot.remstimate <- function(x, reh, ...)
             if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
                 ylim_p <- c(lb_p,ub_p)
             }
-            w_p <- resids$smoothing_weights[,p]
+            w_p <- residuals$residuals$smoothing_weights[,p]
             w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
             par(mfrow=c(1,1))
             plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p) # plotting standardized Schoenfeld's residuals
             lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=1.5,col=2) # plotting smoothed weighted regression of the residuals
             abline(h=0,col="gray40",lwd=1.5,lty=2)
-            mtext(text = colnames(resids$standardized_residuals)[p], side = 3, line = 1,cex=1.5)
+            mtext(text = colnames(residuals$residuals$standardized_residuals)[p], side = 3, line = 1,cex=1.5)
         }
 
         # (3) observed event rates with top % event rate shaded regions
-        #observed <- sapply(1:reh$M, function(y) x$diagnostics$rates[[y]][attr(reh,"dyad")[y]]) 
-        #thres <- sapply(1:reh$M, function(y) quantile(x$diagnostics$rates[[y]],probs=c(0.75,0.90,0.95))) # M x nPercentiles 
+        #observed <- sapply(1:reh$M, function(y) residuals$rates[[y]][attr(reh,"dyad")[y]]) 
+        #thres <- sapply(1:reh$M, function(y) quantile(residuals$rates[[y]],probs=c(0.75,0.90,0.95))) # M x nPercentiles 
         #discrete_scale_colors <- c("#64f75739", "#e7f75739", "#f7a25739", "#f7575739")
         # plot observed event rate
         #plot(reh$edgelist$time,observed,ylim=c(min(observed),max(observed)),xlab="time",ylab=bquote(lambda(e[m])),cex=0.8,col="#000000ad")
@@ -1681,7 +1635,7 @@ plot.remstimate <- function(x, reh, ...)
         # (3) top% classification vs. time
         # the claculation of obs_percentile maybe different for 'manual' risk sets
         #obs_percentile <- sapply(1:reh$M, function(y) {
-        #ordered_decr <- c(1:reh$D)[order(x$diagnostics$rates[[y]],decreasing=TRUE)]
+        #ordered_decr <- c(1:reh$D)[order(residuals$rates[[y]],decreasing=TRUE)]
         #which(ordered_decr==attr(reh,"dyad")[y])/reh$D
         #})
         #classification <- cut(x = obs_percentile, breaks = c(0,0.05,0.10,0.25,1), labels = c("<0.05","0.05-0.1","0.1-0.25",">0.25"), right = TRUE, ordered_result = TRUE)
@@ -1694,12 +1648,11 @@ plot.remstimate <- function(x, reh, ...)
         # code here for actor-oriented modeling
         which_model <- c("sender_model","receiver_model")
         title_model <- c("Rate model (sender)","Choice model (receiver)")
-        resids <- residuals(x)
         for(i in 1:2){
             if(!is.null(x[[which_model[i]]])){
                 # (1) waiting times vs. theoretical distribution
                 if(!attr(reh,"ordinal") & i==1){
-                    sum_rates <- lapply(x[[which_model[i]]]$diagnostics$rates,sum)
+                    sum_rates <- lapply(residuals[[which_model[i]]]$rates,sum)
                     observed <- sort(reh$intereventTime*unlist(sum_rates))
                     theoretical <- stats::qexp(p = c(1:reh$M)/reh$M, rate = 1)
                     plot(theoretical,observed, xlab = "Theoretical Quantiles", 
@@ -1710,11 +1663,11 @@ plot.remstimate <- function(x, reh, ...)
                 }
 
                 # (2) standardized Schoenfeld's residuals
-                #m_exclude <- (reh$M-dim(resids[[which_model[i]]]$standardized_residuals)[1])
-                P <- dim(resids[[which_model[i]]]$standardized_residuals)[2] # number of statistics
+                #m_exclude <- (reh$M-dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1])
+                P <- dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[2] # number of statistics
                 for(p in 1:P){
                     t_p <- reh$edgelist$time #[-c(1:m_exclude)]
-                    y_p <- resids[[which_model[i]]]$standardized_residuals[,p]
+                    y_p <- residuals[[which_model[i]]]$residuals$standardized_residuals[,p]
                     qrt_p <- quantile(y_p, probs=c(0.25,0.75))
                     lb_p <- qrt_p[1] - diff(qrt_p)*3
                     ub_p <- qrt_p[2] + diff(qrt_p)*3
@@ -1722,31 +1675,31 @@ plot.remstimate <- function(x, reh, ...)
                     if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
                         ylim_p <- c(lb_p,ub_p)
                     }
-                    w_p <- resids[[which_model[i]]]$smoothing_weights[,p]
+                    w_p <- residuals[[which_model[i]]]$residuals$smoothing_weights[,p]
                     w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
                     par(mfrow=c(1,1))
                     plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p) # plotting standardized Schoenfeld's residuals
                     lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=1.5,col=2) # plotting smoothed weighted regression of the residuals
                     abline(h=0,col="gray40",lwd=1.5,lty=2)
-                    mtext(text = colnames(resids[[which_model[i]]]$standardized_residuals)[p], side = 3, line = 2,cex=1.5)
+                    mtext(text = colnames(residuals[[which_model[i]]]$residuals$standardized_residuals)[p], side = 3, line = 2,cex=1.5)
                     mtext(text = title_model[i], side = 3, line = 1, cex = 1)
                 }
 
                 # (3) observed event rates with top % event rate shaded regions
-                which_actor <- NULL
-                if(i==1){ # sender model
-                    which_actor <- reh$edgelist$actor1_ID 
-                }
-                else{ # receiver model
-                    which_actor <- unlist(sapply(1:reh$M, function(y) {
-                        s <- rep(0,reh$N)
-                        s[reh$edgelist$actor2_ID[y]] <- 1
-                        which(s[-reh$edgelist$actor1_ID[y]] == 1)
-                        }
-                    ))
-                }
-                #observed <- sapply(1:reh$M, function(y) x[[which_model[i]]]$diagnostics$rates[[y]][which_actor[y]]) 
-                #thres <- sapply(1:reh$M, function(y) quantile(x[[which_model[i]]]$diagnostics$rates[[y]],probs=c(0.75,0.90,0.95))) # M x nPercentiles 
+                #which_actor <- NULL
+                #if(i==1){ # sender model
+                #    which_actor <- reh$edgelist$actor1_ID 
+                #}
+                #else{ # receiver model
+                #    which_actor <- unlist(sapply(1:reh$M, function(y) {
+                #        s <- rep(0,reh$N)
+                #        s[reh$edgelist$actor2_ID[y]] <- 1
+                #        which(s[-reh$edgelist$actor1_ID[y]] == 1)
+                #        }
+                #    ))
+                #}
+                #observed <- sapply(1:reh$M, function(y) residuals[[which_model[i]]]$rates[[y]][which_actor[y]]) 
+                #thres <- sapply(1:reh$M, function(y) quantile(residuals[[which_model[i]]]$rates[[y]],probs=c(0.75,0.90,0.95))) # M x nPercentiles 
                 #discrete_scale_colors <- c("#64f75739", "#e7f75739", "#f7a25739", "#f7575739")
                 # plot observed event rate
                 #plot(reh$edgelist$time,observed,ylim=c(min(observed),max(observed)),xlab="time",ylab="event rate",cex=0.8,col="#000000ad")
@@ -1768,7 +1721,7 @@ plot.remstimate <- function(x, reh, ...)
                 # (3) top% classification vs. time
                 # the claculation of obs_percentile maybe different for 'manual' risk sets
                 #obs_percentile <- sapply(1:reh$M, function(y) {
-                #ordered_decr <- c(1:reh$D)[order(x[[which_model[i]]]$diagnostics$rates[[y]],decreasing=TRUE)]
+                #ordered_decr <- c(1:reh$D)[order(residuals[[which_model[i]]]$rates[[y]],decreasing=TRUE)]
                 #which(ordered_decr==which_actor[y])/reh$D
                 #})
                 #classification <- cut(x = obs_percentile, breaks = c(0,0.05,0.10,0.25,1), labels = c("<0.05","0.05-0.1","0.1-0.25",">0.25"), right = TRUE, ordered_result = TRUE)
