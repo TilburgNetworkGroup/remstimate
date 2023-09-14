@@ -1,7 +1,7 @@
 Type: Package
 Package: remstimate
 Title: Optimization tools for tie-oriented and actor-oriented relational event models
-Version: 2.2.0
+Version: 2.2.0.1
 Date: 2023-07-03
 Authors@R: 
     c(person(given = "Giuseppe",
