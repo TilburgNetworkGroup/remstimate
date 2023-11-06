@@ -17,26 +17,6 @@
 // //////////(BEGIN)              remDerivatives                  (BEGIN)///////////
 // /////////////////////////////////////////////////////////////////////////////////  
 
-//' try1
-//'
-//' function that returns this and that.
-//'
-//' @param dyad dyad
-//' @return list of (original values -1)
-//' @export
-//'
-// [[Rcpp::export]]
-Rcpp::List try1(Rcpp::List dyad){
-  int m;
-  int M = dyad.length();
-  Rcpp::List out(M);
-  for(m=0; m<M; m++){
-  arma::uvec out_loc = Rcpp::as<arma::uvec>(dyad[m])-1;
-  out(m) = out_loc;
-  }
-  return out;
-}
-
 // remDerivativesStandard (tie-oriented modeling)
 //
 // function that returns a list as an output with loglikelihood/gradient/hessian values at specific parameters' values (for tie-oriented modeling).
