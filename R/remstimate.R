@@ -120,7 +120,7 @@ remstimate <- function(reh,
     # ... active riskset? then overwrite two objects (this prevents from coding many ifelse() to switch between active-oriented riskset objects and full-oriented riskset objects)
     if((attr(reh,"riskset") == "active") & (model == "tie")){
         reh$D <- reh$activeD
-        attr(reh,"dyad") <- attr(reh,"dyadIDactive")
+        attr(reh,"dyadID") <- attr(reh,"dyadIDactive")
     }
 
     # ... method
@@ -144,7 +144,7 @@ remstimate <- function(reh,
     # ... stats 
     model_formula <- variable_names <- where_is_baseline <- NULL
     if(model == "tie")
-    {
+    {   
         if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
             variable_names <- dimnames(stats)[[3]]
             model_formula <- stats::as.formula(paste("~ ",paste(variable_names,collapse=" + ")))
@@ -152,6 +152,17 @@ remstimate <- function(reh,
             # is there a baseline term?
             if(any(variable_names %in% c("baseline"))){
                 where_is_baseline <- which(variable_names == "baseline")
+            }
+            if((dim(stats)[3] == dim(reh$edgelist)[1])){ # if statistics are calculated per event (or per time point when no simultaneous events)
+                attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))
+                attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))
+                #if(!is.null(reh$C)){
+                #    attr(reh,"typeID") <- unlist(attr(reh,"typeID"))
+                #}  
+            }
+            else if(((dim(stats)[3] < dim(reh$edgelist)[1]) & (dim(stats)[3] != length(attr(reh,"dyadID")))) | (dim(stats)[3] > dim(reh$edgelist)[1])){ # if dimensions do not match, throw an error
+                stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
             }
         }
         else if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
@@ -166,17 +177,46 @@ remstimate <- function(reh,
         model_formula <- list() # becomes a list
         if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
             variables_rate <- variables_choice <- NULL
+            #if(!is.null(stats$sender_stats) & !is.null(stats$receiver_stats)){
+            #    if(dim(stats$sender_stats)[1]!=dim(stats$receiver_stats)[1]){
+            #        stop("'sender_stats' and 'receiver_stats' must have the same number of rows (number of events, or number of unique time points)") # this check may fail with remstats [[TO CHECK]]
+            #    }
+            #}
             if(!is.null(stats$sender_stats)){ # sender model is specified
                 variables_rate <- dimnames(stats$sender_stats)[[3]]
                 model_formula[["rate_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + ")))
                 stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
                 # is there a baseline term?
                 where_is_baseline <- which(variables_rate == "baseline")
+                if((dim(stats$sender_stats)[3] == dim(reh$edgelist)[1])){ # if statistics are calculated per event (or per time point when no simultaneous events)
+                    attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))
+                    attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
+                    attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))
+                    #if(!is.null(reh$C)){
+                    #    attr(reh,"typeID") <- unlist(attr(reh,"typeID"))
+                    #}  
+                }
+                else if(((dim(stats$sender_stats)[3] < dim(reh$edgelist)[1]) & (dim(stats$sender_stats)[3] != length(attr(reh,"dyadID")))) | (dim(stats$sender_stats)[3] > dim(reh$edgelist)[1])){ # if dimensions do not match, throw an error
+                    stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
+                }
             }
             if(!is.null(stats$receiver_stats)){ # receiver model is specified
                 variables_choice <- dimnames(stats$receiver_stats)[[3]] #as.vector(sapply(dimnames(stats$receiver_stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
                 model_formula[["choice_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_choice,collapse=" + ")))
                 stats$receiver_stats <- aperm(stats$receiver_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
+                if(is.null(stats$sender_stats)){ #if we haven't processed the attributes yet on stats$sender_stats, we do it now
+                    if((dim(stats$receiver_stats)[3] == dim(reh$edgelist)[1])){ # if statistics are calculated per event (or per time point when no simultaneous events)
+                        attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))
+                        attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
+                        attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))
+                        #if(!is.null(reh$C)){
+                        #    attr(reh,"typeID") <- unlist(attr(reh,"typeID"))
+                        #}  
+                    }
+                    else if(((dim(stats$receiver_stats)[3] < dim(reh$edgelist)[1]) & (dim(stats$receiver_stats)[3] != length(attr(reh,"dyadID")))) | (dim(stats$receiver_stats)[3] > dim(reh$edgelist)[1])){ # if dimensions do not match, throw an error
+                        stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
+                    }
+                }
             }
             # vector of variable names and list of model formulas
             variable_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
@@ -379,9 +419,9 @@ remstimate <- function(reh,
                                             rinit = 1, 
                                             rmax = 100, 
                                             stats = stats,  
-                                            actor1 = c(0),
-                                            actor2 = c(0),
-                                            dyad = attr(reh,"dyad")-1,
+                                            actor1 = list(),
+                                            actor2 = list(),
+                                            dyad = attr(reh,"dyadID"),
                                             omit_dyad = reh$omit_dyad,
                                             interevent_time = reh$intereventTime,
                                             model = model,
@@ -398,9 +438,9 @@ remstimate <- function(reh,
                 }
                 optimum_obj <- GDADAMAX(pars = init,
                                     stats = stats,  
-                                    actor1 = c(0),
-                                    actor2 = c(0),
-                                    dyad = attr(reh,"dyad")-1,
+                                    actor1 = list(),
+                                    actor2 = list(),
+                                    dyad = attr(reh,"dyadID"),
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
                                     model = model,
@@ -410,7 +450,7 @@ remstimate <- function(reh,
                                     epsilon = epsilon)
                 optimum_obj$hessian <- remDerivativesStandard(pars = optimum_obj$argument,
                                                                     stats = stats,
-                                                                    dyad = attr(reh,"dyad")-1,
+                                                                    dyad = attr(reh,"dyadID"),
                                                                     omit_dyad = reh$omit_dyad,
                                                                     interevent_time = reh$intereventTime,
                                                                     ordinal = ordinal,
@@ -441,9 +481,9 @@ remstimate <- function(reh,
                                         rinit = 1, 
                                         rmax = 100, 
                                         stats = array(1,dim=c(reh$D,1,reh$M)),  
-                                        actor1 = c(0),
-                                        actor2 = c(0),
-                                        dyad = attr(reh,"dyad")-1,
+                                        actor1 = list(),
+                                        actor2 = list(),
+                                        dyad = attr(reh,"dyadID"),
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
                                         model = model,
@@ -482,9 +522,9 @@ remstimate <- function(reh,
                                     rinit = 1, 
                                     rmax = 100, 
                                     stats = stats[[which_stats[i]]], 
-                                    actor1 = reh$edgelist$actor1-1,
-                                    actor2 = reh$edgelist$actor2-1,
-                                    dyad = c(0),
+                                    actor1 = attr(reh,"actor1ID"),
+                                    actor2 = attr(reh,"actor2ID"),
+                                    dyad = list(),
                                     omit_dyad = reh$omit_dyad, 
                                     interevent_time = reh$intereventTime,
                                     model = model,
@@ -499,9 +539,9 @@ remstimate <- function(reh,
                         }
                         optimum_model[[which_model[i]]] <- GDADAMAX(pars = init[[which_model[i]]], 
                                                 stats = stats[[which_stats[i]]],  
-                                                actor1 = reh$edgelist$actor1-1,
-                                                actor2 = reh$edgelist$actor2-1,
-                                                dyad = c(0),
+                                                actor1 = attr(reh,"actor1ID"),
+                                                actor2 = attr(reh,"actor2ID"),
+                                                dyad = list(),
                                                 omit_dyad = reh$omit_dyad,
                                                 interevent_time = reh$intereventTime,
                                                 model = model,
@@ -515,9 +555,9 @@ remstimate <- function(reh,
                                                 epsilon = epsilon)
                         optimum_model[[which_model[i]]]$hessian <- remDerivatives(pars = optimum_model[[which_model[i]]]$argument,
                                                                         stats = stats[[which_stats[i]]],  
-                                                                        actor1 = reh$edgelist$actor1-1,
-                                                                        actor2 = reh$edgelist$actor2-1,
-                                                                        dyad = c(0),
+                                                                        actor1 = attr(reh,"actor1ID"),
+                                                                        actor2 = attr(reh,"actor2ID"),
+                                                                        dyad = list(),
                                                                         omit_dyad = reh$omit_dyad,
                                                                         interevent_time = reh$intereventTime,
                                                                         model = model,
@@ -557,10 +597,10 @@ remstimate <- function(reh,
                                                                                     parinit = c(0), 
                                                                                     rinit = 1, 
                                                                                     rmax = 100, 
-                                                                                    stats = array(1,dim=c(dim(stats$sender_stats)[1],1,reh$M)),  
-                                                                                    actor1 = reh$edgelist$actor1-1,
-                                                                                    actor2 = c(0),
-                                                                                    dyad = c(0),
+                                                                                    stats = array(1,dim=c(dim(stats$sender_stats)[1],1,dim(stats$sender_stats)[3])),  
+                                                                                    actor1 = attr(reh,"actor1ID"),
+                                                                                    actor2 = list(),
+                                                                                    dyad = list(),
                                                                                     omit_dyad = reh$omit_dyad,
                                                                                     interevent_time = reh$intereventTime,
                                                                                     model = model,
@@ -574,10 +614,10 @@ remstimate <- function(reh,
                                                                                                                     parinit = c(0), 
                                                                                                                     rinit = 1, 
                                                                                                                     rmax = 100, 
-                                                                                                                    stats = array(1,dim=c(dim(stats$receiver_stats)[1],1,reh$M)), 
-                                                                                                                    actor1 = reh$edgelist$actor1-1,
-                                                                                                                    actor2 = reh$edgelist$actor2-1,
-                                                                                                                    dyad = c(0),
+                                                                                                                    stats = array(1,dim=c(dim(stats$receiver_stats)[1],1,dim(stats$receiver_stats)[3])), 
+                                                                                                                    actor1 = attr(reh,"actor1ID"),
+                                                                                                                    actor2 = attr(reh,"actor2ID"),
+                                                                                                                    dyad = list(),
                                                                                                                     omit_dyad = reh$omit_dyad, 
                                                                                                                     interevent_time = reh$intereventTime,
                                                                                                                     model = model,
@@ -628,9 +668,9 @@ remstimate <- function(reh,
                                         rinit = 1, 
                                         rmax = 100, 
                                         stats = stats,  
-                                        actor1 = c(0),
-                                        actor2 = c(0),
-                                        dyad = attr(reh,"dyad")-1,
+                                        actor1 = list(),
+                                        actor2 = list(),
+                                        dyad = attr(reh,"dyadID"),
                                         omit_dyad = reh$omit_dyad,
                                         interevent_time = reh$intereventTime,
                                         model = model,
@@ -659,7 +699,7 @@ remstimate <- function(reh,
             ## (2.2) summing loglik 
             loglik <- apply(bsir$draws,1,function(x) (-1)*remDerivativesStandard(pars = x,
                                     stats = stats,
-                                    dyad = attr(reh,"dyad")-1,
+                                    dyad = attr(reh,"dyadID"),
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
                                     ordinal = ordinal,
@@ -706,9 +746,9 @@ remstimate <- function(reh,
                                                         rinit = 1, 
                                                         rmax = 100, 
                                                         stats = stats[[which_stats[i]]], 
-                                                        actor1 = reh$edgelist$actor1-1,
-                                                        actor2 = reh$edgelist$actor2-1,
-                                                        dyad = c(0),
+                                                        actor1 = attr(reh,"actor1ID"),
+                                                        actor2 = attr(reh,"actor2ID"),
+                                                        dyad = list(),
                                                         omit_dyad = reh$omit_dyad,
                                                         interevent_time = reh$intereventTime,
                                                         model = model,
@@ -742,9 +782,9 @@ remstimate <- function(reh,
                     ## (2.2) summing loglik                   
                     loglik <- apply(bsir_i$draws,1,function(x) (-1)*remDerivatives(pars = x, 
                                     stats = stats[[which_stats[i]]], 
-                                    actor1 = reh$edgelist$actor1-1,
-                                    actor2 = reh$edgelist$actor2-1,
-                                    dyad = c(0),
+                                    actor1 = attr(reh,"actor1ID"),
+                                    actor2 = attr(reh,"actor2ID"),
+                                    dyad = list(),
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
                                     model = model,
@@ -804,9 +844,9 @@ remstimate <- function(reh,
                         meanPrior = rep(0,dim(stats)[2]),
                         sigmaPrior = diag(dim(stats)[2])*1e05,
                         stats = stats,  
-                        actor1 = c(0),
-                        actor2 = c(0),
-                        dyad = attr(reh,"dyad")-1, 
+                        actor1 = list(),
+                        actor2 = list(),
+                        dyad = attr(reh,"dyadID"), 
                         omit_dyad = reh$omit_dyad,
                         interevent_time = reh$intereventTime,
                         model = model,
@@ -848,9 +888,9 @@ remstimate <- function(reh,
                                 meanPrior = rep(0,dim(stats[[which_stats[i]]])[2]),
                                 sigmaPrior = diag(dim(stats[[which_stats[i]]])[2]),
                                 stats = stats[[which_stats[i]]],  
-                                actor1 = reh$edgelist$actor1-1,
-                                actor2 = reh$edgelist$actor2-1,
-                                dyad = c(0), 
+                                actor1 = attr(reh,"actor1ID"),
+                                actor2 = attr(reh,"actor2ID"),
+                                dyad = list(), 
                                 omit_dyad = reh$omit_dyad,
                                 interevent_time = reh$intereventTime,
                                 model = model,
@@ -1063,7 +1103,7 @@ print.remstimate<-function(x, ...){
 # summary.remstimate
 #' @title Generate the summary of a remstimate object
 #' @rdname summary.remstimate
-#' @description A function that prints out the summary of a remstimate object
+#' @description A function that returns the summary of a remstimate object
 #' @param object is a \code{remstimate} object 
 #' @param ... further arguments to be passed to the 'summary' method
 #' @method summary remstimate
@@ -1165,7 +1205,8 @@ summary.remstimate<-function (object, ...)
                         AIC = object$AIC,
                         AICC = object$AICC,
                         BIC = object$BIC,
-                        epsilon = attr(object, "epsilon"))                
+                        epsilon = attr(object, "epsilon"),
+                        chiP = 1 - stats::pchisq(object$model.deviance, object$df.model))                
             summary_out <- do.call(c, list(keep, summary_out))
         }
         else if(attr(object,"model") == "actor"){
@@ -1208,7 +1249,8 @@ summary.remstimate<-function (object, ...)
                                             df.model = object$sender_model$df.model,
                                             AIC = object$sender_model$AIC,
                                             AICC = object$sender_model$AICC,
-                                            BIC = object$sender_model$BIC
+                                            BIC = object$sender_model$BIC,
+                                            chiP = 1 - stats::pchisq(object$sender_model$model.deviance, object$sender_model$df.model)
                                         )
             }  
             if(!is.null(object$receiver_model)){
@@ -1220,7 +1262,8 @@ summary.remstimate<-function (object, ...)
                                             df.model = object$receiver_model$df.model,
                                             AIC = object$receiver_model$AIC,
                                             AICC = object$receiver_model$AICC,
-                                            BIC = object$receiver_model$BIC
+                                            BIC = object$receiver_model$BIC,
+                                            chiP = 1 - stats::pchisq(object$receiver_model$model.deviance, object$receiver_model$df.model)
                                         )
             }           
             summary_out <- do.call(c, list(keep, summary_out))
@@ -1318,8 +1361,10 @@ summary.remstimate<-function (object, ...)
             summary_out <- do.call(c, list(keep, summary_out))
         }
     }
-
-    if(length(summary_out)==0) stop("invalid 'remstimate' object")
+    else{
+        if(length(summary_out)==0) stop("invalid 'remstimate' object")
+    }
+    class(summary_out) <- "summary.remstimate"
 
     cat("Relational Event Model",paste("(",summary_out$model," oriented)",sep=""),"\n\n")
     if(summary_out$model == "tie"){
@@ -1408,10 +1453,8 @@ summary.remstimate<-function (object, ...)
         }
     }
 
+    invisible(summary_out)
 }
-
-#######################################################################################
-#######################################################################################
 
 # residuals.remstimate
 #' @title residuals.remstimate
@@ -1444,9 +1487,9 @@ residuals.remstimate <- function(object, reh, stats, ...)
         diagnostics <- list()
         diagnostics$residuals <- computeDiagnostics(pars = as.vector(object$coefficients)[select_vars],
                                                 stats = stats,
-                                                actor1 = c(0),
-                                                actor2 = c(0),
-                                                dyad = attr(reh,"dyad")-1,
+                                                actor1 = list(),
+                                                actor2 = list(),
+                                                dyad = attr(reh,"dyadID"),
                                                 omit_dyad = reh$omit_dyad,
                                                 model = attr(reh,"model"),
                                                 ncores = attr(object,"ncores"),
@@ -1454,8 +1497,8 @@ residuals.remstimate <- function(object, reh, stats, ...)
                                                 N = reh$N #,
                                                 #which = "residuals" # or "rates"
                                                 )
-        colnames(diagnostics$residuals$standardized_residuals) <- variable_names[select_vars]     
-        colnames(diagnostics$residuals$smoothing_weights) <- colnames(diagnostics$residuals$standardized_residuals)
+        #colnames(diagnostics$residuals$standardized_residuals) <- variable_names[select_vars]
+        colnames(diagnostics$residuals$smoothing_weights) <- variable_names[select_vars]
 
         # lambdas (event rates) : this will have to be calculated only for plot on waiting times (qq-plot) and top% plot
         diagnostics$rates <- diagnostics$residuals$rates   
@@ -1487,17 +1530,17 @@ residuals.remstimate <- function(object, reh, stats, ...)
                 diagnostics[[which_model[i]]] <- list()
                 diagnostics[[which_model[i]]]$residuals <- computeDiagnostics(pars = as.vector(object[[which_model[i]]]$coefficients)[select_vars],
                                                         stats = stats[[which_stats[i]]],
-                                                        actor1 = reh$edgelist$actor1-1,
-                                                        actor2 = reh$edgelist$actor2-1,
-                                                        dyad = c(0),
+                                                        actor1 = attr(reh,"actor1ID"),
+                                                        actor2 = attr(reh,"actor2ID"),
+                                                        dyad = list(),
                                                         omit_dyad = reh$omit_dyad,
                                                         model = attr(reh,"model"),
                                                         N = reh$N,
                                                         senderRate = senderRate[i],
                                                         ncores = attr(object,"ncores"),
-                                                        baseline = baseline_value)                                      
-                colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals) <- if(senderRate[i]) variable_names[["sender_model"]][select_vars] else variable_names[["receiver_model"]][select_vars]
-                colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <- colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals)
+                                                        baseline = baseline_value)                                   
+                #colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals) <- if(senderRate[i]) variable_names[["sender_model"]][select_vars] else variable_names[["receiver_model"]][select_vars]
+                colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <- if(senderRate[i]) variable_names[["sender_model"]][select_vars] else variable_names[["receiver_model"]][select_vars]
                 # lambdas (event rates)
                 diagnostics[[which_model[i]]]$rates <- diagnostics[[which_model[i]]]$residuals$rates   
                 diagnostics[[which_model[i]]]$residuals$rates <- NULL 
@@ -1612,7 +1655,7 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
         }
 
         # (3) observed event rates with top % event rate shaded regions
-        #observed <- sapply(1:reh$M, function(y) residuals$rates[[y]][attr(reh,"dyad")[y]]) 
+        #observed <- sapply(1:reh$M, function(y) residuals$rates[[y]][attr(reh,"dyadID")[y]]) 
         #thres <- sapply(1:reh$M, function(y) quantile(residuals$rates[[y]],probs=c(0.75,0.90,0.95))) # M x nPercentiles 
         #discrete_scale_colors <- c("#64f75739", "#e7f75739", "#f7a25739", "#f7575739")
         # plot observed event rate
@@ -1636,7 +1679,7 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
         # the claculation of obs_percentile maybe different for 'manual' risk sets
         #obs_percentile <- sapply(1:reh$M, function(y) {
         #ordered_decr <- c(1:reh$D)[order(residuals$rates[[y]],decreasing=TRUE)]
-        #which(ordered_decr==attr(reh,"dyad")[y])/reh$D
+        #which(ordered_decr==attr(reh,"dyadID")[y])/reh$D
         #})
         #classification <- cut(x = obs_percentile, breaks = c(0,0.05,0.10,0.25,1), labels = c("<0.05","0.05-0.1","0.1-0.25",">0.25"), right = TRUE, ordered_result = TRUE)
         #plot(reh$edgelist$time,classification)

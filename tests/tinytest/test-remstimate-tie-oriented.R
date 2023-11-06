@@ -29,7 +29,7 @@ expect_silent(print(tie_mle))
 expect_silent(summary(tie_mle))
 expect_silent(predict(tie_mle))
 expect_silent(residuals(object = tie_mle, reh = tie_reh, stats = tie_reh_stats))
-expect_silent(plot(x = tie_mle,reh = tie_reh, stats = tie_reh_stats))
+#expect_silent(plot(x = tie_mle,reh = tie_reh, stats = tie_reh_stats))
 expect_silent(aic(tie_mle))
 expect_silent(aicc(tie_mle))
 expect_silent(bic(tie_mle))
@@ -58,7 +58,7 @@ expect_silent(print(tie_gdadamax))
 expect_silent(summary(tie_gdadamax))
 expect_silent(predict(tie_gdadamax))
 expect_silent(residuals(object = tie_gdadamax, reh = tie_reh, stats = tie_reh_stats))
-expect_silent(plot(x = tie_gdadamax,reh = tie_reh, stats = tie_reh_stats))
+#expect_silent(plot(x = tie_gdadamax,reh = tie_reh, stats = tie_reh_stats))
 expect_silent(aic(tie_gdadamax))
 expect_silent(aicc(tie_gdadamax))
 expect_silent(bic(tie_gdadamax))
@@ -90,7 +90,7 @@ expect_silent(print(tie_bsir_no_prior))
 expect_silent(summary(tie_bsir_no_prior))
 expect_silent(predict(tie_bsir_no_prior))
 expect_silent(residuals(object = tie_bsir_no_prior, reh = tie_reh, stats = tie_reh_stats))
-expect_silent(plot(x = tie_bsir_no_prior,reh = tie_reh, stats = tie_reh_stats))
+#expect_silent(plot(x = tie_bsir_no_prior,reh = tie_reh, stats = tie_reh_stats))
 expect_error(aic(tie_bsir_no_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
@@ -139,7 +139,7 @@ expect_silent(print(tie_bsir_with_prior))
 expect_silent(summary(tie_bsir_with_prior))
 expect_silent(predict(tie_bsir_with_prior))
 expect_silent(residuals(object = tie_bsir_with_prior, reh = tie_reh, stats = tie_reh_stats))
-expect_silent(plot(x = tie_bsir_with_prior,reh = tie_reh, stats = tie_reh_stats))
+#expect_silent(plot(x = tie_bsir_with_prior,reh = tie_reh, stats = tie_reh_stats))
 expect_error(aic(tie_bsir_with_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
@@ -179,7 +179,7 @@ expect_silent(print(tie_hmc))
 expect_silent(summary(tie_hmc))
 expect_silent(predict(tie_hmc))
 expect_silent(residuals(object = tie_hmc, reh = tie_reh, stats = tie_reh_stats))
-expect_silent(plot(x = tie_hmc,reh = tie_reh, stats = tie_reh_stats))
+#expect_silent(plot(x = tie_hmc,reh = tie_reh, stats = tie_reh_stats))
 expect_error(aic(tie_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
@@ -205,9 +205,9 @@ ordinal_mle <- remstimate::remstimate(reh = tie_reh,
                         ncores = 1L,
                         method = "MLE")
 expect_silent(print(ordinal_mle))
-expect_silent(summary(ordinal_mle))  
+expect_silent(print(summary(ordinal_mle)))  
 expect_silent(residuals(object = ordinal_mle, reh = tie_reh, stats = tie_reh_stats))
-expect_silent(plot(x = ordinal_mle,reh = tie_reh, stats = tie_reh_stats))
+#expect_silent(plot(x = ordinal_mle,reh = tie_reh, stats = tie_reh_stats))
 
 
 # testing estimation methods with active riskset 

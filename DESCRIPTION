@@ -1,7 +1,7 @@
 Type: Package
 Package: remstimate
-Title: Optimization tools for tie-oriented and actor-oriented relational event models
-Version: 2.2.0
+Title: Optimization Tools for Tie-oriented and Actor-oriented Relational Event Models
+Version: 3.2.0
 Date: 2023-07-03
 Authors@R: 
     c(person(given = "Giuseppe",
@@ -37,7 +37,7 @@ Authors@R:
              role = "ctb",
              email = "j.mulder3@tilburguniversity.edu"))
 Maintainer: Giuseppe Arena <g.arena@tilburguniversity.edu>
-Description: This package offers a set of tools for the optimization of the likelihood in a relational event modeling framework. Frequentist as well as Bayesian approaches are available inside the package.
+Description: A set of tools for the optimization of the likelihood in a relational event modeling framework. Frequentist as well as Bayesian approaches are available inside the package.
 License: MIT + file LICENSE
 URL: https://github.com/TilburgNetworkGroup/remstimate
 BugReports: https://github.com/TilburgNetworkGroup/remstimate/issues
@@ -47,7 +47,7 @@ Imports:
     methods,
     mvnfast,
     Rcpp,
-    remify (>= 3.0.0),
+    remify (>= 3.2.0),
     trust,
     remstats (>= 3.1.0)
 Suggests: 

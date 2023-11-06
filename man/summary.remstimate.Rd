@@ -12,7 +12,7 @@
 \item{...}{further arguments to be passed to the 'summary' method}
 }
 \description{
-A function that prints out the summary of a remstimate object
+A function that returns the summary of a remstimate object
 }
 \examples{
 

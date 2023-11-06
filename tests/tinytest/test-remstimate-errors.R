@@ -29,7 +29,7 @@ ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, re
 # testing errors 
 
 ## input `reh` is not a `remify` object
-expect_error(remstimate::remstimate(reh = data.matrix(attr(tie_reh,"remulate.reh ")),
+expect_error(remstimate::remstimate(reh = data.matrix(attr(tie_reh,"remulate.reh")),
                         stats = tie_reh_stats,
                         method = "MLE",
                         ncores = 1L),
@@ -295,18 +295,36 @@ fixed = TRUE)
 
 # invalid 'remstimate' object
 attr(tie_mle, "model") <- "actor"
-expect_error(plot(tie_mle,tie_reh),
-"'x' and 'reh' have different attribute 'model'",
-fixed = TRUE)
+expect_error(plot(tie_mle,tie_reh),"'x' and 'reh' have different attribute 'model'",fixed = TRUE)
 
 # stats
 attr(tie_mle, "model") <- "tie"
-expect_error(plot(x = tie_mle, reh = tie_reh,residuals = NULL),
-"'stats' must be provided if argument 'residuals' is NULL",
-fixed = TRUE)
+expect_error(plot(x = tie_mle, reh = tie_reh,residuals = NULL),"'stats' must be provided if argument 'residuals' is NULL",fixed = TRUE)
 
 # residuals object
-expect_error(plot(x = tie_mle, reh = tie_reh,residuals = list(a = "foo")),
-"'residuals' must be an object of class 'remstimate' 'residuals'",
-fixed = TRUE)
+expect_error(plot(x = tie_mle, reh = tie_reh,residuals = list(a = "foo")),"'residuals' must be an object of class 'remstimate' 'residuals'",fixed = TRUE)
  
+# number of time points doesn't mach dimensions of remstats object
+## tie-oriented modeling
+tie_reh_stats <- tie_reh_stats[1:10,,]
+class(tie_reh_stats) <- c("tomstats", "remstats")
+expect_error(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        method = "MLE",
+                        ncores = 1L),
+"the number of time points doesn't match the (row) dimension of the 'remstats' object",
+fixed = TRUE)
+## actor-oriented modeling
+data(ao_reh)
+rate_model <- ~ 1 + remstats::indegreeSender()
+choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
+ao_reh_stats$sender_stats <- ao_reh_stats$sender_stats[1:10,,]
+ao_reh_stats$receiver_stats <- ao_reh_stats$receiver_stats[1:10,,]
+class(ao_reh_stats) <- c("aomstats","remstats")
+expect_error(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        method = "MLE",
+                        ncores = 1L),
+"the number of time points doesn't match the (row) dimension of the 'remstats' object",
+fixed = TRUE)

@@ -9,6 +9,18 @@ errorMessage <- function(cond) {
     .Call(`_remstimate_errorMessage`, cond)
 }
 
+#' try1
+#'
+#' function that returns this and that.
+#'
+#' @param dyad dyad
+#' @return list of (original values -1)
+#' @export
+#'
+try1 <- function(dyad) {
+    .Call(`_remstimate_try1`, dyad)
+}
+
 remDerivativesStandard <- function(pars, stats, dyad, omit_dyad, interevent_time, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE) {
     .Call(`_remstimate_remDerivativesStandard`, pars, stats, dyad, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
 }
