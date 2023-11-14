@@ -1,5 +1,4 @@
-library(tinytest)
-library(remstats)
-library(remify)
-library(remstimate)
-tinytest::test_package("remstimate", testdir="tinytest")
+if ( requireNamespace("tinytest", quietly=TRUE) ){
+  tinytest::test_package("remstimate")
+}
+
