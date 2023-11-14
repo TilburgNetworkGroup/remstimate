@@ -72,7 +72,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
       #ifdef _OPENMP
       omp_set_dynamic(0);         // disabling dynamic teams
       omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
+      #pragma omp parallel for if(ncores>1) private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
       #endif
       for(m = 0; m < M; m++){
           arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
@@ -126,7 +126,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
       #ifdef _OPENMP
       omp_set_dynamic(0);         // disabling dynamic teams
       omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-      #pragma omp parallel for private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
+      #pragma omp parallel for if(ncores>1) private(m,d,l,k,log_lambda) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
       #endif
       for(m = 0; m < M; m++){
         arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
@@ -268,7 +268,7 @@ Rcpp::List remDerivativesSenderRates(
     //#ifdef _OPENMP
     //omp_set_dynamic(0);         // disabling dynamic teams
     //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-    //#pragma omp parallel for private(m,n,expected_stat_m,fisher_m) shared(N,M,stats,pars,actor1,interevent_time,riskset_time_vec,riskset_mat,loglik,grad,fisher)
+    //#pragma omp parallel for if(ncores>1) private(m,n,expected_stat_m,fisher_m) shared(N,M,stats,pars,actor1,interevent_time,riskset_time_vec,riskset_mat,loglik,grad,fisher)
     //#endif
     for(m = 0; m < M; m++){
       arma::mat stats_m = stats.slice(m).t(); // dimensions: [P * N]
@@ -1076,7 +1076,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
   //#ifdef _OPENMP
   //omp_set_dynamic(0);         // disabling dynamic teams
   //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-  //#pragma omp parallel for private() shared()
+  //#pragma omp parallel for if(ncores>1) private() shared()
   //#endif
   //for(p = 0; p < P; p++){
   //  arma::vec check_p = arma::sum(stats.col(p),0);
@@ -1112,7 +1112,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
     //#ifdef _OPENMP
     //omp_set_dynamic(0);         // disabling dynamic teams
     //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-    //#pragma omp parallel for private() shared()
+    //#pragma omp parallel for if(ncores>1) private() shared()
     //#endif
     if(m_start > 0){
       for(m = 0; m < m_start; m++){
@@ -1130,7 +1130,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
     //#ifdef _OPENMP
     //omp_set_dynamic(0);         // disabling dynamic teams
     //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-    //#pragma omp parallel for private(m,p,u,z) shared(M,P,D,dyad,stats,baseline,riskset_time_vec,riskset_mat,residuals_mat)
+    //#pragma omp parallel for if(ncores>1) private(m,p,u,z) shared(M,P,D,dyad,stats,baseline,riskset_time_vec,riskset_mat,residuals_mat)
     //#endif
     for(m = m_start; m < M; m++){ // starting from m=1 because at m=0 most of the statistics are zero
       //arma::uword dyad_m = dyad(m);
@@ -1258,7 +1258,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
     //#ifdef _OPENMP
     //omp_set_dynamic(0);         // disabling dynamic teams
     //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-    //#pragma omp parallel for private(m,p,u,z) shared(M,P,D,dyad,stats,baseline,riskset_time_vec,riskset_mat,residuals_mat)
+    //#pragma omp parallel for if(ncores>1) private(m,p,u,z) shared(M,P,D,dyad,stats,baseline,riskset_time_vec,riskset_mat,residuals_mat)
     //#endif
     for(m = m_start; m < M; m++){ // starting from m=m_start because before m_start most of the statistics are zero
       arma::mat stats_m = stats.slice(m); // dimensions : [nActors*nStats]

@@ -40,3 +40,6 @@ _13/04/2023_ `remstimate 2.1.0`:
 
 _30/06/2023_ `remstimate 2.2.0`:
 * NEWS to be updated
+
+_14/11/2023_ `remstimate 2.3.0`:
+* Simultaneous events (likelihood functions adapted)

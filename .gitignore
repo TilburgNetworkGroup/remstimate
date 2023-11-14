@@ -1,4 +1,10 @@
-.vscode
 .Rproj.user
 .Rhistory
+.RData
+.vscode/
+/src/*.o
+/src/*.so
+/inst/doc
+/doc
+/Meta
 .DS_Store
