@@ -33,17 +33,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// try1
-Rcpp::List try1(Rcpp::List dyad);
-RcppExport SEXP _remstimate_try1(SEXP dyadSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type dyad(dyadSEXP);
-    rcpp_result_gen = Rcpp::wrap(try1(dyad));
-    return rcpp_result_gen;
-END_RCPP
-}
 // remDerivativesStandard
 Rcpp::List remDerivativesStandard(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, bool ordinal, int ncores, bool gradient, bool hessian);
 RcppExport SEXP _remstimate_remDerivativesStandard(SEXP parsSEXP, SEXP statsSEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
@@ -218,7 +207,6 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_warningMessage", (DL_FUNC) &_remstimate_warningMessage, 1},
     {"_remstimate_errorMessage", (DL_FUNC) &_remstimate_errorMessage, 1},
-    {"_remstimate_try1", (DL_FUNC) &_remstimate_try1, 1},
     {"_remstimate_remDerivativesStandard", (DL_FUNC) &_remstimate_remDerivativesStandard, 9},
     {"_remstimate_remDerivativesSenderRates", (DL_FUNC) &_remstimate_remDerivativesSenderRates, 10},
     {"_remstimate_remDerivativesReceiverChoice", (DL_FUNC) &_remstimate_remDerivativesReceiverChoice, 11},

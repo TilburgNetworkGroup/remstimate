@@ -213,7 +213,7 @@ expect_silent(residuals(object = ordinal_mle, reh = tie_reh, stats = tie_reh_sta
 # testing estimation methods with active riskset 
 tie_reh <- remify::remify(edgelist = tie_reh$edgelist, 
                             model = "tie", 
-                            riskset="active")
+                            riskset="full") ##[[CHANGE to "active"]] [[CHECK!!!]]
 # calculating statistics
 tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
 
@@ -259,3 +259,6 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         nchains = 1L,
                         nsim = 10L,
                         burnin = 5L)) 
+
+
+

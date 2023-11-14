@@ -4,9 +4,9 @@
 \name{remstimate-package}
 \alias{remstimate-package}
 \alias{_PACKAGE}
-\title{remstimate: Optimization tools for tie-oriented and actor-oriented relational event models}
+\title{remstimate: Optimization Tools for Tie-oriented and Actor-oriented Relational Event Models}
 \description{
-This package offers a set of tools for the optimization of the likelihood in a relational event modeling framework. Frequentist as well as Bayesian approaches are available inside the package.
+A set of tools for the optimization of the likelihood in a relational event modeling framework. Frequentist as well as Bayesian approaches are available inside the package.
 }
 \seealso{
 Useful links:

@@ -312,7 +312,7 @@ expect_error(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         method = "MLE",
                         ncores = 1L),
-"the number of time points doesn't match the (row) dimension of the 'remstats' object",
+"the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
 fixed = TRUE)
 ## actor-oriented modeling
 data(ao_reh)
@@ -326,5 +326,5 @@ expect_error(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         method = "MLE",
                         ncores = 1L),
-"the number of time points doesn't match the (row) dimension of the 'remstats' object",
+"the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
 fixed = TRUE)
