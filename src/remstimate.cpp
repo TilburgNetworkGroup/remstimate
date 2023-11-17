@@ -243,7 +243,6 @@ Rcpp::List remDerivativesSenderRates(
     // variables for internal computation
     arma::vec lambda_s(N);
     arma::vec expected_stat_m(P);
-    Rcpp::IntegerVector dyad_m(3);
     arma::mat fisher_m(P,P);
     double sum_lambda = 0.0;
 
@@ -289,6 +288,7 @@ Rcpp::List remDerivativesSenderRates(
       // riskset_m
       int riskset_time_m = riskset_time_vec(m);
 
+      // loglik and gradient (first addend)
       loglik += arma::accu(arma::log(lambda_s(sender)));
       if(gradient){
         grad += arma::sum(stats_m.cols(sender),1);
@@ -298,7 +298,7 @@ Rcpp::List remDerivativesSenderRates(
       if(riskset_time_m!=(-1)){
         sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s); 
         if(ordinal){
-          loglik-= std::log(sum_lambda);
+          loglik-= std::log(sum_lambda); // loglik second addend
           if(gradient | hessian){
             for(n = 0; n < N; n++){         //loop throughout all actors
               if(riskset_mat(riskset_time_m,n) == 1){
@@ -406,13 +406,12 @@ Rcpp::List remDerivativesReceiverChoice(
         bool hessian  = true){
 
     arma::uword P_d = stats.n_cols; // number of parameters for dyad stats
-    arma::uword M = actor2.size(); // number of events
+    arma::uword M = stats.n_slices; // number of events
     int n;
 
     // variables for internal computation
     arma::vec lambda_d(N);
     arma::vec expected_stat_m(P_d);
-    Rcpp::IntegerVector dyad_m(3);
     arma::mat fisher_m(P_d,P_d);
     arma::uword dyad = 0;
     double denom = 0;
@@ -442,71 +441,65 @@ Rcpp::List remDerivativesReceiverChoice(
       lambda_d = arma::exp(stats_m.t() * pars);
 
       //actors
-      arma::uvec sender = Rcpp::as<arma::uvec>(actor1[m])-1; // -1 because actors' IDs must range between 0 and N-1
-      arma::uvec receiver = Rcpp::as<arma::uvec>(actor2[m])-1; // -1 because actors' IDs must range between 0 and N-1
-      //int type = dyad_m[2]; // when type will be integrated in the function
-
-
+      arma::uvec sender = Rcpp::as<arma::uvec>(actor1[m])-1; // -1 because actors' IDs must range between 0 and N-1, we will call sender[0] because actor1 is an unlisted list of vectors (so at each m there is only one sender)
+      arma::uvec receiver = Rcpp::as<arma::uvec>(actor2[m])-1; // -1 because actors' IDs must range between 0 and N-1, we will call receiver[0] because actor2 is an unlisted list of vectors (so at each m there is only one receiver)
 
       // riskset_m
       int riskset_time_m = riskset_time_vec(m);
 
-      for(arma::uword e = 0; e < sender.n_elem; e++){ // for each event occurred at t[m]
-
-        //reset internal variables at each iteration
-        if(gradient | hessian){
-          fisher_m.zeros();
-          expected_stat_m.zeros();
-        }
-        denom = 0;
-        
-        // changes in the riskset at m-th event
-        if(riskset_time_m!=(-1)){ 
-            for(n = 0; n<N; n++){
-                dyad = remify::getDyadIndex(sender[e],n,0,N,true);
-                if((n!=sender[e]) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
-                    //loglik
-                    denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
-                    if(hessian){
-                    fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
-                    }
-                    if(gradient | hessian){
-                    expected_stat_m += lambda_d(n) * stats_m.col(n);
-                    }
-                }
-            }
-        }
-        else{ // no changes in the riskset at m-th event
-            for(n = 0;n<N; n++){ //loop throught all actors
-            if(n!=sender[e]){ // 
-                //loglik
-                denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
-                if(hessian){
-                    fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
-                }
-                if(gradient | hessian){
-                expected_stat_m += lambda_d(n) * stats_m.col(n);
-                }
-            }
-            }
-        }
-
-        loglik +=  std::log(lambda_d(receiver[e])); //(3) params_d^T * X_sender_receiver
-        loglik -= std::log(denom);
-
-        if(gradient | hessian){
-            expected_stat_m /= denom; //(8)
-        }
-        if(gradient){
-            grad += stats_m.col(receiver[e]); //(7)
-            grad -= expected_stat_m;
-        }
-        if(hessian){
-            fisher_m /= denom;
-            fisher_m += (expected_stat_m * expected_stat_m.t());
-            fisher += fisher_m;
-        }     
+      //reset internal variables at each iteration
+      if(gradient | hessian){
+        fisher_m.zeros();
+        expected_stat_m.zeros();
       }
+      denom = 0;
+      
+      // changes in the riskset at m-th event
+      if(riskset_time_m!=(-1)){ 
+          for(n = 0; n<N; n++){
+              dyad = remify::getDyadIndex(sender[0],n,0,N,true);
+              if((n!=sender[0]) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
+                  //loglik
+                  denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
+                  if(hessian){
+                  fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+                  }
+                  if(gradient | hessian){
+                  expected_stat_m += lambda_d(n) * stats_m.col(n);
+                  }
+              }
+          }
+      }
+      else{ // no changes in the riskset at m-th event
+          for(n = 0;n<N; n++){ //loop throught all actors
+          if(n!=sender[0]){ // 
+              //loglik
+              denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
+              if(hessian){
+                  fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+              }
+              if(gradient | hessian){
+              expected_stat_m += lambda_d(n) * stats_m.col(n);
+              }
+          }
+          }
+      }
+
+      loglik +=  std::log(lambda_d(receiver[0])); //(3) params_d^T * X_sender_receiver
+      loglik -= std::log(denom);
+
+      if(gradient | hessian){
+          expected_stat_m /= denom; //(8)
+      }
+      if(gradient){
+          grad += stats_m.col(receiver[0]); //(7)
+          grad -= expected_stat_m;
+      }
+      if(hessian){
+          fisher_m /= denom;
+          fisher_m += (expected_stat_m * expected_stat_m.t());
+          fisher += fisher_m;
+      }     
     }
 
     if(gradient && !hessian){

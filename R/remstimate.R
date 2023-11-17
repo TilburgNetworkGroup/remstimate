@@ -4,7 +4,7 @@
 #'
 #' @param reh a \code{remify} object of the processed relational event history. Output object of the function \code{remify::remify()}.
 #' @param stats a \code{remstats} object: when `attr(reh,"model")` is `"tie"`, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if `attr(reh,"model")` is `"actor"`, \code{stats} is a list that can contain up to two arrays named \code{"sender_stats"} and \code{"receiver_stats"} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{"sender_stats"}, receivers in the array \code{"receiver_stats"}). Furthermore, it is possible to only estimate the sender rate model or only the receiver choice model, by using the correct naming of the arrays.
-#' @param method the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).
+#' @param method the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}, and also the default method), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).
 #' @param ncores [\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization)
 #' @param prior [\emph{optional}] prior distribution when \code{method} is \code{"BSIR"}. Default value is \code{NULL}, which means that no prior is assumed. For the tie-oriented modeling, the argument \code{prior} is the name of the function in the format \code{name_package::name_density_function}. The parameters of the prior distribution can be supplied as inputs to the remstimate function (e.g., \code{remstimate::remstimate(reh=reh,stats=stats,method="BSIR",ncores=5,prior=mvnfast::dmvn,mu=rep(0,3),sigma=diag(3)*2,log=TRUE)} ). For actor-oriented modeling the argument \code{prior} is a named list of two objects \code{"sender_model"}, which calls the prior function for the sender rate model, and, \code{"receiver_model"}, which calls the prior function for the receiver choice model. For the specification of the prior parameters, the user must define an optional argument called \code{prior_args}, which is also a named list (with names \code{"sender_model"} and \code{"receiver_model"}): each list is a list of objects named after the prior arguments and with value of the prior argument (e.g., \code{prior_args$sender_model = list(mu = rep(1.5,3), sigma = diag(3)*0.5, log = TRUE)}). Finally, both in tie-oriented and actor-oriented modeling prior functions must have an argument that returns the value of the density on a logarithmic scale (i.e., \code{log=TRUE}). \code{log=TRUE} is already set up internally by \code{remstimate()}.
 #' @param nsim  [\emph{optional}] when \code{method} is \code{"HMC"}, \code{nsim} is the number of simulations (iterations) in each chain, when \code{method} is \code{"BSIR"}, then \code{nsim} is the number of samples from the proposal distribution. Default value is \code{1000}.
@@ -124,6 +124,9 @@ remstimate <- function(reh,
     }
 
     # ... method
+    if(!is.null(method)){
+        method <- "MLE" # method "MLE" as default
+    }
     if(!(method %in% c("MLE","GDADAMAX","BSIR","HMC"))){stop("The `method` specified is not available or it is mistyped.")}
     else{
         method  <- match.arg(arg = method, choices = c("MLE","GDADAMAX","BSIR","HMC"), several.ok = FALSE) # default is "MLE"
@@ -141,6 +144,49 @@ remstimate <- function(reh,
             stop("'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)")
     }
 
+    # ... processing start and stop values and method from ("subset" and "method" attribute of remstats object)
+    # we do this now because later the stats object will change dimensions and won't be a remstats object anymore
+    if(all(inherits(stats,c("remstats","tomstats"),TRUE)) | all(inherits(stats,c("remstats","aomstats"),TRUE))){
+        stats_attr_method <- attr(stats,"method")
+        omit_dyad_receiver <- NULL
+        if(stats_attr_method == "pe"){
+            reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
+            reh$M <- reh$E # overwriting dimension (we can do it because remstimate works only with reh$M so if the method is "pt", reh$M will remain so. For method "pe" we assign reh$E to reh$M
+        }
+        else if(stats_attr_method == "pt"){ # we need to process the time variable inside omit_dyad
+            if(!is.null(reh$omit_dyad)){
+                if((model == "actor")){
+                    if(!is.null(stats$receiver_stats)){
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time, riskset = reh$omit_dyad$riskset)
+                    }
+                }
+                reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")]
+            }
+        }
+        if(!is.null(attr(stats,"subset"))){
+            start_stop <- unlist(attr(stats,"subset"))
+            # we expect stats to have dimensions M(or E)xDxP (note: reh$M <- reh$E when method == "pe")
+            if((start_stop[1] >= 1) | (start_stop[2] <= reh$M)){ # subsett-ing may be required
+                if((start_stop[1] != 1) | (start_stop[2] != reh$M)){ # subsetting is needed because at least start or stop is different than the start and stop of the whole sequence
+                    attr(reh,"dyadID") <- attr(reh,"dyadID")[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
+                    attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
+                    attr(reh,"actor2ID") <- attr(reh,"actor2ID")[start_stop[1]:start_stop[2]]
+                    reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
+                    reh$M <- diff(start_stop)+1
+                    if(!is.null(reh$omit_dyad)){
+                        reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]
+                    }
+                }
+            }
+            else{
+                stop("attr(remstats,'subset') incompatible with input 'reh'")
+            }
+        }
+    }
+    else{
+        stop("'stats' must be a 'remstats' object, suitable for tie-oriented modeling ('tomstats') or actor-oriented modeling ('aomstats')")
+    }
+
     # ... stats 
     model_formula <- variable_names <- where_is_baseline <- NULL
     if(model == "tie")
@@ -153,16 +199,12 @@ remstimate <- function(reh,
             if(any(variable_names %in% c("baseline"))){
                 where_is_baseline <- which(variable_names == "baseline")
             }
-            if((dim(stats)[3] == dim(reh$edgelist)[1])){ # if statistics are calculated per event (or per time point when no simultaneous events)
-                attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))
+
+            # processing attributes for method = "pe"
+            if(stats_attr_method == "pe"){ # if statistics are calculated per event (or per time point when no simultaneous events), default keeps attributes as list of vectors (per time point)
+                attr(reh,"dyadID") <- unlist(attr(reh,"dyadID")) # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
                 attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
-                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))
-                #if(!is.null(reh$C)){
-                #    attr(reh,"typeID") <- unlist(attr(reh,"typeID"))
-                #}  
-            }
-            else if(((dim(stats)[3] < dim(reh$edgelist)[1]) & (dim(stats)[3] != length(attr(reh,"dyadID")))) | (dim(stats)[3] > dim(reh$edgelist)[1])){ # if dimensions do not match, throw an error
-                stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")) 
             }
         }
         else if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
@@ -177,46 +219,21 @@ remstimate <- function(reh,
         model_formula <- list() # becomes a list
         if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
             variables_rate <- variables_choice <- NULL
-            #if(!is.null(stats$sender_stats) & !is.null(stats$receiver_stats)){
-            #    if(dim(stats$sender_stats)[1]!=dim(stats$receiver_stats)[1]){
-            #        stop("'sender_stats' and 'receiver_stats' must have the same number of rows (number of events, or number of unique time points)") # this check may fail with remstats [[TO CHECK]]
-            #    }
-            #}
             if(!is.null(stats$sender_stats)){ # sender model is specified
+                if(stats_attr_method == "pe"){ # if statistics are calculated per event, then unlist attribute actor1ID
+                    attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
+                }
                 variables_rate <- dimnames(stats$sender_stats)[[3]]
                 model_formula[["rate_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + ")))
                 stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
                 # is there a baseline term?
                 where_is_baseline <- which(variables_rate == "baseline")
-                if((dim(stats$sender_stats)[3] == dim(reh$edgelist)[1])){ # if statistics are calculated per event (or per time point when no simultaneous events)
-                    attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))
-                    attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
-                    attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))
-                    #if(!is.null(reh$C)){
-                    #    attr(reh,"typeID") <- unlist(attr(reh,"typeID"))
-                    #}  
-                }
-                else if(((dim(stats$sender_stats)[3] < dim(reh$edgelist)[1]) & (dim(stats$sender_stats)[3] != length(attr(reh,"dyadID")))) | (dim(stats$sender_stats)[3] > dim(reh$edgelist)[1])){ # if dimensions do not match, throw an error
-                    stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
-                }
             }
             if(!is.null(stats$receiver_stats)){ # receiver model is specified
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")) # unlist always for actor-oriented model
                 variables_choice <- dimnames(stats$receiver_stats)[[3]] #as.vector(sapply(dimnames(stats$receiver_stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
                 model_formula[["choice_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_choice,collapse=" + ")))
                 stats$receiver_stats <- aperm(stats$receiver_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
-                if(is.null(stats$sender_stats)){ #if we haven't processed the attributes yet on stats$sender_stats, we do it now
-                    if((dim(stats$receiver_stats)[3] == dim(reh$edgelist)[1])){ # if statistics are calculated per event (or per time point when no simultaneous events)
-                        attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))
-                        attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
-                        attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))
-                        #if(!is.null(reh$C)){
-                        #    attr(reh,"typeID") <- unlist(attr(reh,"typeID"))
-                        #}  
-                    }
-                    else if(((dim(stats$receiver_stats)[3] < dim(reh$edgelist)[1]) & (dim(stats$receiver_stats)[3] != length(attr(reh,"dyadID")))) | (dim(stats$receiver_stats)[3] > dim(reh$edgelist)[1])){ # if dimensions do not match, throw an error
-                        stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
-                    }
-                }
             }
             # vector of variable names and list of model formulas
             variable_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
@@ -228,6 +245,7 @@ remstimate <- function(reh,
             stop("actor-oriented modeling: 'stats' must be either a 'aomstats' 'remstats' object or a list of two arrays named 'sender_stats' and 'receiver_stats'")
         }
     }
+
 
     # ... GDADAMAX: optional arguments
     if(method == "GDADAMAX"){
@@ -409,7 +427,18 @@ remstimate <- function(reh,
 
     # ... creating  an empty lists
     remstimateList <- list()
-        
+    
+    # ... setting up objects for actor-oriented model
+    if(model == "actor"){
+        senderRate <- c(TRUE,FALSE) # meaning that the first BSIR will be run on the "sender rate" model and the second on the "receiver choice"
+        which_model <- c("sender_model","receiver_model")
+        which_stats <- c("sender_stats","receiver_stats")
+        actor1ID_condition <- c(TRUE,FALSE)
+        if(stats_attr_method == "pe"){
+            actor1ID_condition <- as.logical(actor1ID_condition*FALSE) # actor1ID is needed unlist both for sender and receiver model
+        }
+    }
+
     # ... estimating with Maximum Likelihood (MLE) or Gradient Descent ADAMAX (GDADAMAX)
     if(method %in% c("MLE","GDADAMAX")){
         if(model == "tie"){ # Tie-oriented Model  (Relational Event Model)
@@ -508,24 +537,22 @@ remstimate <- function(reh,
             # iterations
             remstimateList$iterations <- optimum_obj$iterations                                    
         }
-        if(model == "actor" ){ # Actor-oriented Model 
+        if(model == "actor"){ # Actor-oriented Model 
             optimum_model <- list()
-            senderRate <- c(TRUE,FALSE) # meaning that the first BSIR will be run on the "sender rate" model and the second on the "receiver choice"
-            which_model <- c("sender_model","receiver_model")
-            which_stats <- c("sender_stats","receiver_stats")
             for(i in 1:2){
                 if(!is.null(stats[[which_stats[i]]])){  # run estimation only if the model is specified
+                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
+                    omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
                     if(method == "MLE"){ # Maximum Likelihood Estimates
-                        # code here
                         optimum_model[[which_model[i]]] <- trust::trust(objfun = remDerivatives, 
                                     parinit = rep(0,dim(stats[[which_stats[i]]])[2]), 
                                     rinit = 1, 
                                     rmax = 100, 
                                     stats = stats[[which_stats[i]]], 
-                                    actor1 = attr(reh,"actor1ID"),
+                                    actor1 = actor1ID_ls,
                                     actor2 = attr(reh,"actor2ID"),
                                     dyad = list(),
-                                    omit_dyad = reh$omit_dyad, 
+                                    omit_dyad = omit_dyad_actor, 
                                     interevent_time = reh$intereventTime,
                                     model = model,
                                     senderRate = senderRate[i],
@@ -539,10 +566,10 @@ remstimate <- function(reh,
                         }
                         optimum_model[[which_model[i]]] <- GDADAMAX(pars = init[[which_model[i]]], 
                                                 stats = stats[[which_stats[i]]],  
-                                                actor1 = attr(reh,"actor1ID"),
+                                                actor1 = actor1ID_ls,
                                                 actor2 = attr(reh,"actor2ID"),
                                                 dyad = list(),
-                                                omit_dyad = reh$omit_dyad,
+                                                omit_dyad = omit_dyad_actor,
                                                 interevent_time = reh$intereventTime,
                                                 model = model,
                                                 ordinal = ordinal,
@@ -555,10 +582,10 @@ remstimate <- function(reh,
                                                 epsilon = epsilon)
                         optimum_model[[which_model[i]]]$hessian <- remDerivatives(pars = optimum_model[[which_model[i]]]$argument,
                                                                         stats = stats[[which_stats[i]]],  
-                                                                        actor1 = attr(reh,"actor1ID"),
+                                                                        actor1 = actor1ID_ls,
                                                                         actor2 = attr(reh,"actor2ID"),
                                                                         dyad = list(),
-                                                                        omit_dyad = reh$omit_dyad,
+                                                                        omit_dyad = omit_dyad_actor,
                                                                         interevent_time = reh$intereventTime,
                                                                         model = model,
                                                                         ordinal = ordinal,
@@ -570,7 +597,6 @@ remstimate <- function(reh,
                                                                         hessian = TRUE) 
                         optimum_model[[which_model[i]]]$hessian <- optimum_model[[which_model[i]]]$hessian$hessian   
                     }
-
                     # output for the receiver model
                     remstimateList[[which_model[i]]] <- list() 
                     # coefficients
@@ -591,17 +617,17 @@ remstimate <- function(reh,
                     remstimateList[[which_model[i]]]$residual.deviance <- -2*remstimateList[[which_model[i]]]$loglik
                     # null deviance                                    
                     remstimateList[[which_model[i]]]$null.deviance <- NULL
-
+                    
                     if(senderRate[i]){ # only for sender model
                         remstimateList$sender_model$null.deviance <- 2*(trust::trust(objfun = remDerivatives, 
                                                                                     parinit = c(0), 
                                                                                     rinit = 1, 
                                                                                     rmax = 100, 
                                                                                     stats = array(1,dim=c(dim(stats$sender_stats)[1],1,dim(stats$sender_stats)[3])),  
-                                                                                    actor1 = attr(reh,"actor1ID"),
+                                                                                    actor1 = actor1ID_ls,
                                                                                     actor2 = list(),
                                                                                     dyad = list(),
-                                                                                    omit_dyad = reh$omit_dyad,
+                                                                                    omit_dyad = omit_dyad_actor,
                                                                                     interevent_time = reh$intereventTime,
                                                                                     model = model,
                                                                                     C = ifelse(is.null(reh$C),1,reh$C),
@@ -615,10 +641,10 @@ remstimate <- function(reh,
                                                                                                                     rinit = 1, 
                                                                                                                     rmax = 100, 
                                                                                                                     stats = array(1,dim=c(dim(stats$receiver_stats)[1],1,dim(stats$receiver_stats)[3])), 
-                                                                                                                    actor1 = attr(reh,"actor1ID"),
+                                                                                                                    actor1 = actor1ID_ls,
                                                                                                                     actor2 = attr(reh,"actor2ID"),
                                                                                                                     dyad = list(),
-                                                                                                                    omit_dyad = reh$omit_dyad, 
+                                                                                                                    omit_dyad = omit_dyad_actor, 
                                                                                                                     interevent_time = reh$intereventTime,
                                                                                                                     model = model,
                                                                                                                     senderRate = FALSE,
@@ -729,15 +755,13 @@ remstimate <- function(reh,
         }
         if(model == "actor"){ # Actor-oriented Model
             bsir <- list()
-            senderRate <- c(TRUE,FALSE) # meaning that the first BSIR will be run on the "sender rate" model and the second on the "receiver choice"
-            which_model <- c("sender_model","receiver_model")
-            which_stats <- c("sender_stats","receiver_stats")
             for(i in 1:2){
                 if(!is.null(stats[[which_stats[i]]])){  # run BSIR only if the model is specified
                     bsir_i <- list()
                     bsir_i$log_posterior <- rep(0,nsim)
                     bsir_i$draws <- list()  
-
+                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
+                    omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
                     # (1) generate from the proposal (importance distribution)
 
                     # First find location and scale parameters (mles and variances and covariances matrix)
@@ -746,10 +770,10 @@ remstimate <- function(reh,
                                                         rinit = 1, 
                                                         rmax = 100, 
                                                         stats = stats[[which_stats[i]]], 
-                                                        actor1 = attr(reh,"actor1ID"),
+                                                        actor1 = actor1ID_ls,
                                                         actor2 = attr(reh,"actor2ID"),
                                                         dyad = list(),
-                                                        omit_dyad = reh$omit_dyad,
+                                                        omit_dyad = omit_dyad_actor,
                                                         interevent_time = reh$intereventTime,
                                                         model = model,
                                                         ordinal = ordinal,
@@ -782,10 +806,10 @@ remstimate <- function(reh,
                     ## (2.2) summing loglik                   
                     loglik <- apply(bsir_i$draws,1,function(x) (-1)*remDerivatives(pars = x, 
                                     stats = stats[[which_stats[i]]], 
-                                    actor1 = attr(reh,"actor1ID"),
+                                    actor1 = actor1ID_ls,
                                     actor2 = attr(reh,"actor2ID"),
                                     dyad = list(),
-                                    omit_dyad = reh$omit_dyad,
+                                    omit_dyad = omit_dyad_actor,
                                     interevent_time = reh$intereventTime,
                                     model = model,
                                     ordinal = ordinal,
@@ -871,11 +895,10 @@ remstimate <- function(reh,
             remstimateList <- c(hmc_out,hmc)
         }
         if(model == "actor"){ # Actor-oriented Model
-            senderRate <- c(TRUE,FALSE) # meaning that the first BSIR will be run on the "sender rate" model and the second on the "receiver choice"
-            which_model <- c("sender_model","receiver_model")
-            which_stats <- c("sender_stats","receiver_stats")
             for(i in 1:2){
                 if(!is.null(stats[[which_stats[i]]])){
+                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
+                    omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
                     hmc_i <- list()  
                     if(is.null(init[[which_model[i]]])){
                         init[[which_model[i]]] <- matrix(stats::runif((dim(stats[[which_stats[i]]])[2])*nchains,-0.1,0.1),nrow=dim(stats[[which_stats[i]]])[2],ncol=nchains)
@@ -888,10 +911,10 @@ remstimate <- function(reh,
                                 meanPrior = rep(0,dim(stats[[which_stats[i]]])[2]),
                                 sigmaPrior = diag(dim(stats[[which_stats[i]]])[2]),
                                 stats = stats[[which_stats[i]]],  
-                                actor1 = attr(reh,"actor1ID"),
+                                actor1 = actor1ID_ls,
                                 actor2 = attr(reh,"actor2ID"),
                                 dyad = list(), 
-                                omit_dyad = reh$omit_dyad,
+                                omit_dyad = omit_dyad_receiver,
                                 interevent_time = reh$intereventTime,
                                 model = model,
                                 senderRate = senderRate[i],
