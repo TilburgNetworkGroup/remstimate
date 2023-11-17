@@ -151,36 +151,15 @@ remstimate <- function(reh,
         omit_dyad_receiver <- NULL
         if(stats_attr_method == "pe"){
             reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
-            reh$M <- reh$E # overwriting dimension (we can do it because remstimate works only with reh$M so if the method is "pt", reh$M will remain so. For method "pe" we assign reh$E to reh$M
-        }
-        else if(stats_attr_method == "pt"){ # we need to process the time variable inside omit_dyad
-            if(!is.null(reh$omit_dyad)){
-                if((model == "actor")){
-                    if(!is.null(stats$receiver_stats)){
-                        omit_dyad_receiver <- list(time = reh$omit_dyad$time, riskset = reh$omit_dyad$riskset)
-                    }
-                }
-                reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")]
+            if(!is.null(reh$E)){ # reh$E is NULL only when there are no simultaneous events
+                reh$M <- reh$E # overwriting dimension (we can do it because remstimate works only with reh$M so if the method is "pt", reh$M will remain so. For method "pe" we assign reh$E to reh$M
             }
         }
         if(!is.null(attr(stats,"subset"))){
-            start_stop <- unlist(attr(stats,"subset"))
-            # we expect stats to have dimensions M(or E)xDxP (note: reh$M <- reh$E when method == "pe")
-            if((start_stop[1] >= 1) | (start_stop[2] <= reh$M)){ # subsett-ing may be required
-                if((start_stop[1] != 1) | (start_stop[2] != reh$M)){ # subsetting is needed because at least start or stop is different than the start and stop of the whole sequence
-                    attr(reh,"dyadID") <- attr(reh,"dyadID")[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
-                    attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
-                    attr(reh,"actor2ID") <- attr(reh,"actor2ID")[start_stop[1]:start_stop[2]]
-                    reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
-                    reh$M <- diff(start_stop)+1
-                    if(!is.null(reh$omit_dyad)){
-                        reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]
-                    }
-                }
-            }
-            else{
-                stop("attr(remstats,'subset') incompatible with input 'reh'")
-            }
+            start_stop <- as.numeric(unlist(attr(stats,"subset")))
+        }
+        else{
+            start_stop <- c(1,reh$M)
         }
     }
     else{
@@ -195,17 +174,32 @@ remstimate <- function(reh,
             variable_names <- dimnames(stats)[[3]]
             model_formula <- stats::as.formula(paste("~ ",paste(variable_names,collapse=" + ")))
             stats <- aperm(stats, perm = c(2,3,1)) # stats reshaped in [D*U*M]
+
             # is there a baseline term?
             if(any(variable_names %in% c("baseline"))){
                 where_is_baseline <- which(variable_names == "baseline")
             }
 
-            # processing attributes for method = "pe"
-            if(stats_attr_method == "pe"){ # if statistics are calculated per event (or per time point when no simultaneous events), default keeps attributes as list of vectors (per time point)
-                attr(reh,"dyadID") <- unlist(attr(reh,"dyadID")) # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
-                attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
-                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")) 
+            # start and stop for tie-oriented model
+            if(stats_attr_method == "pt"){
+                attr(reh,"dyadID") <- attr(reh,"dyadID")[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
+                attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- attr(reh,"actor2ID")[start_stop[1]:start_stop[2]] 
+                if(!is.null(reh$omit_dyad)){
+                    reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")]
+                }
             }
+            else if(stats_attr_method =="pe"){
+                attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
+                attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))[start_stop[1]:start_stop[2]] 
+            } 
+            reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
+            reh$M <- diff(start_stop)+1
+            if(!is.null(reh$omit_dyad)){
+                reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]
+            }
+            
         }
         else if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
             stop("'remstats' object supplied cannot work for tie-oriented modeling")
@@ -220,9 +214,6 @@ remstimate <- function(reh,
         if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
             variables_rate <- variables_choice <- NULL
             if(!is.null(stats$sender_stats)){ # sender model is specified
-                if(stats_attr_method == "pe"){ # if statistics are calculated per event, then unlist attribute actor1ID
-                    attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))
-                }
                 variables_rate <- dimnames(stats$sender_stats)[[3]]
                 model_formula[["rate_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + ")))
                 stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
@@ -230,13 +221,41 @@ remstimate <- function(reh,
                 where_is_baseline <- which(variables_rate == "baseline")
             }
             if(!is.null(stats$receiver_stats)){ # receiver model is specified
-                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")) # unlist always for actor-oriented model
                 variables_choice <- dimnames(stats$receiver_stats)[[3]] #as.vector(sapply(dimnames(stats$receiver_stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
                 model_formula[["choice_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_choice,collapse=" + ")))
                 stats$receiver_stats <- aperm(stats$receiver_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
             }
+
             # vector of variable names and list of model formulas
             variable_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
+
+            # start and stop for tie-oriented model
+            if(stats_attr_method == "pt"){
+                attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")[start_stop[1]:start_stop[2]]) # unlist here because of receiver-choice model
+                if(!is.null(reh$omit_dyad)){
+                    time_points_to_select <- c(1:reh$E)
+                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
+                        time_points_to_select <- c(1:reh$E)[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
+                    }
+                    if(!is.null(stats$receiver_stats)){
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[time_points_to_select[start_stop[1]]:time_points_to_select[start_stop[2]]], riskset = reh$omit_dyad$riskset)
+                    }
+                    reh$omit_dyad$time <-  reh$omit_dyad$time[time_points_to_select][start_stop[1]:start_stop[2]]
+                }
+            }
+            else if(stats_attr_method == "pe"){
+                attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))[start_stop[1]:start_stop[2]]
+                if(!is.null(reh$omit_dyad)){
+                    if(!is.null(stats$receiver_stats)){
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[start_stop[1]:start_stop[2]]  , riskset = reh$omit_dyad$riskset)
+                    } 
+                    reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]        
+                }
+            } 
+            reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
+            reh$M <- diff(start_stop)+1
         }
         else if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
             stop("'remstats' object supplied cannot work for tie-oriented modeling")
@@ -245,7 +264,6 @@ remstimate <- function(reh,
             stop("actor-oriented modeling: 'stats' must be either a 'aomstats' 'remstats' object or a list of two arrays named 'sender_stats' and 'receiver_stats'")
         }
     }
-
 
     # ... GDADAMAX: optional arguments
     if(method == "GDADAMAX"){
@@ -760,7 +778,7 @@ remstimate <- function(reh,
                     bsir_i <- list()
                     bsir_i$log_posterior <- rep(0,nsim)
                     bsir_i$draws <- list()  
-                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
+                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID")[start_stop[1]:start_stop[2]] else unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
                     omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
                     # (1) generate from the proposal (importance distribution)
 
@@ -897,7 +915,7 @@ remstimate <- function(reh,
         if(model == "actor"){ # Actor-oriented Model
             for(i in 1:2){
                 if(!is.null(stats[[which_stats[i]]])){
-                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
+                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID")[start_stop[1]:start_stop[2]] else unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
                     omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
                     hmc_i <- list()  
                     if(is.null(init[[which_model[i]]])){
@@ -914,7 +932,7 @@ remstimate <- function(reh,
                                 actor1 = actor1ID_ls,
                                 actor2 = attr(reh,"actor2ID"),
                                 dyad = list(), 
-                                omit_dyad = omit_dyad_receiver,
+                                omit_dyad = omit_dyad_actor,
                                 interevent_time = reh$intereventTime,
                                 model = model,
                                 senderRate = senderRate[i],
