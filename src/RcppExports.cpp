@@ -34,14 +34,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // remDerivativesStandard
-Rcpp::List remDerivativesStandard(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, bool ordinal, int ncores, bool gradient, bool hessian);
+Rcpp::List remDerivativesStandard(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, bool ordinal, int ncores, bool gradient, bool hessian);
 RcppExport SEXP _remstimate_remDerivativesStandard(SEXP parsSEXP, SEXP statsSEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type dyad(dyadSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type dyad(dyadSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
     Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
@@ -53,14 +53,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // remDerivativesSenderRates
-Rcpp::List remDerivativesSenderRates(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& actor1, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, int C, int D, bool ordinal, bool gradient, bool hessian);
+Rcpp::List remDerivativesSenderRates(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, int C, int D, bool ordinal, bool gradient, bool hessian);
 RcppExport SEXP _remstimate_remDerivativesSenderRates(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP CSEXP, SEXP DSEXP, SEXP ordinalSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor1(actor1SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
     Rcpp::traits::input_parameter< int >::type C(CSEXP);
@@ -73,15 +73,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // remDerivativesReceiverChoice
-Rcpp::List remDerivativesReceiverChoice(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& actor1, const Rcpp::List& actor2, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, int N, int C, int D, bool gradient, bool hessian);
+Rcpp::List remDerivativesReceiverChoice(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, int N, int C, int D, bool gradient, bool hessian);
 RcppExport SEXP _remstimate_remDerivativesReceiverChoice(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP NSEXP, SEXP CSEXP, SEXP DSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor1(actor1SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor2(actor2SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor2(actor2SEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
     Rcpp::traits::input_parameter< int >::type N(NSEXP);
@@ -94,16 +94,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // remDerivatives
-Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& actor1, const Rcpp::List& actor2, const Rcpp::List& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool gradient, bool hessian, bool senderRate, Rcpp::Nullable<int> N, Rcpp::Nullable<int> C, Rcpp::Nullable<int> D);
+Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool gradient, bool hessian, bool senderRate, Rcpp::Nullable<int> N, Rcpp::Nullable<int> C, Rcpp::Nullable<int> D);
 RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP senderRateSEXP, SEXP NSEXP, SEXP CSEXP, SEXP DSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor1(actor1SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor2(actor2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type dyad(dyadSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor2(actor2SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type dyad(dyadSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
@@ -120,16 +120,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // GDADAMAX
-Rcpp::List GDADAMAX(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& actor1, const Rcpp::List& actor2, const Rcpp::List& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, bool senderRate, bool gradient, bool hessian, Rcpp::Nullable<int> N, Rcpp::Nullable<int> C, Rcpp::Nullable<int> D, int ncores, int epochs, double learning_rate, double beta1, double beta2, double epsilon);
+Rcpp::List GDADAMAX(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, bool senderRate, bool gradient, bool hessian, Rcpp::Nullable<int> N, Rcpp::Nullable<int> C, Rcpp::Nullable<int> D, int ncores, int epochs, double learning_rate, double beta1, double beta2, double epsilon);
 RcppExport SEXP _remstimate_GDADAMAX(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP senderRateSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP NSEXP, SEXP CSEXP, SEXP DSEXP, SEXP ncoresSEXP, SEXP epochsSEXP, SEXP learning_rateSEXP, SEXP beta1SEXP, SEXP beta2SEXP, SEXP epsilonSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor1(actor1SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor2(actor2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type dyad(dyadSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor2(actor2SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type dyad(dyadSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
@@ -151,7 +151,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // HMC
-Rcpp::List HMC(arma::mat pars_init, arma::uword nsim, arma::uword nchains, arma::uword burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const Rcpp::List& actor1, const Rcpp::List& actor2, const Rcpp::List& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool senderRate, Rcpp::Nullable<int> N, Rcpp::Nullable<int> C, Rcpp::Nullable<int> D, arma::uword thin, arma::uword L, double epsilon);
+Rcpp::List HMC(arma::mat pars_init, arma::uword nsim, arma::uword nchains, arma::uword burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool senderRate, Rcpp::Nullable<int> N, Rcpp::Nullable<int> C, Rcpp::Nullable<int> D, arma::uword thin, arma::uword L, double epsilon);
 RcppExport SEXP _remstimate_HMC(SEXP pars_initSEXP, SEXP nsimSEXP, SEXP nchainsSEXP, SEXP burninSEXP, SEXP meanPriorSEXP, SEXP sigmaPriorSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP senderRateSEXP, SEXP NSEXP, SEXP CSEXP, SEXP DSEXP, SEXP thinSEXP, SEXP LSEXP, SEXP epsilonSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -163,9 +163,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type meanPrior(meanPriorSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type sigmaPrior(sigmaPriorSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor1(actor1SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor2(actor2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type dyad(dyadSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor2(actor2SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type dyad(dyadSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
@@ -183,16 +183,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // computeDiagnostics
-Rcpp::List computeDiagnostics(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& actor1, const Rcpp::List& actor2, const Rcpp::List& dyad, const Rcpp::List& omit_dyad, std::string model, int N, bool senderRate, int ncores, double baseline);
+Rcpp::List computeDiagnostics(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, std::string model, int N, bool senderRate, int ncores, double baseline);
 RcppExport SEXP _remstimate_computeDiagnostics(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP modelSEXP, SEXP NSEXP, SEXP senderRateSEXP, SEXP ncoresSEXP, SEXP baselineSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor1(actor1SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type actor2(actor2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type dyad(dyadSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor2(actor2SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type dyad(dyadSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
     Rcpp::traits::input_parameter< int >::type N(NSEXP);

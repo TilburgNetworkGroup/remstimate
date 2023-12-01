@@ -7,7 +7,7 @@ data(tie_reh)
 tie_model <- ~ 1 + remstats::indegreeSender()+remstats::inertia()+remstats::reciprocity() 
 
 # calculating statistics
-tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
+tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model, method = "pt")
 
 # (1) method = "MLE"
 expect_silent(remstimate::remstimate(reh = tie_reh,

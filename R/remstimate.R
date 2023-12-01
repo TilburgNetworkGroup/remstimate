@@ -116,6 +116,11 @@ remstimate <- function(reh,
     if(is.null(model) | !(model %in% c("actor","tie"))){
         stop("attribute 'model' of input 'reh' must be either 'actor' or 'tie'")
     }
+    if(!is.null(attr(stats,"model"))){
+        if(attr(stats,"model")!=attr(reh,"model")){
+            stop("attribute 'model' of input 'reh' and input 'stats' must be the same")
+        }
+    }
 
     # ... active riskset? then overwrite two objects (this prevents from coding many ifelse() to switch between active-oriented riskset objects and full-oriented riskset objects)
     if((attr(reh,"riskset") == "active") & (model == "tie")){
@@ -124,7 +129,7 @@ remstimate <- function(reh,
     }
 
     # ... method
-    if(!is.null(method)){
+    if(is.null(method)){
         method <- "MLE" # method "MLE" as default
     }
     if(!(method %in% c("MLE","GDADAMAX","BSIR","HMC"))){stop("The `method` specified is not available or it is mistyped.")}
@@ -144,13 +149,23 @@ remstimate <- function(reh,
             stop("'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)")
     }
 
+    # ... omit dyad
+    if(is.null(reh$omit_dyad)){
+        reh$omit_dyad <- list()
+    }
+
     # ... processing start and stop values and method from ("subset" and "method" attribute of remstats object)
     # we do this now because later the stats object will change dimensions and won't be a remstats object anymore
     if(all(inherits(stats,c("remstats","tomstats"),TRUE)) | all(inherits(stats,c("remstats","aomstats"),TRUE))){
         stats_attr_method <- attr(stats,"method")
+        if(is.null(stats_attr_method)){
+            stop("attribute 'method' not found inside object 'remstats'. Input argument 'stats' must be an object of class 'remstats' from the package 'remstats' (>=3.2.0)")
+        }
         omit_dyad_receiver <- NULL
         if(stats_attr_method == "pe"){
-            reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
+            if(!ordinal){
+                reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
+            }
             if(!is.null(reh$E)){ # reh$E is NULL only when there are no simultaneous events
                 reh$M <- reh$E # overwriting dimension (we can do it because remstimate works only with reh$M so if the method is "pt", reh$M will remain so. For method "pe" we assign reh$E to reh$M
             }
@@ -163,30 +178,34 @@ remstimate <- function(reh,
         }
     }
     else{
-        stop("'stats' must be a 'remstats' object, suitable for tie-oriented modeling ('tomstats') or actor-oriented modeling ('aomstats')")
+        stop("'stats' must be a 'remstats' object from the package 'remstats' (>= 3.2.0), suitable for tie-oriented modeling ('tomstats') or actor-oriented modeling ('aomstats')")
     }
 
     # ... stats 
-    model_formula <- variable_names <- where_is_baseline <- NULL
+    model_formula <- variables_names <- where_is_baseline <- NULL
     if(model == "tie")
     {   
         if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
-            variable_names <- dimnames(stats)[[3]]
-            model_formula <- stats::as.formula(paste("~ ",paste(variable_names,collapse=" + ")))
-            stats <- aperm(stats, perm = c(2,3,1)) # stats reshaped in [D*U*M]
-
-            # is there a baseline term?
-            if(any(variable_names %in% c("baseline"))){
-                where_is_baseline <- which(variable_names == "baseline")
+            variables_names <- dimnames(stats)[[3]]
+            if(is.null(attr(stats,"formula"))){
+                model_formula <- stats::as.formula(paste("~ ",paste(variables_names,collapse=" + ")))
             }
-
+            else{
+                model_formula <- attr(stats,"formula")
+            }
+            # is there a baseline term?
+            if(any(tolower(variables_names) %in% c("baseline"))){
+                where_is_baseline <- which(variables_names == "baseline")
+            }
+            stats <- aperm(stats, perm = c(2,3,1)) # stats reshaped in [D*U*M]
             # start and stop for tie-oriented model
             if(stats_attr_method == "pt"){
                 attr(reh,"dyadID") <- attr(reh,"dyadID")[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
                 attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
                 attr(reh,"actor2ID") <- attr(reh,"actor2ID")[start_stop[1]:start_stop[2]] 
-                if(!is.null(reh$omit_dyad)){
-                    reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")]
+                if(!is.null(reh$omit_dyad) & !ordinal){
+                    if(!is.null(attr(reh,"indices_simultaneous_events")))
+                    reh$omit_dyad$time <-  reh$omit_dyad$time[-simultaneous_events]
                 }
             }
             else if(stats_attr_method =="pe"){
@@ -199,7 +218,6 @@ remstimate <- function(reh,
             if(!is.null(reh$omit_dyad)){
                 reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]
             }
-            
         }
         else if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
             stop("'remstats' object supplied cannot work for tie-oriented modeling")
@@ -215,27 +233,39 @@ remstimate <- function(reh,
             variables_rate <- variables_choice <- NULL
             if(!is.null(stats$sender_stats)){ # sender model is specified
                 variables_rate <- dimnames(stats$sender_stats)[[3]]
-                model_formula[["rate_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + ")))
-                stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
+                if(!is.null(attr(stats,"formula")$rate)){
+                    model_formula[["rate_model_formula"]] <- attr(stats,"formula")$rate
+                }
+                else{
+                    model_formula[["rate_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + ")))
+                }
                 # is there a baseline term?
-                where_is_baseline <- which(variables_rate == "baseline")
+                if(any(tolower(variables_rate) %in% c("baseline"))){
+                    where_is_baseline <- which(variables_rate == "baseline")
+                }
+                stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
             }
             if(!is.null(stats$receiver_stats)){ # receiver model is specified
-                variables_choice <- dimnames(stats$receiver_stats)[[3]] #as.vector(sapply(dimnames(stats$receiver_stats)[[3]],function(x) sub(pattern = ".x.", replacement = ":", x = x)))
-                model_formula[["choice_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_choice,collapse=" + ")))
+                variables_choice <- dimnames(stats$receiver_stats)[[3]] 
+                if(!is.null(attr(stats,"formula")$choice)){
+                    model_formula[["choice_model_formula"]] <- attr(stats,"formula")$choice
+                }
+                else{
+                    model_formula[["choice_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_choice,collapse=" + ")))
+                }
                 stats$receiver_stats <- aperm(stats$receiver_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
             }
 
             # vector of variable names and list of model formulas
-            variable_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
+            variables_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
 
-            # start and stop for tie-oriented model
+            # start and stop for actor-oriented model
             if(stats_attr_method == "pt"){
                 attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
                 attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")[start_stop[1]:start_stop[2]]) # unlist here because of receiver-choice model
                 if(!is.null(reh$omit_dyad)){
                     time_points_to_select <- c(1:reh$E)
-                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
+                    if(!is.null(attr(reh,"indices_simultaneous_events")) & !ordinal){
                         time_points_to_select <- c(1:reh$E)[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
                     }
                     if(!is.null(stats$receiver_stats)){
@@ -258,11 +288,16 @@ remstimate <- function(reh,
             reh$M <- diff(start_stop)+1
         }
         else if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
-            stop("'remstats' object supplied cannot work for tie-oriented modeling")
+            stop("'remstats' object supplied cannot work for actor-oriented modeling")
         }
         else{
             stop("actor-oriented modeling: 'stats' must be either a 'aomstats' 'remstats' object or a list of two arrays named 'sender_stats' and 'receiver_stats'")
         }
+    }
+
+    # ... adjusting the intereventTime when ordinal = TRUE
+    if(ordinal){
+        reh$intereventTime <- rep(1,reh$M) # at this stage the correct value is assigned to reh$M 
     }
 
     # ... GDADAMAX: optional arguments
@@ -477,10 +512,9 @@ remstimate <- function(reh,
             }  
             if(method == "GDADAMAX"){
                 if(is.null(init)){
-                    beta_0 <- log(reh$M) - log(sum(reh$intereventTime)*reh$D) # MLE of the intercept under only intercept model
                     init <- stats::runif(dim(stats)[2],-0.1,0.1) # previously rep(0,dim(stats)[2])
-                    if(any(dimnames(stats)[[2]] == "baseline")){
-                        init[which(dimnames(stats)[[2]] == "baseline")] <- init[which(dimnames(stats)[[2]] == "baseline")] + beta_0
+                    if(any(variables_names == "baseline")){
+                        init[which(variables_names == "baseline")] <- init[which(variables_names == "baseline")] + (log(reh$M) - log(sum(reh$intereventTime)*reh$D))
                     }
                 }
                 optimum_obj <- GDADAMAX(pars = init,
@@ -507,7 +541,7 @@ remstimate <- function(reh,
             }            
             # coefficients                         
             remstimateList$coefficients <- as.vector(optimum_obj$argument)
-            names(remstimateList$coefficients) <- variable_names
+            names(remstimateList$coefficients) <- variables_names
             # loglik
             remstimateList$loglik <- -optimum_obj$value # loglikelihood value at MLE values (we take the '-value' because we minimized the '-loglik')       
             # gradient 
@@ -519,7 +553,7 @@ remstimate <- function(reh,
             # standard errors
             remstimateList$se <- diag(remstimateList$vcov)**0.5 # standard errors
             # re-naming
-            names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- dimnames(stats)[[2]]                           
+            names(remstimateList$coefficients) <- names(remstimateList$se) <- rownames(remstimateList$vcov) <- colnames(remstimateList$vcov) <- variables_names                      
             # residual.deviance
             remstimateList$residual.deviance <- -2*remstimateList$loglik        
             # null.deviance
@@ -553,7 +587,8 @@ remstimate <- function(reh,
             # converged
             remstimateList$converged <- optimum_obj$converged
             # iterations
-            remstimateList$iterations <- optimum_obj$iterations                                    
+            remstimateList$iterations <- optimum_obj$iterations    
+                                          
         }
         if(model == "actor"){ # Actor-oriented Model 
             optimum_model <- list()
@@ -768,7 +803,7 @@ remstimate <- function(reh,
             bsir$df.null <- reh$M
             bsir$df.model <- dim(stats)[2]
             bsir$df.residual <- bsir$df.null - bsir$df.model
-            names(bsir$coefficients) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- dimnames(stats)[[2]] 
+            names(bsir$coefficients) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- variables_names
             remstimateList <- bsir
         }
         if(model == "actor"){ # Actor-oriented Model
@@ -872,16 +907,15 @@ remstimate <- function(reh,
         hmc <- list() # create an empty list where to store the output
         if(model == "tie"){ # Tie-oriented Model (Relational Event Model)
             if(is.null(init)){
-                beta_0 <- log(reh$M) - log(sum(reh$intereventTime)*reh$D) # MLE intercept under null model
                 init <- matrix(stats::runif((dim(stats)[2])*nchains,-0.1,0.1),nrow=dim(stats)[2],ncol=nchains)
-                if(any(dimnames(stats)[[2]] == "baseline")){
-                    init[which(dimnames(stats)[[2]] == "baseline"),] <- init[which(dimnames(stats)[[2]] == "baseline"),] + beta_0
+                if(any(variables_names == "baseline")){
+                    init[which(variables_names == "baseline"),] <- init[which(variables_names == "baseline"),] + (log(reh$M) - log(sum(reh$intereventTime)*reh$D))
                 }
             }
             set.seed(seed)
             hmc_out <- HMC(pars_init = init, 
                         nsim = (burnin+nsim), 
-                        nchains = nchains, 
+                        nchains = nchains,
                         burnin = burnin, 
                         meanPrior = rep(0,dim(stats)[2]),
                         sigmaPrior = diag(dim(stats)[2])*1e05,
@@ -908,7 +942,7 @@ remstimate <- function(reh,
             hmc$df.null <- reh$M
             hmc$df.model <- dim(stats)[2]
             hmc$df.residual <- hmc$df.null - hmc$df.model
-            names(hmc$coefficients) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- dimnames(stats)[[2]]
+            names(hmc$coefficients) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- variables_names
 
             remstimateList <- c(hmc_out,hmc)
         }
@@ -972,7 +1006,7 @@ remstimate <- function(reh,
         attr(str_out,"ordinal") <- ordinal
         attr(str_out, "method") <- method
         attr(str_out, "approach") <- "Frequentist"
-        attr(str_out, "statistics") <- variable_names
+        attr(str_out, "statistics") <- variables_names
         if(method == "GDADAMAX"){                 
             attr(str_out, "epochs") <- epochs
             attr(str_out, "epsilon") <- epsilon
@@ -988,7 +1022,7 @@ remstimate <- function(reh,
         attr(str_out,"ordinal") <- ordinal
         attr(str_out, "method") <- method
         attr(str_out, "approach") <- "Bayesian"
-        attr(str_out, "statistics") <- variable_names
+        attr(str_out, "statistics") <- variables_names
         attr(str_out, "prior") <- prior # i would like to save also the arguments inside (...), you can use match.args but you to save also the values
         attr(str_out, "nsim") <- nsim # from 'nsim' until 'thin' they will probably defined inside remstimateList
         attr(str_out, "seed") <- seed
@@ -1002,7 +1036,6 @@ remstimate <- function(reh,
     # additional attributes useful for remstimate methods
     attr(str_out,"where_is_baseline") <- where_is_baseline
     attr(str_out,"ncores") <- ncores
-    
     return(str_out)
 }
 
@@ -1519,10 +1552,10 @@ residuals.remstimate <- function(object, reh, stats, ...)
         stats <- aperm(stats, perm = c(2,3,1))
         # check on variables names from object and stats (throw an error if they do not match)
         # check on reh and object characteristics (throw an error if they do not match)
-        variable_names <- attr(object, "statistics")
+        variables_names <- attr(object, "statistics")
         where_is_baseline <- attr(object,"where_is_baseline")
 
-        select_vars <- if(is.null(where_is_baseline)) 1:length(variable_names) else c(1:length(variable_names))[-where_is_baseline]
+        select_vars <- if(is.null(where_is_baseline)) 1:length(variables_names) else c(1:length(variables_names))[-where_is_baseline]
         baseline_value <- if(is.null(where_is_baseline)) 0 else as.vector(object$coefficients)[where_is_baseline]
         stats <- if(length(select_vars)==1) array(stats[,select_vars,],dim=c(dim(stats)[1],1,dim(stats)[3])) else stats[,select_vars,]
         diagnostics <- list()
@@ -1538,8 +1571,8 @@ residuals.remstimate <- function(object, reh, stats, ...)
                                                 N = reh$N #,
                                                 #which = "residuals" # or "rates"
                                                 )
-        #colnames(diagnostics$residuals$standardized_residuals) <- variable_names[select_vars]
-        colnames(diagnostics$residuals$smoothing_weights) <- variable_names[select_vars]
+        #colnames(diagnostics$residuals$standardized_residuals) <- variables_names[select_vars]
+        colnames(diagnostics$residuals$smoothing_weights) <- variables_names[select_vars]
 
         # lambdas (event rates) : this will have to be calculated only for plot on waiting times (qq-plot) and top% plot
         diagnostics$rates <- diagnostics$residuals$rates   
@@ -1550,7 +1583,7 @@ residuals.remstimate <- function(object, reh, stats, ...)
     else if(attr(object,"model") == "actor"){ # actor-oriented modeling
         # check on variables names from object and stats (throw an error if they do not match)
         # check on reh and object characteristics (throw an error if they do not match)
-        variable_names <- attr(object, "statistics")
+        variables_names <- attr(object, "statistics")
         where_is_baseline <- attr(object,"where_is_baseline")
         senderRate <- c(TRUE,FALSE)
         which_model <- c("sender_model","receiver_model")
@@ -1580,8 +1613,8 @@ residuals.remstimate <- function(object, reh, stats, ...)
                                                         senderRate = senderRate[i],
                                                         ncores = attr(object,"ncores"),
                                                         baseline = baseline_value)                                   
-                #colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals) <- if(senderRate[i]) variable_names[["sender_model"]][select_vars] else variable_names[["receiver_model"]][select_vars]
-                colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <- if(senderRate[i]) variable_names[["sender_model"]][select_vars] else variable_names[["receiver_model"]][select_vars]
+                #colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals) <- if(senderRate[i]) variables_names[["sender_model"]][select_vars] else variables_names[["receiver_model"]][select_vars]
+                colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <- if(senderRate[i]) variables_names[["sender_model"]][select_vars] else variables_names[["receiver_model"]][select_vars]
                 # lambdas (event rates)
                 diagnostics[[which_model[i]]]$rates <- diagnostics[[which_model[i]]]$residuals$rates   
                 diagnostics[[which_model[i]]]$residuals$rates <- NULL 
