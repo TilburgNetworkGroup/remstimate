@@ -110,10 +110,13 @@ library(remstats)
 ncores <- 1L
 
 # loading data
-data(tie_reh)
+data(tie_data)
 
 # true parameters' values
-attr(tie_reh,"true.pars")
+tie_data$true.pars
+
+# processing event sequence
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 
 # summary of the relational event network
 summary(tie_reh)

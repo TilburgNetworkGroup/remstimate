@@ -214,6 +214,15 @@ expect_error(remstimate::remstimate(reh = tie_reh,
 fixed = TRUE)    
 attr(tie_reh,"ordinal") <- FALSE
 
+# testing with omit_dyad
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie", omit_dyad = list(list(time = c(120,148), dyad=data.frame(actor1=c("4",NA),actor2=c(NA,"4"),type=c(NA,NA))))) # removing actor "4" from time=120 to time=148
+# calculating statistics
+tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model, method="pt")
+# (1) method = "MLE"
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        method = "MLE"))
 
 # Risk set "active"
 

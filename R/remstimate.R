@@ -134,6 +134,7 @@ remstimate <- function(reh,
         if(model == "tie"){
             attr(reh,"dyadID") <- attr(reh,"dyadIDactive")
             reh$omit_dyad <- list() # because "reh$omit_dyad$time" and "reh$omit_dyad$riskset" for riskset="active" are obsolete (will be removed from remify output in the future 3.x.x version)
+            # check line 113 remify.cpp
         }
     }
 
@@ -205,9 +206,6 @@ remstimate <- function(reh,
             if(!is.null(dimnames(stats)[[3]])){
                 variables_names <- dimnames(stats)[[3]]
             }
-            else{
-                variables_names <- sapply(1:dim(stats)[3],function(v) paste("x.",v,sep=""))
-            }
             if(is.null(attr(stats,"formula"))){
                 model_formula <- stats::as.formula(paste("~ ",paste(variables_names,collapse=" + ")))
             }
@@ -243,9 +241,6 @@ remstimate <- function(reh,
         }
         else if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
             stop("'remstats' object supplied cannot work for tie-oriented modeling")
-        }
-        else{
-            stop("tie-oriented modeling: 'stats' must be a 'tomstats' 'remstats' object")
         }
 
         # .. check on dimensions
@@ -338,9 +333,6 @@ remstimate <- function(reh,
         }
         else if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
             stop("'remstats' object supplied cannot work for actor-oriented modeling")
-        }
-        else{
-            stop("actor-oriented modeling: 'stats' must be either a 'aomstats' 'remstats' object or a list of two arrays named 'sender_stats' and 'receiver_stats'")
         }
     }
 

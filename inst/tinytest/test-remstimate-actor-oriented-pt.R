@@ -277,6 +277,7 @@ ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor", riskset =
 
 # calculating statistics
 ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model, method="pt")
+attr(ao_reh_stats,"formula") <- NULL
 
 # (1) method = "MLE"
 expect_silent(remstimate::remstimate(reh = ao_reh,

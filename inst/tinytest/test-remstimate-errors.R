@@ -339,3 +339,24 @@ expect_error(remstimate::remstimate(reh = ao_reh,
                         ncores = 1L),
 "the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
 fixed = TRUE)
+
+# actor-oriented modeling with a tomstats object
+ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
+class(ao_reh_stats) <- c("tomstats","remstats")
+expect_error(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        method = "MLE",
+                        ncores = 1L),
+"'remstats' object supplied cannot work for actor-oriented modeling",
+fixed = TRUE
+) 
+
+
+# method of remstats is not available
+attr(tie_reh_stats,"method") <- NULL
+expect_error(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        method = "MLE",
+                        ncores = 1L),
+"attribute 'method' not found inside object 'remstats'. Input argument 'stats' must be an object of class 'remstats' from the package 'remstats' (>=3.2.0)",
+fixed = TRUE)

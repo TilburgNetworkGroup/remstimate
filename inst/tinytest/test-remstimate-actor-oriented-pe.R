@@ -331,3 +331,16 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
 
 
 
+# simultaneous events with remstats method = "pe"
+ao_data$edgelist$time <- floor(ao_data$edgelist$time) 
+ao_data$edgelist$time[seq(5,95,by=5)] <- ao_data$edgelist$time[seq(5,95,by=5)-1]
+ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
+
+# calculating statistics
+ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model, method="pe")
+
+# (1) method = "MLE"
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "MLE"))
