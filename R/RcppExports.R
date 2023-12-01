@@ -13,24 +13,24 @@ remDerivativesStandard <- function(pars, stats, dyad, omit_dyad, interevent_time
     .Call(`_remstimate_remDerivativesStandard`, pars, stats, dyad, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
 }
 
-remDerivativesSenderRates <- function(pars, stats, actor1, omit_dyad, interevent_time, C, D, ordinal = FALSE, gradient = TRUE, hessian = TRUE) {
-    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, actor1, omit_dyad, interevent_time, C, D, ordinal, gradient, hessian)
+remDerivativesSenderRates <- function(pars, stats, actor1, omit_dyad, interevent_time, ordinal = FALSE, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, actor1, omit_dyad, interevent_time, ordinal, gradient, hessian)
 }
 
-remDerivativesReceiverChoice <- function(pars, stats, actor1, actor2, omit_dyad, interevent_time, N, C, D, gradient = TRUE, hessian = TRUE) {
-    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, actor1, actor2, omit_dyad, interevent_time, N, C, D, gradient, hessian)
+remDerivativesReceiverChoice <- function(pars, stats, actor1, actor2, omit_dyad, interevent_time, N, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, actor1, actor2, omit_dyad, interevent_time, N, gradient, hessian)
 }
 
-remDerivatives <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE, senderRate = TRUE, N = NULL, C = NULL, D = NULL) {
-    .Call(`_remstimate_remDerivatives`, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, gradient, hessian, senderRate, N, C, D)
+remDerivatives <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE, senderRate = TRUE, N = NULL) {
+    .Call(`_remstimate_remDerivatives`, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, gradient, hessian, senderRate, N)
 }
 
-GDADAMAX <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, senderRate = TRUE, gradient = TRUE, hessian = FALSE, N = NULL, C = NULL, D = NULL, ncores = 1L, epochs = 1e03L, learning_rate = 0.002, beta1 = 0.9, beta2 = 0.999, epsilon = 0.01) {
-    .Call(`_remstimate_GDADAMAX`, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, senderRate, gradient, hessian, N, C, D, ncores, epochs, learning_rate, beta1, beta2, epsilon)
+GDADAMAX <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, senderRate = TRUE, gradient = TRUE, hessian = FALSE, N = NULL, ncores = 1L, epochs = 1e03L, learning_rate = 0.002, beta1 = 0.9, beta2 = 0.999, epsilon = 0.01) {
+    .Call(`_remstimate_GDADAMAX`, pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, senderRate, gradient, hessian, N, ncores, epochs, learning_rate, beta1, beta2, epsilon)
 }
 
-HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, C = NULL, D = NULL, thin = 1L, L = 100L, epsilon = 0.01) {
-    .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, C, D, thin, L, epsilon)
+HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, senderRate = TRUE, N = NULL, thin = 1L, L = 100L, epsilon = 0.01) {
+    .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, thin, L, epsilon)
 }
 
 computeDiagnostics <- function(pars, stats, actor1, actor2, dyad, omit_dyad, model, N, senderRate = TRUE, ncores = 1L, baseline = 0) {

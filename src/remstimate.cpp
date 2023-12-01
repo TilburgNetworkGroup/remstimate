@@ -128,11 +128,11 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
       }
     }
     else{ // ordinal likelihood
-      #ifdef _OPENMP
-      omp_set_dynamic(0);         // disabling dynamic teams
-      omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-      #pragma omp parallel for if(ncores>1) private(m,d,l,k) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian)
-      #endif
+      //#ifdef _OPENMP
+      //omp_set_dynamic(0);         // disabling dynamic teams
+      //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+      //#pragma omp parallel for if(ncores>1) private(m,d,l,k) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian)
+      //#endif
       for(m = 0; m < M; m++){
         arma::mat stats_m = stats.slice(m).t();
         arma::vec log_lambda = stats_m.t() * pars;
@@ -217,8 +217,6 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 // @param actor1 is a list actor1's observed at each time point (attr(reh,"actor1")-1).
 // @param omit_dyad is a list of two objects: a vector "time" and a matrix "risksetSender". Two objects for handling changing risksets. The object is NULL if no change of the risk set structure is defined.
 // @param interevent_time the time difference between the current time point and the previous event time.
-// @param C number of event types observed in the network (reh$C).
-// @param D number of dyads in the network (reh$D).
 // @param ordinal boolean that indicate whether to use the ordinal or interval timing likelihood (default is false).
 // @param gradient boolean true/false whether to return gradient value (default is true).
 // @param hessian boolean true/false whether to return hessian value (default is true).
@@ -232,8 +230,6 @@ Rcpp::List remDerivativesSenderRates(
         const arma::field<arma::uvec> &actor1,     
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
-        int C,
-        int D,
         bool ordinal = false,
         bool gradient = true,
         bool hessian  = true){
@@ -389,8 +385,6 @@ Rcpp::List remDerivativesSenderRates(
 // @param omit_dyad is a list of two objects: a vector "time" and a matrix "riskset". Two objects for handling changing risksets. The object is NULL if no change of the risk set structure is defined.
 // @param interevent_time the time difference between the current time point and the previous event time.
 // @param N the number of actors in the network (reh$N).
-// @param C number of event types observed in the network (reh$C).
-// @param D number of dyads in the network (reh$D).
 // @param gradient boolean true/false whether to return gradient value (default is true).
 // @param hessian boolean true/false whether to return hessian value (default is true).
 //
@@ -405,8 +399,6 @@ Rcpp::List remDerivativesReceiverChoice(
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
         int N,
-        int C,
-        int D,
         bool gradient = true,
         bool hessian  = true){
 
@@ -555,9 +547,7 @@ Rcpp::List remDerivatives(const arma::vec &pars,
                                   bool gradient = true,
                                   bool hessian = true,
                                   bool senderRate = true,
-                                  Rcpp::Nullable<int> N = R_NilValue,
-                                  Rcpp::Nullable<int> C = R_NilValue,
-                                  Rcpp::Nullable<int> D = R_NilValue){
+                                  Rcpp::Nullable<int> N = R_NilValue){
   Rcpp::List out;
   std::vector<std::string> models = {"tie","actor"};
   std::vector<std::string>::iterator itr = std::find(models.begin(), models.end(), model);
@@ -571,11 +561,11 @@ Rcpp::List remDerivatives(const arma::vec &pars,
     case 1: { 
         switch (senderRate){ // both likelihood miss paralellization
           case 0 : {
-                    out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),Rcpp::as<int>(C),Rcpp::as<int>(D),gradient,hessian);
+                    out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),gradient,hessian);
                     break;
                     }
           case 1 : {
-                    out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,Rcpp::as<int>(C),Rcpp::as<int>(D),ordinal,gradient,hessian);
+                    out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,ordinal,gradient,hessian);
                     break;
                     }
         }
@@ -611,8 +601,6 @@ Rcpp::List remDerivatives(const arma::vec &pars,
 // @param gradient boolean true/false whether to return gradient value.
 // @param hessian boolean true/false whether to return hessian value.
 // @param N number of actors in the network. This argument is used only in the ReceiverChoice likelihood (model = "actor"). Default is NULL.
-// @param C number of event types observed in the network (reh$C). Default is NULL.
-// @param D number of dyads in the network (reh$D). Default is NULL.
 // @param ncores number of threads to use for the parallelization (default is 1).
 // @param epochs number of epochs (default is 1e03).
 // @param learning_rate learning rate (default is 0.002).
@@ -636,8 +624,6 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
                   bool gradient = true,
                   bool hessian = false,
                   Rcpp::Nullable<int> N = R_NilValue,
-                  Rcpp::Nullable<int> C = R_NilValue,
-                  Rcpp::Nullable<int> D = R_NilValue,
                   int ncores = 1,
                   int epochs = 1e03,
                   double learning_rate = 0.002,
@@ -661,7 +647,7 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
 
 
   while(i <= (epochs-1)){
-    Rcpp::List derv = remDerivatives(pars_loc,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,gradient,hessian,senderRate,N,C,D);
+    Rcpp::List derv = remDerivatives(pars_loc,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,gradient,hessian,senderRate,N);
 
     // calculate loglik and gradient with the previous iteration
     loglik = derv["value"];
@@ -743,8 +729,6 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
 // @param ncores number of threads to use for the parallelization (default is 1).
 // @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false).
 // @param N number of actors in the network. This argument is used only in the ReceiverChoice likelihood (model = "actor"). Default is NULL.
-// @param C number of event types observed in the network (reh$C). Default is NULL.
-// @param D number of dyads in the network (reh$D). Default is NULL.
 //
 // @return value of log-posterior density.
 double logPostHMC(const arma::vec &meanPrior,
@@ -760,11 +744,9 @@ double logPostHMC(const arma::vec &meanPrior,
                   bool ordinal = false,
                   int ncores = 1,
                   bool senderRate = true,
-                  Rcpp::Nullable<int> N = R_NilValue,
-                  Rcpp::Nullable<int> C = R_NilValue,
-                  Rcpp::Nullable<int> D = R_NilValue){
+                  Rcpp::Nullable<int> N = R_NilValue){
 
-  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,C,D);
+  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N);
   double derv_0 = Rcpp::as<double>(derv[0]);                
   double prior =  arma::accu(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
   return (prior + derv_0); 
@@ -790,8 +772,6 @@ double logPostHMC(const arma::vec &meanPrior,
 // @param ncores number of threads to use for the parallelization (default is 1).
 // @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false).
 // @param N number of actors in the network. This argument is used only in the ReceiverChoice likelihood (model = "actor"). Default is NULL.
-// @param C number of event types observed in the network (reh$C). Default is NULL.
-// @param D number of dyads in the network (reh$D). Default is NULL.
 //
 // @return value of log-posterior gradient.
 arma::vec logPostGradientHMC(const arma::vec &meanPrior,
@@ -807,10 +787,8 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               bool ordinal = false,
                               int ncores = 1,
                               bool senderRate = true,
-                              Rcpp::Nullable<int> N = R_NilValue,
-                              Rcpp::Nullable<int> C = R_NilValue,
-                              Rcpp::Nullable<int> D = R_NilValue){
-  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N,C,D);
+                              Rcpp::Nullable<int> N = R_NilValue){
+  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N);
   arma::vec gprior = inv(sigmaPrior)*(pars - meanPrior); // the sign is already changed here
   arma::vec glp = Rcpp::as<arma::vec>(derv[1]);
   return (glp + gprior); 
@@ -837,8 +815,6 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
 // @param ncores number of threads to use for the parallelization (default is 1).
 // @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false).
 // @param N number of actors in the network. This argument is used only in the ReceiverChoice likelihood (model = "actor"). Default is NULL.
-// @param C number of event types observed in the network (reh$C). Default is NULL.
-// @param D number of dyads in the network (reh$D). Default is NULL.
 //
 // @return output of one iteration of the Hamiltonian Monte Carlo
 arma::field<arma::vec> iterHMC(arma::uword L,
@@ -856,9 +832,7 @@ arma::field<arma::vec> iterHMC(arma::uword L,
                   bool ordinal = false,
                   int ncores = 1,
                   bool senderRate = true,
-                  Rcpp::Nullable<int> N = R_NilValue,
-                  Rcpp::Nullable<int> C = R_NilValue,
-                  Rcpp::Nullable<int> D = R_NilValue){
+                  Rcpp::Nullable<int> N = R_NilValue){
 
   arma::uword P = pars.size(); //number of parameters
   arma::field<arma::vec> out(2); // output object
@@ -873,17 +847,17 @@ arma::field<arma::vec> iterHMC(arma::uword L,
   arma::vec betaP = pars; // new proposed beta (starting value is current beta)
 
   //leapfrog algorithm, updates via Hamiltonian equations
-  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N));
   for(arma::uword i = 1; i <= L; i++){
     betaP += (epsilon * rP);
-    if(i != L) rP -= (epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
+    if(i != L) rP -= (epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N));
   }
-  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D));
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N));
   rP *= (-1);
 
   //computes final quantities for the acceptance rate
-  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
-  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
+  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
   double K = 0.5 * arma::accu(arma::pow(rC,2));
   double propK = 0.5 * arma::accu(arma::pow(rP,2));
 
@@ -952,8 +926,6 @@ Rcpp::List burninHMC(const arma::cube& samples, const arma::mat& loglik, arma::u
 // @param ncores number of threads to use for the parallelization (default is 1).
 // @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false).
 // @param N number of actors in the network. This argument is used only in the ReceiverChoice likelihood (model = "actor"). Default is NULL.
-// @param C number of event types observed in the network (reh$C). Default is NULL.
-// @param D number of dyads in the network (reh$D). Default is NULL.
 // @param thin is the number of draws to be skipped. For instance, if thin = 10, draws will be selected every 10 generated draws: 1, 11, 21, 31, ...
 // @param L number of leapfrogs. Default (and recommended) value is 100.
 // @param epsilon size of the leapfrog (default value is 1e-02).
@@ -978,8 +950,6 @@ Rcpp::List HMC(arma::mat pars_init,
                 int ncores = 1,
                 bool senderRate = true,
                 Rcpp::Nullable<int> N = R_NilValue,
-                Rcpp::Nullable<int> C = R_NilValue,
-                Rcpp::Nullable<int> D = R_NilValue,
                 arma::uword thin = 1,
                 arma::uword L = 100,
                 double epsilon = 0.01){ 
@@ -993,14 +963,14 @@ Rcpp::List HMC(arma::mat pars_init,
     arma::mat chain_j(pars_init.n_rows,nsim,arma::fill::zeros);
     arma::vec chain_j_loglik(nsim,arma::fill::zeros);
     //[i=0] this step only get the first sample out of the starting value
-    arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+    arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
     chain_j.col(0) = iter_i_hmc[0]; // saving draws
     chain_j_loglik(0) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
     //Rcpp::Rcout << "first value of the chain: " << chain_j.col(0) << "\n";
     for(i = 1; i < nsim; i++){ //looping through iterations of the MCMC
       //Rcpp::Rcout <<i <<"\n"; progress bar on chains progress
       //Then the next step will always be based on the previous one
-      arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,C,D);
+      arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
       chain_j.col(i) = iter_i_hmc[0]; // saving draws
       chain_j_loglik(i) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
     }

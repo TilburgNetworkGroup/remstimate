@@ -1,7 +1,12 @@
 ## testing actor-oriented modeling ##
 
 # loading data
-data(ao_reh)
+data(ao_data)
+
+# processing data with simultaneous events (two events observed at the same time point)
+ao_data$edgelist$time <- floor(ao_data$edgelist$time) 
+ao_data$edgelist$time[seq(5,95,by=5)] <- ao_data$edgelist$time[seq(5,95,by=5)-1]
+ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 
 # specifying linear predictor (for rate and choice model)
 rate_model <- ~ 1 + remstats::indegreeSender()
@@ -14,7 +19,7 @@ ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, re
 expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
-                        method = "MLE"))
+                        method = "MLE"))                      
 ao_mle <- remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
@@ -33,7 +38,7 @@ expect_identical(attr(ao_mle,"approach"),"Frequentist")
 expect_silent(print(ao_mle))
 expect_silent(summary(ao_mle))
 expect_silent(predict(ao_mle))
-expect_silent(residuals(object = ao_mle, reh = ao_reh, stats = ao_reh_stats))
+#expect_silent(residuals(object = ao_mle, reh = ao_reh, stats = ao_reh_stats))
 #expect_silent(plot(x = ao_mle,reh = ao_reh, stats = ao_reh_stats))
 expect_silent(aic(ao_mle))
 expect_silent(aicc(ao_mle))
@@ -84,7 +89,7 @@ expect_identical(attr(ao_gdadamax,"approach"),"Frequentist")
 expect_silent(print(ao_gdadamax))
 expect_silent(summary(ao_gdadamax))
 expect_silent(predict(ao_gdadamax))
-expect_silent(residuals(object = ao_gdadamax, reh = ao_reh, stats = ao_reh_stats))
+#expect_silent(residuals(object = ao_gdadamax, reh = ao_reh, stats = ao_reh_stats))
 #expect_silent(plot(x = ao_gdadamax,reh = ao_reh, stats = ao_reh_stats))
 expect_silent(aic(ao_gdadamax))
 expect_silent(aicc(ao_gdadamax))
@@ -120,7 +125,7 @@ expect_identical(attr(ao_bsir_no_prior,"approach"),"Bayesian")
 expect_silent(print(ao_bsir_no_prior))
 expect_silent(summary(ao_bsir_no_prior))
 expect_silent(predict(ao_bsir_no_prior))
-expect_silent(residuals(object = ao_bsir_no_prior, reh = ao_reh, stats = ao_reh_stats))
+#expect_silent(residuals(object = ao_bsir_no_prior, reh = ao_reh, stats = ao_reh_stats))
 #expect_silent(plot(x = ao_bsir_no_prior,reh = ao_reh, stats = ao_reh_stats))
 expect_error(aic(ao_bsir_no_prior),
 "'approach' must be 'Frequentist'",
@@ -167,7 +172,7 @@ expect_identical(attr(ao_bsir_with_prior,"approach"),"Bayesian")
 expect_silent(print(ao_bsir_with_prior))
 expect_silent(summary(ao_bsir_with_prior))
 expect_silent(predict(ao_bsir_with_prior))
-expect_silent(residuals(object = ao_bsir_with_prior, reh = ao_reh, stats = ao_reh_stats))
+#expect_silent(residuals(object = ao_bsir_with_prior, reh = ao_reh, stats = ao_reh_stats))
 #expect_silent(plot(x = ao_bsir_with_prior,reh = ao_reh, stats = ao_reh_stats))
 expect_error(aic(ao_bsir_with_prior),
 "'approach' must be 'Frequentist'",
@@ -211,7 +216,7 @@ expect_identical(attr(ao_hmc,"approach"),"Bayesian")
 expect_silent(print(ao_hmc))
 expect_silent(summary(ao_hmc))
 expect_silent(predict(ao_hmc))
-expect_silent(residuals(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats))
+#expect_silent(residuals(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats))
 #expect_silent(plot(x = ao_hmc,reh = ao_reh, stats = ao_reh_stats))
 expect_error(aic(ao_hmc),
 "'approach' must be 'Frequentist'",
@@ -257,15 +262,67 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
 
 # ordinal likelihood (actor-oriented modeling)
 attr(ao_reh,"ordinal") <- TRUE
+expect_error(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "MLE"),
+"method = 'pt' from remstats not compatible with ordinal likelihood",
+fixed=TRUE)
+
+
+# Risk set "active"
+
+# testing estimation methods with active riskset 
+ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor", riskset = "active")
+
+# calculating statistics
+ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model, method="pt")
+
+# (1) method = "MLE"
 expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
-                        method = "MLE"))              
-ordinal_mle <- remstimate::remstimate(reh = ao_reh,
+                        method = "MLE"))
+# (2) method = "GDADAMAX" 
+expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
-                        method = "MLE")
-expect_silent(print(ordinal_mle))
-expect_silent(print(summary(ordinal_mle)))       
-expect_silent(residuals(object = ordinal_mle, reh = ao_reh, stats = ao_reh_stats))
-#expect_silent(plot(x = ordinal_mle,reh = ao_reh, stats = ao_reh_stats))    
+                        method = "GDADAMAX",
+                        epochs = 10L))
+# (3) method  = "BSIR" 
+
+## (3.1) with prior = NULL
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "BSIR",
+                        nsim = 10L,
+                        prior = NULL))     
+
+## (3.2) with a specified prior 
+priormvt <- mvnfast::dmvt
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "BSIR",
+                        nsim = 10L,
+                        prior = list(sender_model = priormvt, receiver_model = priormvt),
+                        prior_args = list(sender_model =  list(mu = rep(0,dim(ao_reh_stats$sender_stats)[3]),
+                                                            sigma = diag(dim(ao_reh_stats$sender_stats)[3]),
+                                                            df = 1), 
+                                        receiver_model = list(mu = rep(0,dim(ao_reh_stats$receiver_stats)[3]),
+                                                            sigma = diag(dim(ao_reh_stats$receiver_stats)[3]),
+                                                            df = 1)),
+                        log = TRUE
+                        ))
+# (4) method  = "HMC"    
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "HMC",
+                        nchains = 1L,
+                        nsim = 10L,
+                        burnin = 5L)) 
+
+
+

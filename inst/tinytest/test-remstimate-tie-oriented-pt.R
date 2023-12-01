@@ -1,7 +1,11 @@
 ## testing tie-oriented modeling (methods) ##
 
 # loading data
-data(tie_reh)
+data(tie_data)
+
+# processing data with simultaneous events (two or more events observed at the same time point)
+tie_data$edgelist$time <- floor(tie_data$edgelist$time) 
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 
 # specifying linear predictor
 tie_model <- ~ 1 + remstats::indegreeSender()+remstats::inertia()+remstats::reciprocity() 
@@ -14,6 +18,12 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "MLE"))
+# testing method = NULL (default is "MLE")
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        method = NULL))
+                        
 tie_mle <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
@@ -196,26 +206,23 @@ fixed = TRUE)
 
 # ordinal likelihood (tie-oriented modeling)
 attr(tie_reh,"ordinal") <- TRUE
-expect_silent(remstimate::remstimate(reh = tie_reh,
+expect_error(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
-                        method = "MLE"))              
-ordinal_mle <- remstimate::remstimate(reh = tie_reh,
-                        stats = tie_reh_stats,
-                        ncores = 1L,
-                        method = "MLE")
-expect_silent(print(ordinal_mle))
-expect_silent(print(summary(ordinal_mle)))  
-expect_silent(residuals(object = ordinal_mle, reh = tie_reh, stats = tie_reh_stats))
-#expect_silent(plot(x = ordinal_mle,reh = tie_reh, stats = tie_reh_stats))
+                        method = "MLE"),
+"method = 'pt' from remstats not compatible with ordinal likelihood",
+fixed = TRUE)    
+attr(tie_reh,"ordinal") <- FALSE
 
+
+# Risk set "active"
 
 # testing estimation methods with active riskset 
-tie_reh <- remify::remify(edgelist = tie_reh$edgelist, 
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, 
                             model = "tie", 
-                            riskset="full") ##[[CHANGE to "active"]] [[CHECK!!!]]
+                            riskset="active") 
 # calculating statistics
-tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
+tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model, method="pt")
 
 # (1) method = "MLE"
 expect_silent(remstimate::remstimate(reh = tie_reh,

@@ -1,7 +1,10 @@
 ## testing warnings of remstimate ##
   
 # loading data
-data(tie_reh)
+data(tie_data)
+
+# processing data
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 
 # specifying linear predictor
 tie_model <- ~ 1 + remstats::inertia()

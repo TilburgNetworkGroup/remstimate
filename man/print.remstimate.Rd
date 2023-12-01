@@ -22,7 +22,10 @@ A function that prints out the estimates returned by a 'remstimate' object.
 # ------------------------------------ #
 
 # loading data
-data(tie_reh)
+data(tie_data)
+
+# processing event sequence with remify
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
   
 # specifying linear predictor
 tie_model <- ~ 1 + 
@@ -50,7 +53,10 @@ tie_mle
 # ------------------------------------ #
 
 # loading data
-data(ao_reh)
+data(ao_data)
+
+# processing event sequence with remify
+ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
   
 # specifying linear predictor (for sender rate and receiver choice model)
 rate_model <- ~ 1 + remstats::indegreeSender()

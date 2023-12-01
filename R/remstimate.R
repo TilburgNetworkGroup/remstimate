@@ -28,7 +28,10 @@
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(tie_reh)
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 #'   
 #' # specifying linear predictor
 #' tie_model <- ~ 1 + 
@@ -53,7 +56,10 @@
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(ao_reh)
+#' data(ao_data)
+#' 
+#' # processing event sequence with remify
+#' ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 #'   
 #' # specifying linear predictor (for sender rate and receiver choice model)
 #' rate_model <- ~ 1 + remstats::indegreeSender()
@@ -123,9 +129,12 @@ remstimate <- function(reh,
     }
 
     # ... active riskset? then overwrite two objects (this prevents from coding many ifelse() to switch between active-oriented riskset objects and full-oriented riskset objects)
-    if((attr(reh,"riskset") == "active") & (model == "tie")){
+    if((attr(reh,"riskset") == "active")){
         reh$D <- reh$activeD
-        attr(reh,"dyadID") <- attr(reh,"dyadIDactive")
+        if(model == "tie"){
+            attr(reh,"dyadID") <- attr(reh,"dyadIDactive")
+            reh$omit_dyad <- list() # because "reh$omit_dyad$time" and "reh$omit_dyad$riskset" for riskset="active" are obsolete (will be removed from remify output in the future 3.x.x version)
+        }
     }
 
     # ... method
@@ -145,7 +154,7 @@ remstimate <- function(reh,
 
     # ... ncores
     if(is.null(ncores)) ncores <- attr(reh,"ncores")
-    else if(((parallel::detectCores() > 2L) & (ncores > floor(parallel::detectCores()-2L))) | ((parallel::detectCores() == 2L) & (ncores > 1L))){
+    if(((parallel::detectCores() > 2L) & (ncores > floor(parallel::detectCores()-2L))) | ((parallel::detectCores() == 2L) & (ncores > 1L))){
             stop("'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)")
     }
 
@@ -164,10 +173,17 @@ remstimate <- function(reh,
         omit_dyad_receiver <- NULL
         if(stats_attr_method == "pe"){
             if(!ordinal){
-                reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
+                if(!is.null(attr(reh,"evenly_spaced_interevent_time"))){
+                    reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
+                }
             }
             if(!is.null(reh$E)){ # reh$E is NULL only when there are no simultaneous events
                 reh$M <- reh$E # overwriting dimension (we can do it because remstimate works only with reh$M so if the method is "pt", reh$M will remain so. For method "pe" we assign reh$E to reh$M
+            }
+        }
+        if(stats_attr_method == "pt"){
+            if(ordinal){
+                stop("method = 'pt' from remstats not compatible with ordinal likelihood")
             }
         }
         if(!is.null(attr(stats,"subset"))){
@@ -186,7 +202,12 @@ remstimate <- function(reh,
     if(model == "tie")
     {   
         if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
-            variables_names <- dimnames(stats)[[3]]
+            if(!is.null(dimnames(stats)[[3]])){
+                variables_names <- dimnames(stats)[[3]]
+            }
+            else{
+                variables_names <- sapply(1:dim(stats)[3],function(v) paste("x.",v,sep=""))
+            }
             if(is.null(attr(stats,"formula"))){
                 model_formula <- stats::as.formula(paste("~ ",paste(variables_names,collapse=" + ")))
             }
@@ -203,9 +224,10 @@ remstimate <- function(reh,
                 attr(reh,"dyadID") <- attr(reh,"dyadID")[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
                 attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
                 attr(reh,"actor2ID") <- attr(reh,"actor2ID")[start_stop[1]:start_stop[2]] 
-                if(!is.null(reh$omit_dyad) & !ordinal){
-                    if(!is.null(attr(reh,"indices_simultaneous_events")))
-                    reh$omit_dyad$time <-  reh$omit_dyad$time[-simultaneous_events]
+                if((length(reh$omit_dyad)>0) & !ordinal){
+                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
+                        reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")]
+                    }
                 }
             }
             else if(stats_attr_method =="pe"){
@@ -213,9 +235,9 @@ remstimate <- function(reh,
                 attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
                 attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))[start_stop[1]:start_stop[2]] 
             } 
-            reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
+            reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]] # in line 168 we already re-assigned the intereventTime variable in case of method="pe", so line 224 is a valid processing for "pt" and "pe"
             reh$M <- diff(start_stop)+1
-            if(!is.null(reh$omit_dyad)){
+            if(length(reh$omit_dyad)>0){
                 reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]
             }
         }
@@ -224,6 +246,11 @@ remstimate <- function(reh,
         }
         else{
             stop("tie-oriented modeling: 'stats' must be a 'tomstats' 'remstats' object")
+        }
+
+        # .. check on dimensions
+        if(reh$M != dim(stats)[3]){ # if the dimension of the processed intereventTime are different from the dimensions of the input stats object, then throw error
+            stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
         }
     }
     if(model == "actor") 
@@ -263,13 +290,16 @@ remstimate <- function(reh,
             if(stats_attr_method == "pt"){
                 attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
                 attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")[start_stop[1]:start_stop[2]]) # unlist here because of receiver-choice model
-                if(!is.null(reh$omit_dyad)){
+                if(is.null(reh$E)){ # this scenario can still happen
+                    reh$E <- reh$M
+                }
+                if(length(reh$omit_dyad)>0){
                     time_points_to_select <- c(1:reh$E)
                     if(!is.null(attr(reh,"indices_simultaneous_events")) & !ordinal){
                         time_points_to_select <- c(1:reh$E)[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
                     }
                     if(!is.null(stats$receiver_stats)){
-                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[time_points_to_select[start_stop[1]]:time_points_to_select[start_stop[2]]], riskset = reh$omit_dyad$riskset)
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[time_points_to_select[start_stop[1]]:time_points_to_select[start_stop[2]]], riskset = reh$omit_dyad$riskset, risksetSender = reh$omit_dyad$risksetSender)
                     }
                     reh$omit_dyad$time <-  reh$omit_dyad$time[time_points_to_select][start_stop[1]:start_stop[2]]
                 }
@@ -277,15 +307,34 @@ remstimate <- function(reh,
             else if(stats_attr_method == "pe"){
                 attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
                 attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))[start_stop[1]:start_stop[2]]
-                if(!is.null(reh$omit_dyad)){
+                if(length(reh$omit_dyad)>0){
                     if(!is.null(stats$receiver_stats)){
-                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[start_stop[1]:start_stop[2]]  , riskset = reh$omit_dyad$riskset)
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[start_stop[1]:start_stop[2]]  , riskset = reh$omit_dyad$riskset, risksetSender = reh$omit_dyad$risksetSender)
                     } 
                     reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]        
                 }
             } 
-            reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
+            if(!ordinal){
+                reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
+            }
             reh$M <- diff(start_stop)+1
+
+            # .. check on dimensions
+            no_correct_dimensions <- FALSE
+            if(!is.null(stats$sender_stats)){
+                if((reh$M != dim(stats$sender_stats)[3])){ # if the dimension of the processed intereventTime is different from the dimensions of the input stats object, then throw error
+                    no_correct_dimensions <- TRUE
+                }
+            }
+            if(!is.null(stats$receiver_stats)){
+                if((dim(reh$edgelist)[1] != dim(stats$receiver_stats)[3])){ # if the dimension of the edgelist is different from the dimensions of the input stats object, then throw error
+                    no_correct_dimensions <- TRUE
+                }
+            }
+            if(no_correct_dimensions){
+                stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
+            }
+
         }
         else if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
             stop("'remstats' object supplied cannot work for actor-oriented modeling")
@@ -609,9 +658,7 @@ remstimate <- function(reh,
                                     interevent_time = reh$intereventTime,
                                     model = model,
                                     senderRate = senderRate[i],
-                                    N = reh$N,
-                                    C = ifelse(is.null(reh$C),1,reh$C),
-                                    D = reh$D)
+                                    N = reh$N)
                     }
                     else if(method == "GDADAMAX"){ # Gradient Descent
                         if(is.null(init[[which_model[i]]])){
@@ -628,8 +675,6 @@ remstimate <- function(reh,
                                                 ordinal = ordinal,
                                                 senderRate = senderRate[i],
                                                 N = reh$N,
-                                                C = ifelse(is.null(reh$C),1,reh$C),
-                                                D = reh$D,
                                                 ncores = ncores,
                                                 epochs = epochs,
                                                 epsilon = epsilon)
@@ -644,8 +689,6 @@ remstimate <- function(reh,
                                                                         ordinal = ordinal,
                                                                         senderRate = senderRate[i],
                                                                         N = reh$N,
-                                                                        C = ifelse(is.null(reh$C),1,reh$C),
-                                                                        D = reh$D,
                                                                         ncores = ncores,
                                                                         hessian = TRUE) 
                         optimum_model[[which_model[i]]]$hessian <- optimum_model[[which_model[i]]]$hessian$hessian   
@@ -683,8 +726,6 @@ remstimate <- function(reh,
                                                                                     omit_dyad = omit_dyad_actor,
                                                                                     interevent_time = reh$intereventTime,
                                                                                     model = model,
-                                                                                    C = ifelse(is.null(reh$C),1,reh$C),
-                                                                                    D = reh$D,
                                                                                     ordinal = ordinal,
                                                                                     senderRate = TRUE)$value)
                     }
@@ -701,9 +742,7 @@ remstimate <- function(reh,
                                                                                                                     interevent_time = reh$intereventTime,
                                                                                                                     model = model,
                                                                                                                     senderRate = FALSE,
-                                                                                                                    N = reh$N,
-                                                                                                                    C = ifelse(is.null(reh$C),1,reh$C),
-                                                                                                                    D = reh$D)$value),-2*log(1/(reh$N-1)))
+                                                                                                                    N = reh$N)$value),-2*log(1/(reh$N-1)))
                     }
                     
                     # [[NOTE: null.deviance.choice is for the receivder model -2*log(1/(reh$N-1)) when the riskset is always (all the time points) the same.
@@ -813,7 +852,7 @@ remstimate <- function(reh,
                     bsir_i <- list()
                     bsir_i$log_posterior <- rep(0,nsim)
                     bsir_i$draws <- list()  
-                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID")[start_stop[1]:start_stop[2]] else unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
+                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
                     omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
                     # (1) generate from the proposal (importance distribution)
 
@@ -832,9 +871,7 @@ remstimate <- function(reh,
                                                         ordinal = ordinal,
                                                         ncores = ncores,
                                                         senderRate = senderRate[i],
-                                                        N = reh$N,
-                                                        C = ifelse(is.null(reh$C),1,reh$C),
-                                                        D = reh$D)                          
+                                                        N = reh$N)                          
                     
                     # proposal distribution (default proposal is a multivariate Student t): drawing nsim*3 samples
                     bsir_i$draws <- mvnfast::rmvt(n = nsim*3, 
@@ -870,9 +907,7 @@ remstimate <- function(reh,
                                     ncores = ncores,
                                     gradient = FALSE,
                                     hessian = FALSE,
-                                    N = reh$N,
-                                    C = ifelse(is.null(reh$C),1,reh$C),
-                                    D = reh$D)$value) # this is the most time consuming step to be optimized, avoiding the apply        
+                                    N = reh$N)$value) # this is the most time consuming step to be optimized, avoiding the apply        
                     bsir_i$log_posterior <- bsir_i$log_posterior + loglik
 
                     # (3) calculate Importance resampling log-weights (irlw)
@@ -931,9 +966,7 @@ remstimate <- function(reh,
                         thin = thin,
                         L = L,
                         epsilon = epsilon, 
-                        N = reh$N,
-                        C = ifelse(is.null(reh$C),1,reh$C),
-                        D = reh$D)          
+                        N = reh$N)          
             hmc$coefficients <- hmc_out$draws[which.min(hmc_out$log_posterior),] # log_posterior is a vector of posterior nloglik, therefore we take the minimum
             hmc$post.mean <- colMeans(hmc_out$draws)
             hmc$vcov <- stats::cov(hmc_out$draws)
@@ -949,7 +982,7 @@ remstimate <- function(reh,
         if(model == "actor"){ # Actor-oriented Model
             for(i in 1:2){
                 if(!is.null(stats[[which_stats[i]]])){
-                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID")[start_stop[1]:start_stop[2]] else unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
+                    actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
                     omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
                     hmc_i <- list()  
                     if(is.null(init[[which_model[i]]])){
@@ -971,8 +1004,6 @@ remstimate <- function(reh,
                                 model = model,
                                 senderRate = senderRate[i],
                                 N = reh$N,
-                                C = ifelse(is.null(reh$C),1,reh$C),
-                                D = reh$D,
                                 ordinal = ordinal,
                                 ncores = ncores,
                                 thin = thin,
@@ -1060,7 +1091,10 @@ remstimate <- function(reh,
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(tie_reh)
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 #'   
 #' # specifying linear predictor
 #' tie_model <- ~ 1 + 
@@ -1088,7 +1122,10 @@ remstimate <- function(reh,
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(ao_reh)
+#' data(ao_data)
+#' 
+#' # processing event sequence with remify
+#' ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 #'   
 #' # specifying linear predictor (for sender rate and receiver choice model)
 #' rate_model <- ~ 1 + remstats::indegreeSender()
@@ -1191,7 +1228,10 @@ print.remstimate<-function(x, ...){
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(tie_reh)
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 #'   
 #' # specifying linear predictor
 #' tie_model <- ~ 1 + 
@@ -1219,7 +1259,10 @@ print.remstimate<-function(x, ...){
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(ao_reh)
+#' data(ao_data)
+#' 
+#' # processing event sequence with remify
+#' ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 #'   
 #' # specifying linear predictor (for sender rate and receiver choice model)
 #' rate_model <- ~ 1 + remstats::indegreeSender()
@@ -1870,7 +1913,10 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(tie_reh)
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 #'   
 #' # specifying linear predictor
 #' tie_model <- ~ 1 + 
@@ -1939,7 +1985,10 @@ aic.remstimate <- function(object,...) {
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(tie_reh)
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 #'   
 #' # specifying linear predictor
 #' tie_model <- ~ 1 + 
@@ -2008,7 +2057,10 @@ aicc.remstimate <- function(object,...) {
 #' # ------------------------------------ #
 #' 
 #' # loading data
-#' data(tie_reh)
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 #'   
 #' # specifying linear predictor
 #' tie_model <- ~ 1 + 

@@ -29,7 +29,10 @@ A function that returns the AIC (Akaike's Information Criterion) value in a 'rem
 # ------------------------------------ #
 
 # loading data
-data(tie_reh)
+data(tie_data)
+
+# processing event sequence with remify
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
   
 # specifying linear predictor
 tie_model <- ~ 1 + 

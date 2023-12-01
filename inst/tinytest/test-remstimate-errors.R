@@ -1,7 +1,10 @@
 ## testing errors of remstimate ##
 
 # loading data for tie-oriented modeling, defining linear predictor and computing statistics
-data(tie_reh)
+data(tie_data)
+
+# processing data
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 
 # specifying linear predictor
 tie_model <- ~ 1 + remstats::inertia()
@@ -17,7 +20,10 @@ mle_loc <- remstimate::remstimate(reh = tie_reh,
                         model = "tie")
 
 # loading data for actor-oriented modeling, defining linear predictor and computing statistics                     
-data(ao_reh)
+data(ao_data)
+
+# processing data with simultaneous events (two events observed at the same time point)
+ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 
 # specifying linear predictor (for rate and choice model)
 rate_model <- ~ 1 + remstats::indegreeSender()
@@ -29,7 +35,7 @@ ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, re
 # testing errors 
 
 ## input `reh` is not a `remify` object
-expect_error(remstimate::remstimate(reh = data.matrix(attr(tie_reh,"remulate.reh")),
+expect_error(remstimate::remstimate(reh = data.matrix(ao_data$edgelist),
                         stats = tie_reh_stats,
                         method = "MLE",
                         ncores = 1L),
@@ -66,17 +72,18 @@ expect_error(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         method = "MLE",
                         ncores = 1L),
-"'remstats' object supplied cannot work for tie-oriented modeling",
+"attribute 'model' of input 'reh' and input 'stats' must be the same",
 fixed = TRUE
 ) 
 
 # actor-oriented modeling and stats object that is not a remstats object
 class(tie_reh_stats) <- "none"
+attr(tie_reh,"model") <- "tie"
 expect_error(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         method = "MLE",
                         ncores = 1L),
-"actor-oriented modeling: 'stats' must be either a 'aomstats' 'remstats' object or a list of two arrays named 'sender_stats' and 'receiver_stats'",
+"'stats' must be a 'remstats' object from the package 'remstats' (>= 3.2.0), suitable for tie-oriented modeling ('tomstats') or actor-oriented modeling ('aomstats')",
 fixed = TRUE
 ) 
 
@@ -97,7 +104,7 @@ expect_error(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         method = "MLE",
                         ncores = 1L),
-"tie-oriented modeling: 'stats' must be a 'tomstats' 'remstats' object",
+"'stats' must be a 'remstats' object from the package 'remstats' (>= 3.2.0), suitable for tie-oriented modeling ('tomstats') or actor-oriented modeling ('aomstats')",
 fixed = TRUE
 ) 
 class(tie_reh_stats) <- c("tomstats","remstats")
@@ -308,6 +315,7 @@ expect_error(plot(x = tie_mle, reh = tie_reh,residuals = list(a = "foo")),"'resi
 ## tie-oriented modeling
 tie_reh_stats <- tie_reh_stats[1:10,,]
 class(tie_reh_stats) <- c("tomstats", "remstats")
+attr(tie_reh_stats,"method") <- "pt"
 expect_error(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         method = "MLE",
@@ -315,13 +323,16 @@ expect_error(remstimate::remstimate(reh = tie_reh,
 "the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
 fixed = TRUE)
 ## actor-oriented modeling
-data(ao_reh)
+data(ao_data)
+# processing data with simultaneous events (two events observed at the same time point)
+ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 rate_model <- ~ 1 + remstats::indegreeSender()
 choice_model <- ~ remstats::inertia() + remstats::reciprocity()
 ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
 ao_reh_stats$sender_stats <- ao_reh_stats$sender_stats[1:10,,]
 ao_reh_stats$receiver_stats <- ao_reh_stats$receiver_stats[1:10,,]
 class(ao_reh_stats) <- c("aomstats","remstats")
+attr(ao_reh_stats,"method") <- "pt"
 expect_error(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         method = "MLE",
