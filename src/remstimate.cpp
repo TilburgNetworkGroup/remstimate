@@ -71,7 +71,9 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 
     if(!ordinal){ // interval likelihood
       #ifdef _OPENMP
-      #pragma omp parallel for num_threads(ncores) if(ncores>1) private(m,d,l,k) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
+      omp_set_dynamic(0);         
+      omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+      #pragma omp parallel for if(ncores>1) private(m,d,l,k) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian,interevent_time)
       #endif
       for(m = 0; m < M; m++){
           arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
@@ -128,36 +130,40 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
       }
     }
     else{ // ordinal likelihood
-      //#ifdef _OPENMP
-      //omp_set_dynamic(0);         // disabling dynamic teams
-      //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-      //#pragma omp parallel for if(ncores>1) private(m,d,l,k) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian)
-      //#endif
+      #ifdef _OPENMP
+      omp_set_dynamic(0);         
+      omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+      #pragma omp parallel for if(ncores>1) private(m,d,l,k) shared(M,D,U,loglik,hess,grad,stats,riskset_time_vec,riskset_mat,dyad,gradient,hessian)
+      #endif
       for(m = 0; m < M; m++){
         arma::mat stats_m = stats.slice(m).t();
         arma::vec log_lambda = stats_m.t() * pars;
+        int riskset_time_m = riskset_time_vec(m);
         double surv = 0.0;
-        int riskset_time_m = riskset_time_vec[m];
+        double loglik_m = 0.0;
+        arma::vec grad_m(U,arma::fill::zeros);
+        arma::mat hess_m(U,U,arma::fill::zeros);
         arma::uvec events_occurred = dyad(m)-1;  // -1 because dyads' IDs must range between 0 and D-1
-        loglik[m] += arma::accu(log_lambda(events_occurred));
+        // for the occured events we comput loglik and gradient contributes
+        loglik_m += arma::accu(log_lambda(events_occurred));
         if(gradient){
-          grad.col(m) += arma::sum(stats_m.cols(events_occurred),1); // first component of the gradient
+          grad_m += arma::sum(stats_m.cols(events_occurred),1); // first component of the gradient
         }
         if(riskset_time_m!=(-1)){ // if the riskset_time_m is different from (-1), then a dynamic riskset is observed
           arma::vec lambda_only_dyads_at_risk = riskset_mat.row(riskset_time_m).t() % exp(log_lambda); // lambda is zero for events not at risk
           surv = arma::accu(lambda_only_dyads_at_risk); 
           if(gradient){
-            grad.col(m) *= surv; // gradient multiplied by surv here
+            grad_m *= surv; // gradient multiplied by surv here
             arma::vec lambda_d_stats_m = stats_m * lambda_only_dyads_at_risk;
-            grad.col(m) -= lambda_d_stats_m;
-            grad.col(m) /= surv; // gradient divided by surv here, so (first_component*surv-second_component)/surv
+            grad_m -= lambda_d_stats_m;
+            grad_m /= surv; // gradient divided by surv here, so (first_component*surv-second_component)/surv
           }
          for(d = 0; d < D; d++){
             if(hessian){
               for(k = 0; k < U; k++){
                 for (l = k; l < U; l++){
-                  hess(k,l,m) -= stats_m.at(l,d)*stats_m.at(k,d)*lambda_only_dyads_at_risk.at(d);
-                  hess(l,k,m) = hess(k,l,m);
+                  hess_m(k,l) -= stats_m.at(l,d)*stats_m.at(k,d)*lambda_only_dyads_at_risk.at(d);
+                  hess_m(l,k) = hess_m(k,l);
                 }
               }
             }   
@@ -167,32 +173,35 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
           arma::vec lambda_only_dyads_at_risk = exp(log_lambda);
           surv = arma::accu(lambda_only_dyads_at_risk); 
           if(gradient){
-            grad.col(m) *= surv; // gradient multiplied by surv here
+            grad_m *= surv; // gradient multiplied by surv here
             arma::vec lambda_d_stats_m = stats_m * lambda_only_dyads_at_risk;
-            grad.col(m) -= lambda_d_stats_m;
-            grad.col(m) /= surv; // gradient divided by surv here, so (first_component*surv-second_component)/surv
+            grad_m -= lambda_d_stats_m;
+            grad_m /= surv; // gradient divided by surv here, so (first_component*surv-second_component)/surv
           }
          for(d = 0; d < D; d++){
             if(hessian){
               for(k = 0; k < U; k++){
                 for (l = k; l < U; l++){
-                  hess(k,l,m) -= stats_m.at(l,d)*stats_m.at(k,d)*lambda_only_dyads_at_risk.at(d);
-                  hess(l,k,m) = hess(k,l,m);
+                  hess_m(k,l) -= stats_m.at(l,d)*stats_m.at(k,d)*lambda_only_dyads_at_risk.at(d);
+                  hess_m(l,k) = hess_m(k,l);
                 }
               }
             }   
           }
         }
-        loglik[m] -= log(surv);
+        loglik_m -= log(surv);
         if(hessian){
           for(k = 0; k < U; k++){
             for (l = k; l < U; l++){
-              hess(k,l,m) /= surv;
-              hess(k,l,m) += (grad(k,m) * grad(l,m))/(std::pow(surv,2));
-              hess(l,k,m) = hess(k,l,m);
+              hess_m(k,l) /= surv;
+              hess_m(k,l) += (grad_m(k) * grad_m(l))/(std::pow(surv,2));
+              hess_m(l,k) = hess_m(k,l);
             }
           }
         }
+        loglik(m) = loglik_m;
+        grad.col(m) = grad_m;
+        hess.slice(m) = hess_m;
       }
     }
 
@@ -218,6 +227,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 // @param omit_dyad is a list of two objects: a vector "time" and a matrix "risksetSender". Two objects for handling changing risksets. The object is NULL if no change of the risk set structure is defined.
 // @param interevent_time the time difference between the current time point and the previous event time.
 // @param ordinal boolean that indicate whether to use the ordinal or interval timing likelihood (default is false).
+// @param ncores number of cores for parallelization
 // @param gradient boolean true/false whether to return gradient value (default is true).
 // @param hessian boolean true/false whether to return hessian value (default is true).
 //
@@ -231,146 +241,147 @@ Rcpp::List remDerivativesSenderRates(
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
         bool ordinal = false,
+        int ncores = 1,
         bool gradient = true,
         bool hessian  = true){
+  arma::uword U = stats.n_cols; // number of parameters 
+  int M = stats.n_slices; // number of events
+  int N = stats.n_rows; //Number of actors
+  int n, m;
 
-    arma::uword P = stats.n_cols; // number of parameters 
-    int M = stats.n_slices; // number of events
-    int N = stats.n_rows; //Number of actors
-    int n, m;
+  //output
+  arma::vec loglik(M,arma::fill::zeros);
+  arma::cube fisher(U,U,M,arma::fill::zeros);
+  arma::mat grad(U,M,arma::fill::zeros);
 
-    // variables for internal computation
-    arma::vec lambda_s(N);
-    arma::vec expected_stat_m(P);
-    arma::mat fisher_m(P,P);
-    double sum_lambda = 0.0;
-    arma::mat stats_m(P,N,arma::fill::ones); // to account for presence/absence of intercept
+  // omit_dyad 
+  arma::vec riskset_time_vec(M); 
+  arma::mat riskset_mat;
 
+  if(omit_dyad.size()>0){
+    riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+    riskset_mat = Rcpp::as<arma::mat>(omit_dyad["risksetSender"]);
+  }
+  else{
+    riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
+  }
 
-    //output
-    double loglik = 0.0;
-    arma::mat fisher(P,P,arma::fill::zeros);
-    arma::vec grad(P,arma::fill::zeros);
+  //#ifdef _OPENMP
+  //omp_set_dynamic(0);         // disabling dynamic teams
+  //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+  //#pragma omp parallel for if(ncores>1) private(m,n) shared(N,M,stats,pars,actor1,interevent_time,riskset_time_vec,riskset_mat,loglik,grad,fisher,ordinal,hessian,gradient)
+  //#endif
+  for(m = 0; m < M; m++){
+    arma::mat stats_m = stats.slice(m).t(); 
+    //this is exp(beta^T X) dot product
+    arma::vec lambda_s = arma::exp(stats_m.t() * pars);
+    int riskset_time_m = riskset_time_vec(m); // risk set at time m
+    double loglik_m = 0.0;
+    arma::vec grad_m(U,arma::fill::zeros);
+    arma::vec expected_stat_m(U,arma::fill::zeros);
+    arma::mat fisher_m(U,U,arma::fill::zeros);
 
-    // omit_dyad 
-    arma::vec riskset_time_vec(M); 
-    arma::mat riskset_mat;
+    // sender(s) interacting at time t[m]
+    arma::uvec sender = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1
 
-    if(omit_dyad.size()>0){
-      riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
-      riskset_mat = Rcpp::as<arma::mat>(omit_dyad["risksetSender"]);
+    // loglik and gradient (first addend)
+    loglik_m += arma::accu(arma::log(lambda_s(sender)));
+    if(gradient){
+      grad_m += arma::sum(stats_m.cols(sender),1); //grad
     }
-    else{
-      riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
-    }
 
-    //loop through all events
-    //#ifdef _OPENMP
-    //omp_set_dynamic(0);         // disabling dynamic teams
-    //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-    //#pragma omp parallel for if(ncores>1) private(m,n,expected_stat_m,fisher_m,stats_m) shared(N,M,stats,pars,actor1,interevent_time,riskset_time_vec,riskset_mat,loglik,grad,fisher)
-    //#endif
-    for(m = 0; m < M; m++){
-      stats_m = stats.slice(m).t(); 
-
-      //this is exp(beta^T X) dot product
-      lambda_s = arma::exp(stats_m.t() * pars);
-
-      // sender(s) interacting at time t[m]
-      arma::uvec sender = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1
-      // int type = dyad[2]; // when type will be integrated in the function
-
-      //reset internal variables
-      if(gradient | hessian){
-        fisher_m.zeros();
-        expected_stat_m.zeros();
-      }
-
-      // riskset_m
-      int riskset_time_m = riskset_time_vec(m);
-
-      // loglik and gradient (first addend)
-      loglik += arma::accu(arma::log(lambda_s(sender)));
-      if(gradient){
-        grad += arma::sum(stats_m.cols(sender),1);
-      }
-
-      // changes in the riskset at m-th event
-      if(riskset_time_m!=(-1)){
-        sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s); 
-        if(ordinal){
-          loglik-= std::log(sum_lambda); // loglik second addend
-          if(gradient | hessian){
-            for(n = 0; n < N; n++){         //loop throughout all actors
-              if(riskset_mat(riskset_time_m,n) == 1){
-                expected_stat_m += lambda_s(n) * (stats_m.col(n));
-                expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
-                if(gradient){
-                  grad -= expected_stat_m;
-                }
-                if(hessian){
-                  fisher_m += (expected_stat_m * expected_stat_m.t());
-                  fisher_m -= (lambda_s(n) / sum_lambda) *( stats_m.col(n) * (stats_m.col(n).t()));
-                  fisher += fisher_m;
-                }   
-              }
-            }
-          }
-        } 
-        else{
-          loglik -=  sum_lambda * interevent_time(m);
-          if(gradient){
-            grad -= interevent_time(m) * stats_m * (riskset_mat.row(riskset_time_m).t() % lambda_s); 
-          }
-          if(hessian){
-            for(n = 0; n < N; n++){         //loop throughout all actors
-              fisher_m += (riskset_mat(riskset_time_m,n) * lambda_s(n)) * (stats_m.col(n) * (stats_m.col(n).t()) );
-            }
-            fisher -= interevent_time(m) * fisher_m;
-          }
-        }
-      }
-      else{  //no dynamic riskset
-        sum_lambda = sum(lambda_s);
-        if(ordinal){
-          loglik-= std::log(sum_lambda);
-          if(gradient | hessian){
-            for(n = 0; n < N; n++){         //loop throughout all actors
+    // changes in the riskset at m-th event
+    if(riskset_time_m!=(-1)){
+      double sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s); 
+      if(ordinal){
+        loglik_m -= std::log(sum_lambda); // loglik second addend
+        if(gradient | hessian){
+          for(n = 0; n < N; n++){         //loop throughout all actors
+            if(riskset_mat(riskset_time_m,n) == 1){
               expected_stat_m += lambda_s(n) * (stats_m.col(n));
               expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
               if(gradient){
-                grad -= expected_stat_m;
+                grad_m -= expected_stat_m; //grad
               }
               if(hessian){
                 fisher_m += (expected_stat_m * expected_stat_m.t());
-                fisher_m -= (lambda_s(n) / sum_lambda) * (stats_m.col(n) * (stats_m.col(n).t()));
-                fisher += fisher_m;
-              }
+                fisher_m -= (lambda_s(n) / sum_lambda) *( stats_m.col(n) * (stats_m.col(n).t()));
+                //fisher += fisher_m;
+              }   
             }
           }
-        } 
-        else{
-          loglik -=  sum_lambda * interevent_time(m);
-          if(gradient){
-            grad -= interevent_time(m) * stats_m * lambda_s; //(6)
+        }
+      } 
+      else{
+        loglik_m -=  sum_lambda * interevent_time(m);
+        if(gradient){
+          grad_m -= interevent_time(m) * stats_m * (riskset_mat.row(riskset_time_m).t() % lambda_s); 
+        }
+        if(hessian){
+          for(n = 0; n < N; n++){         //loop throughout all actors
+            fisher_m += (riskset_mat(riskset_time_m,n) * lambda_s(n)) * (stats_m.col(n) * (stats_m.col(n).t()) );
           }
-          if(hessian){
-            for(n = 0; n < N; n++){         //loop throughout all actors
-              fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()));
+          //fisher -= interevent_time(m) * fisher_m;
+        }
+      }
+    }
+    else{  //no dynamic riskset
+      double sum_lambda = sum(lambda_s);
+      if(ordinal){
+        loglik_m -= std::log(sum_lambda);
+        if(gradient | hessian){
+          for(n = 0; n < N; n++){         //loop throughout all actors
+            expected_stat_m += lambda_s(n) * (stats_m.col(n));
+            expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
+            if(gradient){
+              grad_m -= expected_stat_m;
             }
-            fisher -= interevent_time(m) * fisher_m;
+
+            if(hessian){
+              fisher_m += (expected_stat_m * expected_stat_m.t());
+              fisher_m -= (lambda_s(n) / sum_lambda) * (stats_m.col(n) * (stats_m.col(n).t()));
+              //fisher += fisher_m;
+            }
           }
+        }
+      } 
+      else{
+        loglik_m -=  sum_lambda * interevent_time(m);
+        if(gradient){
+          grad_m -= interevent_time(m) * stats_m * lambda_s; //(6)
+        }
+        if(hessian){
+          for(n = 0; n < N; n++){         //loop throughout all actors
+            fisher_m += lambda_s(n)*(stats_m.col(n) * (stats_m.col(n).t()));
+          }
+          //fisher -= interevent_time(m) * fisher_m;
         }
       }
     }
 
-    if(gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
-    }else if(!gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
-    }else{
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
+    loglik(m) = loglik_m;
+    if(gradient){ // assigning gradient value at time m
+      grad.col(m) = grad_m;
     }
+    if(hessian){ // assigning hessian value at time m (different value between ordinal and interval likelihood)
+      if(ordinal){
+        fisher.slice(m) = fisher_m;
+      }
+      else{
+        fisher.slice(m) = (-1.0) * interevent_time(m) * fisher_m;
+      }
+    }
+  }
+
+  // processing output
+  if(gradient && !hessian){
+    return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1));
+  }else if(!gradient && !hessian){
+    return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik));
+  }else{
+    arma::cube H = -sum(fisher,2);
+    return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1), Rcpp::Named("hessian") = H.slice(0));
+  }
 }
 
 
@@ -384,6 +395,7 @@ Rcpp::List remDerivativesSenderRates(
 // @param actor2 list of actor2's observed at each time point (attr(reh,"actor2")-1).
 // @param omit_dyad is a list of two objects: a vector "time" and a matrix "riskset". Two objects for handling changing risksets. The object is NULL if no change of the risk set structure is defined.
 // @param interevent_time the time difference between the current time point and the previous event time.
+// @param ncores number of cores for parallelization
 // @param N the number of actors in the network (reh$N).
 // @param gradient boolean true/false whether to return gradient value (default is true).
 // @param hessian boolean true/false whether to return hessian value (default is true).
@@ -399,24 +411,19 @@ Rcpp::List remDerivativesReceiverChoice(
         const Rcpp::List &omit_dyad,
         const arma::vec &interevent_time,
         int N,
+        int ncores = 1,
         bool gradient = true,
         bool hessian  = true){
 
-    arma::uword P_d = stats.n_cols; // number of parameters for dyad stats
-    arma::uword M = stats.n_slices; // number of events
+    int U = stats.n_cols; // number of parameters for dyad stats
+    int M = stats.n_slices; // number of events
+    int m;
     int n;
 
-    // variables for internal computation
-    arma::vec lambda_d(N);
-    arma::vec expected_stat_m(P_d);
-    arma::mat fisher_m(P_d,P_d);
-    arma::uword dyad = 0;
-    double denom = 0;
-
     //output
-    double loglik = 0.0;
-    arma::mat fisher(P_d,P_d,arma::fill::zeros);
-    arma::vec grad(P_d,arma::fill::zeros);
+    arma::vec loglik(M,arma::fill::zeros);
+    arma::cube fisher(U,U,M,arma::fill::zeros);
+    arma::mat grad(U,M,arma::fill::zeros);
 
     // omit_dyad 
     arma::vec riskset_time_vec(M); 
@@ -429,13 +436,16 @@ Rcpp::List remDerivativesReceiverChoice(
       riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
     }
 
-
-    //loop through all events
-    for(arma::uword m = 0; m < M; m++){
+    #ifdef _OPENMP
+    omp_set_dynamic(0);         // disabling dynamic teams
+    omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+    #pragma omp parallel for if(ncores>1) private(m,n) shared(N,M,stats,pars,actor1,actor2,riskset_time_vec,riskset_mat,loglik,grad,fisher,hessian,gradient)
+    #endif
+    for(m = 0; m < M; m++){
       arma::mat stats_m = stats.slice(m).t(); // dimensions : [P*N] we want to access dyads by column
 
       //this is exp(beta^T X) dot product
-      lambda_d = arma::exp(stats_m.t() * pars);
+      arma::vec lambda_d = arma::exp(stats_m.t() * pars);
 
       //actors
       arma::uvec sender = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1, we will call sender[0] because actor1 is an unlisted list of vectors (so at each m there is only one sender)
@@ -444,20 +454,19 @@ Rcpp::List remDerivativesReceiverChoice(
       // riskset_m
       int riskset_time_m = riskset_time_vec(m);
 
-      //reset internal variables at each iteration
-      if(gradient | hessian){
-        fisher_m.zeros();
-        expected_stat_m.zeros();
-      }
-      denom = 0;
+      double loglik_m = 0.0;
+      arma::vec expected_stat_m(U,arma::fill::zeros);
+      arma::mat fisher_m(U,U,arma::fill::zeros);
+
+      double denom = 0.0;
       
       // changes in the riskset at m-th event
       if(riskset_time_m!=(-1)){ 
           for(n = 0; n<N; n++){
-              dyad = remify::getDyadIndex(sender[0],n,0,N,true);
+              arma::uword dyad = remify::getDyadIndex(sender[0],n,0,N,true);
               if((n!=sender[0]) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
                   //loglik
-                  denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
+                  denom += lambda_d(n); // exp(param_d * X_sender_i) 
                   if(hessian){
                   fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
                   }
@@ -470,8 +479,8 @@ Rcpp::List remDerivativesReceiverChoice(
       else{ // no changes in the riskset at m-th event
           for(n = 0;n<N; n++){ //loop throught all actors
           if(n!=sender[0]){ // 
-              //loglik
-              denom += lambda_d(n); // exp(param_d * X_sender_i) (4)
+              // loglik
+              denom += lambda_d(n); // exp(param_d * X_sender_i) )
               if(hessian){
                   fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
               }
@@ -482,30 +491,33 @@ Rcpp::List remDerivativesReceiverChoice(
           }
       }
 
-      loglik +=  std::log(lambda_d(receiver[0])); //(3) params_d^T * X_sender_receiver
-      loglik -= std::log(denom);
-
+      loglik_m +=  std::log(lambda_d(receiver[0])); // params_d^T * X_sender_receiver
+      loglik_m -= std::log(denom);
+      // assigning likelihood value
+      loglik(m) = loglik_m;
       if(gradient | hessian){
-          expected_stat_m /= denom; //(8)
+          expected_stat_m /= denom; 
       }
+      // assigning gradient
       if(gradient){
-          grad += stats_m.col(receiver[0]); //(7)
-          grad -= expected_stat_m;
+          grad.col(m) = stats_m.col(receiver[0]) - expected_stat_m; 
       }
       if(hessian){
           fisher_m /= denom;
           fisher_m += (expected_stat_m * expected_stat_m.t());
-          fisher += fisher_m;
-      }     
+          fisher.slice(m) = fisher_m;
+      } 
     }
 
-    if(gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad);
-    }else if(!gradient && !hessian){
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik);
-    }else{
-      return Rcpp::List::create(Rcpp::Named("value") = -loglik, Rcpp::Named("gradient") = -grad, Rcpp::Named("hessian") = -fisher);
-    }
+  // processing output
+  if(gradient && !hessian){
+    return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1));
+  }else if(!gradient && !hessian){
+    return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik));
+  }else{
+    arma::cube H = -sum(fisher,2);
+    return Rcpp::List::create(Rcpp::Named("value") = -sum(loglik), Rcpp::Named("gradient") = -sum(grad,1), Rcpp::Named("hessian") = H.slice(0));
+  }
 }
 
 
@@ -561,11 +573,11 @@ Rcpp::List remDerivatives(const arma::vec &pars,
     case 1: { 
         switch (senderRate){ // both likelihood miss paralellization
           case 0 : {
-                    out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),gradient,hessian);
+                    out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),ncores,gradient,hessian);
                     break;
                     }
           case 1 : {
-                    out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,ordinal,gradient,hessian);
+                    out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
                     break;
                     }
         }

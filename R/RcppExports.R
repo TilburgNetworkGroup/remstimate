@@ -13,12 +13,12 @@ remDerivativesStandard <- function(pars, stats, dyad, omit_dyad, interevent_time
     .Call(`_remstimate_remDerivativesStandard`, pars, stats, dyad, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
 }
 
-remDerivativesSenderRates <- function(pars, stats, actor1, omit_dyad, interevent_time, ordinal = FALSE, gradient = TRUE, hessian = TRUE) {
-    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, actor1, omit_dyad, interevent_time, ordinal, gradient, hessian)
+remDerivativesSenderRates <- function(pars, stats, actor1, omit_dyad, interevent_time, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesSenderRates`, pars, stats, actor1, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian)
 }
 
-remDerivativesReceiverChoice <- function(pars, stats, actor1, actor2, omit_dyad, interevent_time, N, gradient = TRUE, hessian = TRUE) {
-    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, actor1, actor2, omit_dyad, interevent_time, N, gradient, hessian)
+remDerivativesReceiverChoice <- function(pars, stats, actor1, actor2, omit_dyad, interevent_time, N, ncores = 1L, gradient = TRUE, hessian = TRUE) {
+    .Call(`_remstimate_remDerivativesReceiverChoice`, pars, stats, actor1, actor2, omit_dyad, interevent_time, N, ncores, gradient, hessian)
 }
 
 remDerivatives <- function(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal = FALSE, ncores = 1L, gradient = TRUE, hessian = TRUE, senderRate = TRUE, N = NULL) {

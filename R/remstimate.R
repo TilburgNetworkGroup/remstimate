@@ -330,9 +330,9 @@ remstimate <- function(reh,
         }
     }
 
-    # ... adjusting the intereventTime when ordinal = TRUE and model="actor" (for model="tie" in the ordinal likelihood the interevent time is not used)
-    if(ordinal & (model == "actor")){
-        reh$intereventTime <- rep(1,reh$M) # at this stage the correct value is assigned to reh$M 
+    # ... adjusting the intereventTime
+    if(ordinal){
+        reh$intereventTime <- c(1) # we can assign a vector of length 1 because the intereventTime will not be used from any ordinal likelihood
     }
 
     # ... GDADAMAX: optional arguments
@@ -643,8 +643,10 @@ remstimate <- function(reh,
                                     omit_dyad = omit_dyad_actor, 
                                     interevent_time = reh$intereventTime,
                                     model = model,
+                                    ordinal = ordinal,
                                     senderRate = senderRate[i],
-                                    N = reh$N)
+                                    N = reh$N,
+                                    ncores = ncores)
                     }
                     else if(method == "GDADAMAX"){ # Gradient Descent
                         if(is.null(init[[which_model[i]]])){
@@ -713,6 +715,7 @@ remstimate <- function(reh,
                                                                                     interevent_time = reh$intereventTime,
                                                                                     model = model,
                                                                                     ordinal = ordinal,
+                                                                                    ncores = ncores,
                                                                                     senderRate = TRUE)$value)
                     }
                     else{ # for receiver model
@@ -727,6 +730,7 @@ remstimate <- function(reh,
                                                                                                                     omit_dyad = omit_dyad_actor, 
                                                                                                                     interevent_time = reh$intereventTime,
                                                                                                                     model = model,
+                                                                                                                    ncores = ncores,
                                                                                                                     senderRate = FALSE,
                                                                                                                     N = reh$N)$value),-2*log(1/(reh$N-1)))
                     }
