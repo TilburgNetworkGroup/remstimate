@@ -284,13 +284,13 @@ remstimate <- function(reh,
                     if(!is.null(attr(reh,"indices_simultaneous_events"))){
                         time_points_to_select <- reh$edgelist$time[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
                     }
+                    reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")][start_stop[1]:start_stop[2]] # for the sender model
                     time_points_to_select <- time_points_to_select[start_stop]
                     lb_time <- min(which(reh$edgelist$time>=time_points_to_select[1]))
                     ub_time <- max(which(reh$edgelist$time<=time_points_to_select[2]))
                     if(!is.null(stats$receiver_stats)){
-                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[lb_time:ub_time], riskset = reh$omit_dyad$riskset)
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[lb_time:ub_time], riskset = reh$omit_dyad$riskset) # for the receiver model
                     }
-                    reh$omit_dyad$time <-  reh$omit_dyad$time[time_points_to_select][start_stop[1]:start_stop[2]]
                 }
             }
             else if(stats_attr_method == "pe"){
