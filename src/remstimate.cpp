@@ -1000,7 +1000,7 @@ Rcpp::List HMC(arma::mat pars_init,
 // function that computes Schoenfeld's residuals and rates given the estimates of the model parameters and the array of statistics.
 //
 // @param pars is a vector of parameters (note: the order must be aligned with the column order in 'stats').
-// @param stats is cube of M slices. Each slice is a matrix of dimensions D*U (or N*U for the actor-oriented model) with statistics of interest by column and dyads (actors, for the actor-oriented model) by row.
+// @param stats is cube of M slices. Each slice is a matrix of dimensions D*U (or N*U for the actor-oriented model) with statistics of interest by column and dyads (actors, for the actor-oriented model) by row. If intercept is present then it will be excluded from the array
 // @param actor1 list of actor1's observed per each time point (attr(reh,"actor1")-1).
 // @param actor2 list of actor2's observed per each time point (attr(reh,"actor2")-1).
 // @param dyad list of dyads observed per each time point (from the attribute attr(remify,"dyad")-1).
@@ -1033,7 +1033,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
 
   Rcpp::List out = Rcpp::List::create(); // output list object
   arma::uword M = stats.n_slices;
-  arma::uword P = stats.n_cols; 
+  arma::uword P = stats.n_cols;  
   arma::uword D = stats.n_rows; // is the number of dyads in the tie-oriented model, and the number of actors in the actor-oriented model
   arma::uword m,p,u,z,j,e;
   int n,l;
@@ -1162,9 +1162,9 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
       arma::mat inverse_vcov = arma::inv_sympd(vcov_sel,arma::inv_opts::allow_approx);
       for(j = 0 ; j < vcov_sel.n_rows; j++){
         l = which_stat_to_keep(j);
-        for(e = 0; e < dyad_m.n_elem; e++){ // loop over events occurred at the same time point t[m]
+        //for(e = 0; e < dyad_m.n_elem; e++){ // loop over events occurred at the same time point t[m]
           residuals_std(m-m_start).col(l) = residuals_mat(m-m_start).col(l) * inverse_vcov(j,j); // standardizing the residual
-        }
+        //}
         smoothing_weights(m-m_start,l) = 1/inverse_vcov(j,j); // saving the inverse variance for the smoothing spline in R
       }
     }
@@ -1285,24 +1285,23 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
         }
       }
       else{ // receiver choice model
-        arma::uvec actor1_m = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1
-        arma::uvec actor2_m = actor2(m)-1; // -1 because actors' IDs must range between 0 and N-1
-        arma::mat stats_actor2_m = stats_m.rows(actor2_m); // perhaps it is necessary to use the transpose ? .t(); // we select it now before we reduce lambda and stats according to varying risk set
-        residuals_mat(m-m_start).set_size(actor1_m.n_elem,P);
-        residuals_std(m-m_start).set_size(actor1_m.n_elem,P);
+        arma::uvec actor1_m_vec = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1
+        arma::uvec actor2_m_vec = actor2(m)-1; // -1 because actors' IDs must range between 0 and N-1
+        arma::uword actor1_m = actor1_m_vec(0); // this could be improved (?)
+        arma::uword actor2_m = actor2_m_vec(0); // this could be improved (?)
+        arma::rowvec stats_actor2_m = stats_m.row(actor2_m); // perhaps it is necessary to use the transpose ? .t(); // we select it now before we reduce lambda and stats according to varying risk set
+        residuals_mat(m-m_start).set_size(1,P);
+        residuals_std(m-m_start).set_size(1,P);
         arma::vec lambda = arma::exp((stats_m * pars) + baseline); // event rates
         Rcpp::IntegerVector remove_actors;
         arma::vec ws;
-        for(e = 0; e < actor1_m.n_elem; e++){
-          remove_actors.push_back(actor1_m[e]);
-        }
+        remove_actors.push_back(actor1_m);
+        
         if(riskset_time_vec(m)!=(-1)){
-          for(e=0; e< actor1_m.n_elem; e++){
-            for(n = 0; n<N; n++){
-              int dyad_n = remify::getDyadIndex(actor1_m[e],n,0,N,true); // in the actor-oriented model, D is the number of actors
-              if(n!=actor1_m[e] && riskset_mat(riskset_time_vec(m),dyad_n)==0){
-                remove_actors.push_back(n);
-              }
+          for(n = 0; n<N; n++){
+            int dyad_n = remify::getDyadIndex(actor1_m,n,0,N,true); // in the actor-oriented model, D is the number of actors
+            if(n!=actor1_m && riskset_mat(riskset_time_vec(m),dyad_n)==0){
+              remove_actors.push_back(n);
             }
           }
         }
@@ -1313,7 +1312,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
         
         for(p = 0; p < P; p++){
           expected_stats(p) = sum(stats_m.col(p).t() * ws);
-          residuals_mat(m-m_start).col(p) = stats_actor2_m.col(p);
+          residuals_mat(m-m_start).col(p) = stats_actor2_m(p);
           residuals_mat(m-m_start).col(p) -= expected_stats(p);
         }
 

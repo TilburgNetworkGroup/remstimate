@@ -203,16 +203,12 @@ expect_error(waic(tie_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE) 
 
-
 # ordinal likelihood (tie-oriented modeling)
 attr(tie_reh,"ordinal") <- TRUE
-expect_error(remstimate::remstimate(reh = tie_reh,
+expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
-                        method = "MLE"),
-"method = 'pt' from remstats not compatible with ordinal likelihood",
-fixed = TRUE)    
-attr(tie_reh,"ordinal") <- FALSE
+                        method = "MLE")) 
 
 # testing with omit_dyad
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie", omit_dyad = list(list(time = c(120,148), dyad=data.frame(actor1=c("4",NA),actor2=c(NA,"4"),type=c(NA,NA))))) # removing actor "4" from time=120 to time=148

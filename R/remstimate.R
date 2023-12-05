@@ -142,7 +142,7 @@ remstimate <- function(reh,
     if(is.null(method)){
         method <- "MLE" # method "MLE" as default
     }
-    if(!(method %in% c("MLE","GDADAMAX","BSIR","HMC"))){stop("The `method` specified is not available or it is mistyped.")}
+    if(!any(method %in% c("MLE","GDADAMAX","BSIR","HMC"))){stop("The `method` specified is not available or it is mistyped.")}
     else{
         method  <- match.arg(arg = method, choices = c("MLE","GDADAMAX","BSIR","HMC"), several.ok = FALSE) # default is "MLE"
     }
@@ -173,18 +173,11 @@ remstimate <- function(reh,
         }
         omit_dyad_receiver <- NULL
         if(stats_attr_method == "pe"){
-            if(!ordinal){
-                if(!is.null(attr(reh,"evenly_spaced_interevent_time"))){
-                    reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
-                }
+            if(!is.null(attr(reh,"evenly_spaced_interevent_time"))){
+                reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
             }
             if(!is.null(reh$E)){ # reh$E is NULL only when there are no simultaneous events
                 reh$M <- reh$E # overwriting dimension (we can do it because remstimate works only with reh$M so if the method is "pt", reh$M will remain so. For method "pe" we assign reh$E to reh$M
-            }
-        }
-        if(stats_attr_method == "pt"){
-            if(ordinal){
-                stop("method = 'pt' from remstats not compatible with ordinal likelihood")
             }
         }
         if(!is.null(attr(stats,"subset"))){
@@ -222,10 +215,8 @@ remstimate <- function(reh,
                 attr(reh,"dyadID") <- attr(reh,"dyadID")[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
                 attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
                 attr(reh,"actor2ID") <- attr(reh,"actor2ID")[start_stop[1]:start_stop[2]] 
-                if((length(reh$omit_dyad)>0) & !ordinal){
-                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
-                        reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")]
-                    }
+                if((length(reh$omit_dyad)>0) & !is.null(attr(reh,"indices_simultaneous_events"))){
+                    reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")] 
                 }
             }
             else if(stats_attr_method =="pe"){
@@ -244,7 +235,7 @@ remstimate <- function(reh,
         }
 
         # .. check on dimensions
-        if(reh$M != dim(stats)[3]){ # if the dimension of the processed intereventTime are different from the dimensions of the input stats object, then throw error
+        if(length(attr(reh,"dyadID")) != dim(stats)[3]){ # if the dimension of the processed intereventTime are different from the dimensions of the input stats object, then throw error
             stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
         }
     }
@@ -289,12 +280,15 @@ remstimate <- function(reh,
                     reh$E <- reh$M
                 }
                 if(length(reh$omit_dyad)>0){
-                    time_points_to_select <- c(1:reh$E)
-                    if(!is.null(attr(reh,"indices_simultaneous_events")) & !ordinal){
-                        time_points_to_select <- c(1:reh$E)[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
+                    time_points_to_select <- reh$edgelist$time  # it was c(1:reh$E)
+                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
+                        time_points_to_select <- reh$edgelist$time[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
                     }
+                    time_points_to_select <- time_points_to_select[start_stop]
+                    lb_time <- min(which(reh$edgelist$time>=time_points_to_select[1]))
+                    ub_time <- max(which(reh$edgelist$time<=time_points_to_select[2]))
                     if(!is.null(stats$receiver_stats)){
-                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[time_points_to_select[start_stop[1]]:time_points_to_select[start_stop[2]]], riskset = reh$omit_dyad$riskset, risksetSender = reh$omit_dyad$risksetSender)
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[lb_time:ub_time], riskset = reh$omit_dyad$riskset)
                     }
                     reh$omit_dyad$time <-  reh$omit_dyad$time[time_points_to_select][start_stop[1]:start_stop[2]]
                 }
@@ -304,7 +298,7 @@ remstimate <- function(reh,
                 attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))[start_stop[1]:start_stop[2]]
                 if(length(reh$omit_dyad)>0){
                     if(!is.null(stats$receiver_stats)){
-                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[start_stop[1]:start_stop[2]]  , riskset = reh$omit_dyad$riskset, risksetSender = reh$omit_dyad$risksetSender)
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[start_stop[1]:start_stop[2]]  , riskset = reh$omit_dyad$riskset)
                     } 
                     reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]        
                 }
@@ -317,12 +311,12 @@ remstimate <- function(reh,
             # .. check on dimensions
             no_correct_dimensions <- FALSE
             if(!is.null(stats$sender_stats)){
-                if((reh$M != dim(stats$sender_stats)[3])){ # if the dimension of the processed intereventTime is different from the dimensions of the input stats object, then throw error
+                if((length(attr(reh,"actor1ID")) != dim(stats$sender_stats)[3])){ # if the dimension of the processed intereventTime is different from the dimensions of the input stats object, then throw error
                     no_correct_dimensions <- TRUE
                 }
             }
             if(!is.null(stats$receiver_stats)){
-                if((dim(reh$edgelist)[1] != dim(stats$receiver_stats)[3])){ # if the dimension of the edgelist is different from the dimensions of the input stats object, then throw error
+                if((length(attr(reh,"actor2ID")) != dim(stats$receiver_stats)[3])){ # if the dimension of the edgelist is different from the dimensions of the input stats object, then throw error
                     no_correct_dimensions <- TRUE
                 }
             }
@@ -336,8 +330,8 @@ remstimate <- function(reh,
         }
     }
 
-    # ... adjusting the intereventTime when ordinal = TRUE
-    if(ordinal){
+    # ... adjusting the intereventTime when ordinal = TRUE and model="actor" (for model="tie" in the ordinal likelihood the interevent time is not used)
+    if(ordinal & (model == "actor")){
         reh$intereventTime <- rep(1,reh$M) # at this stage the correct value is assigned to reh$M 
     }
 
@@ -1582,9 +1576,214 @@ summary.remstimate<-function (object, ...)
 #' 
 residuals.remstimate <- function(object, reh, stats, ...)
 {
+    # processing dyadID actor1ID and actor2ID depending on pt/pe and on start and stop values
+        # ... remify object ('reh' input argument)
+    if(!inherits(reh,"remify")){
+        stop("'reh' must be a 'remify' object (see ?remify::remify).")
+    }
+
+    # ... model
+    model <- attr(reh, "model") # attribute from reh object
+    if(is.null(model) | !(model %in% c("actor","tie"))){
+        stop("attribute 'model' of input 'reh' must be either 'actor' or 'tie'")
+    }
+    if(!is.null(attr(stats,"model"))){
+        if(attr(stats,"model")!=attr(reh,"model")){
+            stop("attribute 'model' of input 'reh' and input 'stats' must be the same")
+        }
+    }
+       
+    # ... active riskset? then overwrite two objects (this prevents from coding many ifelse() to switch between active-oriented riskset objects and full-oriented riskset objects)
+    if((attr(reh,"riskset") == "active")){
+        reh$D <- reh$activeD
+        if(model == "tie"){
+            attr(reh,"dyadID") <- attr(reh,"dyadIDactive")
+            reh$omit_dyad <- list() # because "reh$omit_dyad$time" and "reh$omit_dyad$riskset" for riskset="active" are obsolete (will be removed from remify output in the future 3.x.x version)
+            # check line 113 remify.cpp
+        }
+    }
+
+    # ... type of likelihood
+    ordinal <- attr(reh,"ordinal")
+
+    # ... omit dyad
+    if(is.null(reh$omit_dyad)){
+        reh$omit_dyad <- list()
+    }
+
+    # ... processing start and stop values and method from ("subset" and "method" attribute of remstats object)
+    # we do this now because later the stats object will change dimensions and won't be a remstats object anymore
+    if(all(inherits(stats,c("remstats","tomstats"),TRUE)) | all(inherits(stats,c("remstats","aomstats"),TRUE))){
+        stats_attr_method <- attr(stats,"method")
+        if(is.null(stats_attr_method)){
+            stop("attribute 'method' not found inside object 'remstats'. Input argument 'stats' must be an object of class 'remstats' from the package 'remstats' (>=3.2.0)")
+        }
+        omit_dyad_receiver <- NULL
+        if(stats_attr_method == "pe"){
+            if(!is.null(attr(reh,"evenly_spaced_interevent_time"))){
+                reh$intereventTime <- attr(reh,"evenly_spaced_interevent_time")
+            }
+            if(!is.null(reh$E)){ # reh$E is NULL only when there are no simultaneous events
+                reh$M <- reh$E # overwriting dimension (we can do it because remstimate works only with reh$M so if the method is "pt", reh$M will remain so. For method "pe" we assign reh$E to reh$M
+            }
+        }
+        if(!is.null(attr(stats,"subset"))){
+            start_stop <- as.numeric(unlist(attr(stats,"subset")))
+        }
+        else{
+            start_stop <- c(1,reh$M)
+        }
+    }
+    else{
+        stop("'stats' must be a 'remstats' object from the package 'remstats' (>= 3.2.0), suitable for tie-oriented modeling ('tomstats') or actor-oriented modeling ('aomstats')")
+    }
+
+    # ... stats 
+    model_formula <- variables_names <- where_is_baseline <- NULL
+    if(model == "tie")
+    {   
+        if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
+            if(!is.null(dimnames(stats)[[3]])){
+                variables_names <- dimnames(stats)[[3]]
+            }
+            if(is.null(attr(stats,"formula"))){
+                model_formula <- stats::as.formula(paste("~ ",paste(variables_names,collapse=" + ")))
+            }
+            else{
+                model_formula <- attr(stats,"formula")
+            }
+            # is there a baseline term?
+            if(any(tolower(variables_names) %in% c("baseline"))){
+                where_is_baseline <- which(variables_names == "baseline")
+            }
+            stats <- aperm(stats, perm = c(2,3,1)) # stats reshaped in [D*U*M]
+            # start and stop for tie-oriented model
+            if(stats_attr_method == "pt"){
+                attr(reh,"dyadID") <- attr(reh,"dyadID")[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
+                attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- attr(reh,"actor2ID")[start_stop[1]:start_stop[2]] 
+                if((length(reh$omit_dyad)>0) & !is.null(attr(reh,"indices_simultaneous_events"))){
+                    reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")] 
+                }
+            }
+            else if(stats_attr_method =="pe"){
+                attr(reh,"dyadID") <- unlist(attr(reh,"dyadID"))[start_stop[1]:start_stop[2]] # this is already working for dyadIDactive because we reassing attribute dyadID in line 123
+                attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))[start_stop[1]:start_stop[2]] 
+            } 
+            reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]] # in line 168 we already re-assigned the intereventTime variable in case of method="pe", so line 224 is a valid processing for "pt" and "pe"
+            reh$M <- diff(start_stop)+1
+            if(length(reh$omit_dyad)>0){
+                reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]
+            }
+        }
+        else if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
+            stop("'remstats' object supplied cannot work for tie-oriented modeling")
+        }
+
+        # .. check on dimensions
+        if(length(attr(reh,"dyadID")) != dim(stats)[3]){ # if the dimension of the processed intereventTime are different from the dimensions of the input stats object, then throw error
+            stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
+        }
+    }
+    if(model == "actor") 
+    {
+        model_formula <- list() # becomes a list
+        if(all(inherits(stats,c("remstats","aomstats"),TRUE))){
+            variables_rate <- variables_choice <- NULL
+            if(!is.null(stats$sender_stats)){ # sender model is specified
+                variables_rate <- dimnames(stats$sender_stats)[[3]]
+                if(!is.null(attr(stats,"formula")$rate)){
+                    model_formula[["rate_model_formula"]] <- attr(stats,"formula")$rate
+                }
+                else{
+                    model_formula[["rate_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_rate,collapse=" + ")))
+                }
+                # is there a baseline term?
+                if(any(tolower(variables_rate) %in% c("baseline"))){
+                    where_is_baseline <- which(variables_rate == "baseline")
+                }
+                stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
+            }
+            if(!is.null(stats$receiver_stats)){ # receiver model is specified
+                variables_choice <- dimnames(stats$receiver_stats)[[3]] 
+                if(!is.null(attr(stats,"formula")$choice)){
+                    model_formula[["choice_model_formula"]] <- attr(stats,"formula")$choice
+                }
+                else{
+                    model_formula[["choice_model_formula"]] <- stats::as.formula(paste("~ ",paste(variables_choice,collapse=" + ")))
+                }
+                stats$receiver_stats <- aperm(stats$receiver_stats, perm = c(2,3,1)) # stats reshaped in [N*U*M]
+            }
+
+            # vector of variable names and list of model formulas
+            variables_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
+
+            # start and stop for actor-oriented model
+            if(stats_attr_method == "pt"){
+                attr(reh,"actor1ID") <- attr(reh,"actor1ID")[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID")[start_stop[1]:start_stop[2]]) # unlist here because of receiver-choice model
+                if(is.null(reh$E)){ # this scenario can still happen
+                    reh$E <- reh$M
+                }
+                if(length(reh$omit_dyad)>0){
+                    time_points_to_select <- reh$edgelist$time  # it was c(1:reh$E)
+                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
+                        time_points_to_select <- reh$edgelist$time[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
+                    }
+                    time_points_to_select <- time_points_to_select[start_stop]
+                    lb_time <- min(which(reh$edgelist$time>=time_points_to_select[1]))
+                    ub_time <- max(which(reh$edgelist$time<=time_points_to_select[2]))
+                    if(!is.null(stats$receiver_stats)){
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[lb_time:ub_time], riskset = reh$omit_dyad$riskset)
+                    }
+                    reh$omit_dyad$time <-  reh$omit_dyad$time[time_points_to_select][start_stop[1]:start_stop[2]]
+                }
+            }
+            else if(stats_attr_method == "pe"){
+                attr(reh,"actor1ID") <- unlist(attr(reh,"actor1ID"))[start_stop[1]:start_stop[2]]
+                attr(reh,"actor2ID") <- unlist(attr(reh,"actor2ID"))[start_stop[1]:start_stop[2]]
+                if(length(reh$omit_dyad)>0){
+                    if(!is.null(stats$receiver_stats)){
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[start_stop[1]:start_stop[2]]  , riskset = reh$omit_dyad$riskset)
+                    } 
+                    reh$omit_dyad$time <- reh$omit_dyad$time[start_stop[1]:start_stop[2]]        
+                }
+            } 
+            if(!ordinal){
+                reh$intereventTime <- reh$intereventTime[start_stop[1]:start_stop[2]]
+            }
+            reh$M <- diff(start_stop)+1
+
+            # .. check on dimensions
+            no_correct_dimensions <- FALSE
+            if(!is.null(stats$sender_stats)){
+                if((length(attr(reh,"actor1ID")) != dim(stats$sender_stats)[3])){ # if the dimension of the processed intereventTime is different from the dimensions of the input stats object, then throw error
+                    no_correct_dimensions <- TRUE
+                }
+            }
+            if(!is.null(stats$receiver_stats)){
+                if((length(attr(reh,"actor2ID")) != dim(stats$receiver_stats)[3])){ # if the dimension of the edgelist is different from the dimensions of the input stats object, then throw error
+                    no_correct_dimensions <- TRUE
+                }
+            }
+            if(no_correct_dimensions){
+                stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
+            }
+
+        }
+        else if(all(inherits(stats,c("remstats","tomstats"),TRUE))){
+            stop("'remstats' object supplied cannot work for actor-oriented modeling")
+        }
+    }
+
+    # ... adjusting the intereventTime when ordinal = TRUE and model="actor" (for model="tie" in the ordinal likelihood the interevent time is not used)
+    if(ordinal & (model == "actor")){
+        reh$intereventTime <- rep(1,reh$M) # at this stage the correct value is assigned to reh$M 
+    }
     
+
     if(attr(object,"model") == "tie"){ # tie-oriented modeling
-        stats <- aperm(stats, perm = c(2,3,1))
         # check on variables names from object and stats (throw an error if they do not match)
         # check on reh and object characteristics (throw an error if they do not match)
         variables_names <- attr(object, "statistics")
@@ -1612,8 +1811,6 @@ residuals.remstimate <- function(object, reh, stats, ...)
         # lambdas (event rates) : this will have to be calculated only for plot on waiting times (qq-plot) and top% plot
         diagnostics$rates <- diagnostics$residuals$rates   
         diagnostics$residuals$rates <- NULL  
-        class(diagnostics) <- c("remstimate","residuals")
-        return(diagnostics) 
     }
     else if(attr(object,"model") == "actor"){ # actor-oriented modeling
         # check on variables names from object and stats (throw an error if they do not match)
@@ -1623,11 +1820,17 @@ residuals.remstimate <- function(object, reh, stats, ...)
         senderRate <- c(TRUE,FALSE)
         which_model <- c("sender_model","receiver_model")
         which_stats <- c("sender_stats","receiver_stats") 
+        actor1ID_condition <- c(TRUE,FALSE)
+        if(stats_attr_method == "pe"){
+            actor1ID_condition <- as.logical(actor1ID_condition*FALSE) # actor1ID is needed unlist both for sender and receiver model
+        }
         diagnostics <- list()
         # residuals
         for(i in 1:2){
             if(!is.null(stats[[which_stats[i]]])){
-                stats[[which_stats[i]]] <- aperm(stats[[which_stats[i]]], perm = c(2,3,1))
+                actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
+                omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
+                #stats[[which_stats[i]]] <- aperm(stats[[which_stats[i]]], perm = c(2,3,1))
                 diagnostics[[which_model[i]]] <- list()
                 baseline_value <- 0
                 select_vars <- c(1:dim(stats[[which_stats[i]]])[2])
@@ -1639,10 +1842,10 @@ residuals.remstimate <- function(object, reh, stats, ...)
                 diagnostics[[which_model[i]]] <- list()
                 diagnostics[[which_model[i]]]$residuals <- computeDiagnostics(pars = as.vector(object[[which_model[i]]]$coefficients)[select_vars],
                                                         stats = stats[[which_stats[i]]],
-                                                        actor1 = attr(reh,"actor1ID"),
+                                                        actor1 = actor1ID_ls,
                                                         actor2 = attr(reh,"actor2ID"),
                                                         dyad = list(),
-                                                        omit_dyad = reh$omit_dyad,
+                                                        omit_dyad = omit_dyad_actor,
                                                         model = attr(reh,"model"),
                                                         N = reh$N,
                                                         senderRate = senderRate[i],
@@ -1655,9 +1858,11 @@ residuals.remstimate <- function(object, reh, stats, ...)
                 diagnostics[[which_model[i]]]$residuals$rates <- NULL 
             }
         }
-        class(diagnostics) <- c("remstimate","residuals")
-        return(diagnostics) 
     }
+    diagnostics$reh.processed <- reh
+    class(diagnostics) <- c("remstimate","residuals")
+    diagnostics$stats.method <- stats_attr_method
+    return(diagnostics) 
 }
 
 
@@ -1728,6 +1933,9 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
             stop("'residuals' must be an object of class 'remstimate' 'residuals'")
     }
 
+    # overwriting reh with one coming from residuals(), because there pt/pe methods and start/stop from remstats are already processed
+    reh <- residuals$reh.processed
+
     if(attr(x,"model") == "tie"){ # tie-oriented modeling
 
         # (1) waiting times vs. theoretical distribution
@@ -1742,11 +1950,15 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
         }
 
         # (2) standardized Schoenfeld's residuals
-        P <- dim(residuals$residuals$standardized_residuals)[2] # number of statistics
+        P <- dim(residuals$residuals$standardized_residuals[[1]])[2] # number of statistics
         #m_exclude <- (reh$M-dim(residuals$residuals$standardized_residuals)[1])
+        n_repeats_per_time_point <- rep(1,dim(residuals$residuals$standardized_residuals)[1])# for attr(residuals, "stats.method") = "pe"
+        if(residuals$stats.method == "pt"){
+            n_repeats_per_time_point <- sapply(1:dim(residuals$residuals$standardized_residuals)[1], function(v) dim(residuals$residuals$standardized_residuals[[v]])[1])
+        }
+        t_p <- rep(cumsum(reh$intereventTime),n_repeats_per_time_point) # skipping first time point #reh$edgelist$time #[-c(1:m_exclude)]
         for(p in 1:P){
-            t_p <- reh$edgelist$time #[-c(1:m_exclude)]
-            y_p <- residuals$residuals$standardized_residuals[,p]
+            y_p <-  unlist(sapply(1:dim(residuals$residuals$standardized_residuals)[1], function(v) residuals$residuals$standardized_residuals[[v]][,p])) #skipping first time point
             qrt_p <- quantile(y_p, probs=c(0.25,0.75))
             lb_p <- qrt_p[1] - diff(qrt_p)*3
             ub_p <- qrt_p[2] + diff(qrt_p)*3
@@ -1754,13 +1966,13 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
             if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
                 ylim_p <- c(lb_p,ub_p)
             }
-            w_p <- residuals$residuals$smoothing_weights[,p]
+            w_p <- rep(residuals$residuals$smoothing_weights[,p],n_repeats_per_time_point) # skipping first time point
             w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
             par(mfrow=c(1,1))
             plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p) # plotting standardized Schoenfeld's residuals
             lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=1.5,col=2) # plotting smoothed weighted regression of the residuals
             abline(h=0,col="gray40",lwd=1.5,lty=2)
-            mtext(text = colnames(residuals$residuals$standardized_residuals)[p], side = 3, line = 1,cex=1.5)
+            mtext(text = colnames(residuals$residuals$smoothing_weights)[p], side = 3, line = 1,cex=1.5)
         }
 
         # (3) observed event rates with top % event rate shaded regions
@@ -1816,10 +2028,19 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
 
                 # (2) standardized Schoenfeld's residuals
                 #m_exclude <- (reh$M-dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1])
-                P <- dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[2] # number of statistics
+                P <- dim(residuals[[which_model[i]]]$residuals$standardized_residuals[[1]])[2] # number of statistics
+                n_repeats_per_time_point <- rep(1,dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1])
+                if(i == 1){
+                    if((residuals$stats.method == "pt")){
+                        n_repeats_per_time_point <- sapply(1:dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) dim(residuals[[which_model[i]]]$residuals$standardized_residuals[[v]])[1])
+                    }
+                    t_p <- rep(cumsum(reh$intereventTime),n_repeats_per_time_point)
+                }
+                else if(i == 2){
+                    t_p <- cumsum(n_repeats_per_time_point)
+                }
                 for(p in 1:P){
-                    t_p <- reh$edgelist$time #[-c(1:m_exclude)]
-                    y_p <- residuals[[which_model[i]]]$residuals$standardized_residuals[,p]
+                    y_p <- unlist(sapply(1:dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) residuals[[which_model[i]]]$residuals$standardized_residuals[[v]][,p])) # skipping first time point
                     qrt_p <- quantile(y_p, probs=c(0.25,0.75))
                     lb_p <- qrt_p[1] - diff(qrt_p)*3
                     ub_p <- qrt_p[2] + diff(qrt_p)*3
@@ -1827,13 +2048,13 @@ plot.remstimate <- function(x, reh, residuals = NULL, ...)
                     if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
                         ylim_p <- c(lb_p,ub_p)
                     }
-                    w_p <- residuals[[which_model[i]]]$residuals$smoothing_weights[,p]
+                    w_p <- rep(residuals[[which_model[i]]]$residuals$smoothing_weights[,p],n_repeats_per_time_point) # skipping first time point
                     w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
                     par(mfrow=c(1,1))
                     plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p) # plotting standardized Schoenfeld's residuals
                     lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=1.5,col=2) # plotting smoothed weighted regression of the residuals
                     abline(h=0,col="gray40",lwd=1.5,lty=2)
-                    mtext(text = colnames(residuals[[which_model[i]]]$residuals$standardized_residuals)[p], side = 3, line = 2,cex=1.5)
+                    mtext(text = colnames(residuals[[which_model[i]]]$residuals$smoothing_weights)[p], side = 3, line = 2,cex=1.5)
                     mtext(text = title_model[i], side = 3, line = 1, cex = 1)
                 }
 

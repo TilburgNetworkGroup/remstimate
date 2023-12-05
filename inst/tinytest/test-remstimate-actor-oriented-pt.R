@@ -262,12 +262,10 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
 
 # ordinal likelihood (actor-oriented modeling)
 attr(ao_reh,"ordinal") <- TRUE
-expect_error(remstimate::remstimate(reh = ao_reh,
+expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
-                        method = "MLE"),
-"method = 'pt' from remstats not compatible with ordinal likelihood",
-fixed=TRUE)
+                        method = "MLE"))
 
 
 # Risk set "active"
