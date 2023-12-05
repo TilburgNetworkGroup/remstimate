@@ -463,8 +463,8 @@ Rcpp::List remDerivativesReceiverChoice(
       // changes in the riskset at m-th event
       if(riskset_time_m!=(-1)){ 
           for(n = 0; n<N; n++){
-              arma::uword dyad = remify::getDyadIndex(sender[0],n,0,N,true);
-              if((n!=sender[0]) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
+              arma::uword dyad = remify::getDyadIndex(sender(0),n,0,N,true);
+              if((n!=sender(0)) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
                   //loglik
                   denom += lambda_d(n); // exp(param_d * X_sender_i) 
                   if(hessian){
@@ -478,7 +478,7 @@ Rcpp::List remDerivativesReceiverChoice(
       }
       else{ // no changes in the riskset at m-th event
           for(n = 0;n<N; n++){ //loop throught all actors
-          if(n!=sender[0]){ // 
+          if(n!=sender(0)){ // 
               // loglik
               denom += lambda_d(n); // exp(param_d * X_sender_i) )
               if(hessian){
@@ -491,7 +491,7 @@ Rcpp::List remDerivativesReceiverChoice(
           }
       }
 
-      loglik_m +=  std::log(lambda_d(receiver[0])); // params_d^T * X_sender_receiver
+      loglik_m +=  std::log(lambda_d(receiver(0))); // params_d^T * X_sender_receiver
       loglik_m -= std::log(denom);
       // assigning likelihood value
       loglik(m) = loglik_m;
@@ -500,7 +500,7 @@ Rcpp::List remDerivativesReceiverChoice(
       }
       // assigning gradient
       if(gradient){
-          grad.col(m) = stats_m.col(receiver[0]) - expected_stat_m; 
+          grad.col(m) = stats_m.col(receiver(0)) - expected_stat_m; 
       }
       if(hessian){
           fisher_m /= denom;
