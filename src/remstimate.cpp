@@ -266,11 +266,11 @@ Rcpp::List remDerivativesSenderRates(
     riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
   }
 
-  //#ifdef _OPENMP
-  //omp_set_dynamic(0);         // disabling dynamic teams
-  //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-  //#pragma omp parallel for if(ncores>1) private(m,n) shared(N,M,stats,pars,actor1,interevent_time,riskset_time_vec,riskset_mat,loglik,grad,fisher,ordinal,hessian,gradient)
-  //#endif
+  #ifdef _OPENMP
+  omp_set_dynamic(0);         // disabling dynamic teams
+  omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
+  #pragma omp parallel for if(ncores>1) private(m,n) shared(N,M,stats,pars,actor1,interevent_time,riskset_time_vec,riskset_mat,loglik,grad,fisher,ordinal,hessian,gradient)
+  #endif
   for(m = 0; m < M; m++){
     arma::mat stats_m = stats.slice(m).t(); 
     //this is exp(beta^T X) dot product
