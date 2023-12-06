@@ -280,16 +280,23 @@ remstimate <- function(reh,
                     reh$E <- reh$M
                 }
                 if(length(reh$omit_dyad)>0){
-                    time_points_to_select <- reh$edgelist$time  # it was c(1:reh$E)
-                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
-                        time_points_to_select <- reh$edgelist$time[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
-                    }
-                    reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")][start_stop[1]:start_stop[2]] # for the sender model
-                    time_points_to_select <- time_points_to_select[start_stop]
-                    lb_time <- min(which(reh$edgelist$time>=time_points_to_select[1]))
-                    ub_time <- max(which(reh$edgelist$time<=time_points_to_select[2]))
+
+                    # for the receiver model 
                     if(!is.null(stats$receiver_stats)){
+                        start_stop_time <- unique(reh$edgelist$time)[start_stop]
+                        lb_time <- min(which(reh$edgelist$time>=start_stop_time[1]))
+                        ub_time <- max(which(reh$edgelist$time<=start_stop_time[2]))
                         omit_dyad_receiver <- list(time = reh$omit_dyad$time[lb_time:ub_time], riskset = reh$omit_dyad$riskset) # for the receiver model
+                    }
+
+                    # for the sender model (we process now the sender model because this will modify the reh$omit_dyad$time object)
+                    if(!is.null(stats$sender_stats)){
+                        if(!is.null(attr(reh,"indices_simultaneous_events"))){
+                            reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")][start_stop[1]:start_stop[2]] # for the sender model
+                        }
+                        else{
+                            reh$omit_dyad$time <-  reh$omit_dyad$time[start_stop[1]:start_stop[2]] # for the sender model
+                        }
                     }
                 }
             }

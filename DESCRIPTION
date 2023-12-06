@@ -47,7 +47,7 @@ Imports:
     methods,
     mvnfast,
     Rcpp,
-    remify (>= 3.2.0),
+    remify (>= 3.2.4),
     trust,
     remstats (>= 3.1.0)
 Suggests: 

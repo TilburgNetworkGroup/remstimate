@@ -220,7 +220,7 @@ tie_reh <- remify::remify(edgelist = tie_data$edgelist,
                             model = "tie", 
                             riskset="active") 
 # calculating statistics
-tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model, method="pt")
+tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model, method="pe")
 
 # (1) method = "MLE"
 expect_silent(remstimate::remstimate(reh = tie_reh,

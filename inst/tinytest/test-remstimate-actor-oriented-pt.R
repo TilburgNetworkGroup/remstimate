@@ -262,6 +262,7 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
 
 # ordinal likelihood (actor-oriented modeling)
 ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor", ordinal = TRUE)
+ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model, method="pt")
 expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
