@@ -2059,11 +2059,17 @@ plot.remstimate <- function(x,
                 mtext(text = "Q-Q waiting times", side = 3, line = 2,cex=1.5)
                 abline(a=0,b=1,lty=2,lwd=1.5)
                 density_observed <- density(observed)
-                density_observed$y <- density_observed$y/max(density_observed$y) # rescaling max density to 1 (to compare with dexp)
+                if(max(density_observed$y)>0){
+                    density_observed$y <- density_observed$y/max(density_observed$y) # rescaling max density to 1 (to compare with dexp)
+                }
                 curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lwd=1.5,xlab="waiting times")
                 lines(density_observed,col=2,lwd=1.5)
                 mtext(text = "Density plot of waiting times", side = 3, line = 2,cex=1.5)
-                legend("topright", legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2))
+                # plot size
+                plot.width <- par("fin")[1] * par("plt")[1]
+                plot.height <- par("fin")[2] * par("plt")[2]
+                # legend
+                legend(x="bottom", inset = c(plot.height,plot.width), legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2),horiz=TRUE, box.lwd=0)
                 par(op)
             }
         }
@@ -2125,12 +2131,18 @@ plot.remstimate <- function(x,
                         mtext(text = title_model[i], side = 3, line = 1,cex=1)
                         abline(a=0,b=1,lty=2,lwd=1.5)
                         density_observed <- density(observed)
-                        density_observed$y <- density_observed$y/max(density_observed$y) # rescaling max density to 1 (to compare with dexp)
+                        if(max(density_observed$y)>0){
+                            density_observed$y <- density_observed$y/max(density_observed$y) # rescaling max density to 1 (to compare with dexp)
+                        }
                         curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lwd=1.5,xlab="waiting times",ylab="Density")
                         lines(density_observed,col=2,lwd=1.5)
                         mtext(text = "Density plot of waiting times", side = 3, line = 2,cex=1.5)
                         mtext(text = title_model[i], side = 3, line = 1,cex=1)
-                        legend("topright", legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2))
+                        # plot size
+                        plot.width <- par("fin")[1] * par("plt")[1]
+                        plot.height <- par("fin")[2] * par("plt")[2]
+                        # legend
+                        legend(x="bottom", inset = c(plot.height,plot.width), legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2),horiz=TRUE, box.lwd=0)
                         par(op)
                     }
                 }
