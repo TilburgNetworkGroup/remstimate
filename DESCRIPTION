@@ -1,6 +1,6 @@
 Type: Package
 Package: remstimate
-Title: Optimization Frameworks for Tie-oriented and Actor-oriented Relational Event Models
+Title: Optimization Frameworks for Tie-Oriented and Actor-Oriented Relational Event Models
 Version: 2.3.2
 Date: 2023-12-08
 Authors@R: 

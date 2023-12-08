@@ -6,17 +6,16 @@
 \title{Tie-Oriented Relational Event History}
 \format{
 \code{tie_data} is a list object containing the following objects:
-\itemize{
-   \item{}{\code{edgelist}, is a \code{data.frame} with the raw simulated edgelist. The columns of the \code{data.frame} are:
-           \itemize{
-               \item{}{\code{time}: the timestamp indicating the time at which each event occurred}
-               \item{}{\code{actor1}: the actor that generated the relational event}
-               \item{}{\code{actor2}: the actor that received the relational event}
-           }
-   \item{}{\code{seed}, that contains the seed value used in \code{remulate::remulateTie()} for generating the event sequence}
-   \item{}{\code{true.pars}, that is a vector containing the values of the parameters used in the generation of the event sequence}
+\describe{
+   \item{\code{edgelist}}{a \code{data.frame} with the raw simulated edgelist. The columns of the \code{data.frame} are:
+           \describe{
+               \item{\code{time}}{the timestamp indicating the time at which each event occurred}
+               \item{\code{actor1}}{the actor that generated the relational event}
+               \item{\code{actor2}}{the actor that received the relational event}
+           }}
+   \item{\code{seed}}{the seed value used in \code{remulate::remulateTie()} for generating the event sequence}
+   \item{\code{true.pars}}{ a vector containing the values of the parameters used in the generation of the event sequence}
     }
-}
 }
 \usage{
 data(tie_data)

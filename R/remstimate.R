@@ -571,13 +571,16 @@ remstimate <- function(reh,
                                     ncores = ncores,
                                     epochs = epochs,
                                     epsilon = epsilon)
-                optimum_obj$hessian <- remDerivativesStandard(pars = optimum_obj$argument,
-                                                                    stats = stats,
-                                                                    dyad = attr(reh,"dyadID"),
-                                                                    omit_dyad = reh$omit_dyad,
-                                                                    interevent_time = reh$intereventTime,
-                                                                    ordinal = ordinal,
-                                                                    ncores = ncores)
+                optimum_obj$hessian <- remDerivatives(pars = optimum_obj$argument,
+                                    stats = stats,
+                                    actor1 = list(),
+                                    actor2 = list(),
+                                    dyad = attr(reh,"dyadID"),
+                                    omit_dyad = reh$omit_dyad,
+                                    interevent_time = reh$intereventTime,
+                                    model = "tie",
+                                    ordinal = ordinal,
+                                    ncores = ncores)
                 optimum_obj$hessian <- optimum_obj$hessian$hessian 
                                                                 
             }            
@@ -812,16 +815,18 @@ remstimate <- function(reh,
                 bsir$log_posterior <- bsir$log_prior
             }
             ## (2.2) summing loglik 
-            loglik <- apply(bsir$draws,1,function(x) (-1)*remDerivativesStandard(pars = x,
+            loglik <- apply(bsir$draws,1,function(x) (-1)*remDerivatives(pars = x,
                                     stats = stats,
+                                    actor1 = list(),
+                                    actor2 = list(),
                                     dyad = attr(reh,"dyadID"),
                                     omit_dyad = reh$omit_dyad,
                                     interevent_time = reh$intereventTime,
+                                    model = "tie",
                                     ordinal = ordinal,
                                     ncores = ncores,
                                     gradient = FALSE,
                                     hessian = FALSE)$value) # this is the most time consuming step to be optimized, avoiding the apply
-    
             bsir$log_posterior <- bsir$log_posterior + loglik
             # (3) calculate Importance resampling log-weights (irlw)
             irlw <- (bsir$log_posterior - max(bsir$log_posterior) + min(bsir$log_proposal)) - bsir$log_proposal

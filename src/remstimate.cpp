@@ -7,7 +7,6 @@
 #include <functional>
 #include <numeric>
 #include <string>
-#include "messages.h"
 #include <remify/remify.h> 
 
 #ifdef _OPENMP
@@ -33,8 +32,6 @@
 // @param hessian boolean true/false whether to return hessian value (default is true).
 //
 // @return list of values: loglik, gradient and hessian.
-//
-// [[Rcpp::export]]
 Rcpp::List remDerivativesStandard(const arma::vec &pars,
                                           const arma::cube &stats,
                                           const arma::field<arma::uvec> &dyad,
@@ -232,8 +229,6 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 // @param hessian boolean true/false whether to return hessian value (default is true).
 //
 // @return list of values: loglik, gradient and hessian.
-//
-// [[Rcpp::export]]
 Rcpp::List remDerivativesSenderRates(
         const arma::vec &pars,
         const arma::cube &stats,
@@ -401,8 +396,6 @@ Rcpp::List remDerivativesSenderRates(
 // @param hessian boolean true/false whether to return hessian value (default is true).
 //
 // @return list of values: loglik, gradient and hessian.
-//
-// [[Rcpp::export]]
 Rcpp::List remDerivativesReceiverChoice(
         const arma::vec &pars,
         const arma::cube &stats,

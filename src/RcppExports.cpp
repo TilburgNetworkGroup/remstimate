@@ -11,86 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// warningMessage
-std::string warningMessage(int cond);
-RcppExport SEXP _remstimate_warningMessage(SEXP condSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type cond(condSEXP);
-    rcpp_result_gen = Rcpp::wrap(warningMessage(cond));
-    return rcpp_result_gen;
-END_RCPP
-}
-// errorMessage
-std::string errorMessage(int cond);
-RcppExport SEXP _remstimate_errorMessage(SEXP condSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type cond(condSEXP);
-    rcpp_result_gen = Rcpp::wrap(errorMessage(cond));
-    return rcpp_result_gen;
-END_RCPP
-}
-// remDerivativesStandard
-Rcpp::List remDerivativesStandard(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, bool ordinal, int ncores, bool gradient, bool hessian);
-RcppExport SEXP _remstimate_remDerivativesStandard(SEXP parsSEXP, SEXP statsSEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type dyad(dyadSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
-    Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
-    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivativesStandard(pars, stats, dyad, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian));
-    return rcpp_result_gen;
-END_RCPP
-}
-// remDerivativesSenderRates
-Rcpp::List remDerivativesSenderRates(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, bool ordinal, int ncores, bool gradient, bool hessian);
-RcppExport SEXP _remstimate_remDerivativesSenderRates(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
-    Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
-    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivativesSenderRates(pars, stats, actor1, omit_dyad, interevent_time, ordinal, ncores, gradient, hessian));
-    return rcpp_result_gen;
-END_RCPP
-}
-// remDerivativesReceiverChoice
-Rcpp::List remDerivativesReceiverChoice(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, int N, int ncores, bool gradient, bool hessian);
-RcppExport SEXP _remstimate_remDerivativesReceiverChoice(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP NSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor2(actor2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
-    Rcpp::traits::input_parameter< int >::type N(NSEXP);
-    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
-    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivativesReceiverChoice(pars, stats, actor1, actor2, omit_dyad, interevent_time, N, ncores, gradient, hessian));
-    return rcpp_result_gen;
-END_RCPP
-}
 // remDerivatives
 Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool gradient, bool hessian, bool senderRate, Rcpp::Nullable<int> N);
 RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP senderRateSEXP, SEXP NSEXP) {
@@ -197,11 +117,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_remstimate_warningMessage", (DL_FUNC) &_remstimate_warningMessage, 1},
-    {"_remstimate_errorMessage", (DL_FUNC) &_remstimate_errorMessage, 1},
-    {"_remstimate_remDerivativesStandard", (DL_FUNC) &_remstimate_remDerivativesStandard, 9},
-    {"_remstimate_remDerivativesSenderRates", (DL_FUNC) &_remstimate_remDerivativesSenderRates, 9},
-    {"_remstimate_remDerivativesReceiverChoice", (DL_FUNC) &_remstimate_remDerivativesReceiverChoice, 10},
     {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 14},
     {"_remstimate_GDADAMAX", (DL_FUNC) &_remstimate_GDADAMAX, 19},
     {"_remstimate_HMC", (DL_FUNC) &_remstimate_HMC, 20},
