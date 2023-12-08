@@ -4,15 +4,19 @@
 \alias{predict.remstimate}
 \title{predict.remstimate}
 \usage{
-\method{predict}{remstimate}(object, ...)
+\method{predict}{remstimate}(object, A, diagnostics, ...)
 }
 \arguments{
 \item{object}{is a \code{remstimate} object}
 
+\item{A}{is the number of steps ahead to predict}
+
+\item{diagnostics}{a object of class \code{"remstimate","diagnostics"}}
+
 \item{...}{further arguments to be passed to the 'predict' method depending on the estimator used}
 }
 \description{
-A function that returns predictions given a 'remstimate' object.
+A function that returns in-sample A-steps ahead predictions given a 'remstimate' object.
 }
 \examples{
 

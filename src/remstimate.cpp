@@ -643,7 +643,7 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
                   double beta2 = 0.999,
                   double epsilon = 0.01){
 
-  // link ref: https://machinelearningmastery.com/gradient-descent-optimization-with-adamax-from-scratch/   (properly cite the original papers, in the vignettes)               
+  // link ref: https://machinelearningmastery.com/gr?adient-descent-optimization-with-adamax-from-scratch/   (properly cite the original papers, in the vignettes)               
   arma::uword P = pars.n_elem;
   double  alpha = 0.002; 
   double loglik,loglik_prev;

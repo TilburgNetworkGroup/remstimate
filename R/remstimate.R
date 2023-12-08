@@ -1484,7 +1484,7 @@ summary.remstimate<-function (object, ...)
     if(summary_out$model == "tie"){
         cat("Call:\n",deparse(summary_out$formula),"\n\n",sep="")
         second_line <- paste("(",summary_out$method," with ",sep="")
-        if(summary_out$ordinal) second_line <- paste(second_line,"ordinal likelihood):",sep="")
+        if(summary_out$ordinal) second_line <- paste(second_line,"ordinal likelihood):\n\n",sep="")
         else{
             second_line <- paste(second_line,"interval likelihood):\n\n",sep="")
         }
@@ -1570,25 +1570,67 @@ summary.remstimate<-function (object, ...)
     invisible(summary_out)
 }
 
-# residuals.remstimate
-#' @title residuals.remstimate
-#' @rdname residuals.remstimate
-#' @description A function that extracts model diagnostics (Schoenfeld's residuals - add citation) from a 'remstimate' object.
+
+
+# diagnostics
+#' @title diagnostics
+#' @description A function that returns the diagnostics of a \code{remstimate} object. The output object of the method \code{diagnostics} contains the residuals of the model estimated in the \code{remstimate} object, and the event rates estimated from the model at each tiem point. For tie-oriented modeling frameworks the object contains: a list \code{residuals} with two objects, \code{standardized_residuals} containing standardized Schoenfeld's residuals (Schoenfeld, D., 1982, <doi:10.2307/2335876>; Grambsch, P. M., & Therneau, T. M., 1994, <doi:10.2307/2337123>; Winnett, A., & Sasieni, P., 2001, <jstor.org/stable/2673500>), and \code{smoothing_weights} (a matrix of weights used for the red smooth splines in the plot of the residuals), an array structure \code{rates} with the event rates estimated from the optimized model parameters, and \code{.reh.processed} which is a pseudo-hidden object containing a further processed \code{remify} object that helps speed up the plotting function \code{plot.remstimate} and that the user is not supposed to modify. As to the actor-oriented modeling frameworks, in the diagnostics output there are two main list objects named after \code{sender_model} and \code{receiver_model}. After selecting the model, the structure of diagnostics is the same as for the tie-oriented model. Each model's diagnostics (sender or receiver) is available only if the corresponding model is found in the \code{remstimate} object.
 #' @param object is a \code{remstimate} object 
-#' @param reh is a \code{remify} object (the same used with \code{remstimate::remstimate()})
-#' @param stats is a \code{remstats} object (the same used with \code{remstimate::remstimate()})
-#' @param ... further arguments to be passed to the 'residuals' method depending on the estimator used
-#' @method residuals remstimate
+#' @param reh is a \code{remify} object, the same used for the 'remstimate' object
+#' @param stats is a \code{remstats} object, the same used for the 'remstimate' object
+#' @param ... further arguments to be passed to the 'diagnostics' method
 #' @export
 #' 
-#' @examples 
+#' @return A object of class \code{"remstimate","diagnostics"} with standardized Schoenfeld's residuals and estimated event rates given the optimized model parameters. 
+#'
 #' 
-#' # No examples available at the moment
+#' @examples
 #' 
-residuals.remstimate <- function(object, reh, stats, ...)
-{
+#' # ------------------------------------ #
+#' #       tie-oriented model: "MLE"      #
+#' # ------------------------------------ #
+#' 
+#' # loading data
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+#'   
+#' # specifying linear predictor
+#' tie_model <- ~ 1 + 
+#'                remstats::indegreeSender()+
+#'                remstats::inertia()+
+#'                remstats::reciprocity() 
+#' 
+#' # calculating statistics
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+#'                                     tie_effects = tie_model)
+#' 
+#' # running estimation
+#' tie_mle <- remstimate::remstimate(reh = tie_reh,
+#'                                   stats = tie_reh_stats,
+#'                                   method = "MLE",
+#'                                   ncores = 1)
+#' 
+#' # diagnostics
+#' tie_diagnostics <- diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats)
+#' names(tie_diagnostics)
+#' 
+diagnostics <- function(object,reh,stats,...){
+  UseMethod("diagnostics")
+}
+
+
+#' @describeIn diagnostics diagnostics of a 'remstimate' object
+#' @method diagnostics remstimate
+#' @export
+diagnostics.remstimate <- function(object,reh,stats,...) {
+
     # processing dyadID actor1ID and actor2ID depending on pt/pe and on start and stop values
-        # ... remify object ('reh' input argument)
+
+    # ... processing input arguments
+
+    # ... remify object ('reh' input argument)
     if(!inherits(reh,"remify")){
         stop("'reh' must be a 'remify' object (see ?remify::remify).")
     }
@@ -1603,7 +1645,7 @@ residuals.remstimate <- function(object, reh, stats, ...)
             stop("attribute 'model' of input 'reh' and input 'stats' must be the same")
         }
     }
-       
+
     # ... active riskset? then overwrite two objects (this prevents from coding many ifelse() to switch between active-oriented riskset objects and full-oriented riskset objects)
     if((attr(reh,"riskset") == "active")){
         reh$D <- reh$activeD
@@ -1616,6 +1658,11 @@ residuals.remstimate <- function(object, reh, stats, ...)
 
     # ... type of likelihood
     ordinal <- attr(reh,"ordinal")
+
+    # ... ncores
+    if(!is.null(attr(remstimate,"ncores"))){
+        ncores <- attr(remstimate,"ncores")
+    }
 
     # ... omit dyad
     if(is.null(reh$omit_dyad)){
@@ -1738,17 +1785,24 @@ residuals.remstimate <- function(object, reh, stats, ...)
                     reh$E <- reh$M
                 }
                 if(length(reh$omit_dyad)>0){
-                    time_points_to_select <- reh$edgelist$time  # it was c(1:reh$E)
-                    if(!is.null(attr(reh,"indices_simultaneous_events"))){
-                        time_points_to_select <- reh$edgelist$time[-attr(reh,"indices_simultaneous_events")] # if method=="pt" and attr(reh,"indices_simultaneous_events") exists, then reh$E exists
-                    }
-                    time_points_to_select <- time_points_to_select[start_stop]
-                    lb_time <- min(which(reh$edgelist$time>=time_points_to_select[1]))
-                    ub_time <- max(which(reh$edgelist$time<=time_points_to_select[2]))
+
+                    # for the receiver model 
                     if(!is.null(stats$receiver_stats)){
-                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[lb_time:ub_time], riskset = reh$omit_dyad$riskset)
+                        start_stop_time <- unique(reh$edgelist$time)[start_stop]
+                        lb_time <- min(which(reh$edgelist$time>=start_stop_time[1]))
+                        ub_time <- max(which(reh$edgelist$time<=start_stop_time[2]))
+                        omit_dyad_receiver <- list(time = reh$omit_dyad$time[lb_time:ub_time], riskset = reh$omit_dyad$riskset) # for the receiver model
                     }
-                    reh$omit_dyad$time <-  reh$omit_dyad$time[time_points_to_select][start_stop[1]:start_stop[2]]
+
+                    # for the sender model (we process now the sender model because this will modify the reh$omit_dyad$time object)
+                    if(!is.null(stats$sender_stats)){
+                        if(!is.null(attr(reh,"indices_simultaneous_events"))){
+                            reh$omit_dyad$time <-  reh$omit_dyad$time[-attr(reh,"indices_simultaneous_events")][start_stop[1]:start_stop[2]] # for the sender model
+                        }
+                        else{
+                            reh$omit_dyad$time <-  reh$omit_dyad$time[start_stop[1]:start_stop[2]] # for the sender model
+                        }
+                    }
                 }
             }
             else if(stats_attr_method == "pe"){
@@ -1788,18 +1842,18 @@ residuals.remstimate <- function(object, reh, stats, ...)
         }
     }
 
-    # ... adjusting the intereventTime when ordinal = TRUE and model="actor" (for model="tie" in the ordinal likelihood the interevent time is not used)
-    if(ordinal & (model == "actor")){
-        reh$intereventTime <- rep(1,reh$M) # at this stage the correct value is assigned to reh$M 
+    # ... adjusting the intereventTime
+    if(ordinal){
+        reh$intereventTime <- c(1) # we can assign a vector of length 1 because the intereventTime will not be used from any ordinal likelihood
     }
-    
+
+    ## diagnostics per model type (tie-oriented and actor-oriented)
 
     if(attr(object,"model") == "tie"){ # tie-oriented modeling
-        # check on variables names from object and stats (throw an error if they do not match)
-        # check on reh and object characteristics (throw an error if they do not match)
+        # [[CHECK]] on variables names from object and stats (throw an error if they do not match)
+        # [[CHECK]] on reh and object characteristics (throw an error if they do not match)
         variables_names <- attr(object, "statistics")
         where_is_baseline <- attr(object,"where_is_baseline")
-
         select_vars <- if(is.null(where_is_baseline)) 1:length(variables_names) else c(1:length(variables_names))[-where_is_baseline]
         baseline_value <- if(is.null(where_is_baseline)) 0 else as.vector(object$coefficients)[where_is_baseline]
         stats <- if(length(select_vars)==1) array(stats[,select_vars,],dim=c(dim(stats)[1],1,dim(stats)[3])) else stats[,select_vars,]
@@ -1813,19 +1867,16 @@ residuals.remstimate <- function(object, reh, stats, ...)
                                                 model = attr(reh,"model"),
                                                 ncores = attr(object,"ncores"),
                                                 baseline = baseline_value,
-                                                N = reh$N #,
-                                                #which = "residuals" # or "rates"
+                                                N = reh$N
                                                 )
-        #colnames(diagnostics$residuals$standardized_residuals) <- variables_names[select_vars]
         colnames(diagnostics$residuals$smoothing_weights) <- variables_names[select_vars]
-
-        # lambdas (event rates) : this will have to be calculated only for plot on waiting times (qq-plot) and top% plot
+        # lambdas (event rates)
         diagnostics$rates <- diagnostics$residuals$rates   
         diagnostics$residuals$rates <- NULL  
     }
     else if(attr(object,"model") == "actor"){ # actor-oriented modeling
-        # check on variables names from object and stats (throw an error if they do not match)
-        # check on reh and object characteristics (throw an error if they do not match)
+        # [[CHECK]] on variables names from object and stats (throw an error if they do not match)
+        # [[CHECK]] on reh and object characteristics (throw an error if they do not match)
         variables_names <- attr(object, "statistics")
         where_is_baseline <- attr(object,"where_is_baseline")
         senderRate <- c(TRUE,FALSE)
@@ -1841,7 +1892,6 @@ residuals.remstimate <- function(object, reh, stats, ...)
             if(!is.null(stats[[which_stats[i]]])){
                 actor1ID_ls <- if(actor1ID_condition[i]) attr(reh,"actor1ID") else unlist(attr(reh,"actor1ID"))
                 omit_dyad_actor <- if(senderRate[i]) reh$omit_dyad else omit_dyad_receiver
-                #stats[[which_stats[i]]] <- aperm(stats[[which_stats[i]]], perm = c(2,3,1))
                 diagnostics[[which_model[i]]] <- list()
                 baseline_value <- 0
                 select_vars <- c(1:dim(stats[[which_stats[i]]])[2])
@@ -1862,7 +1912,6 @@ residuals.remstimate <- function(object, reh, stats, ...)
                                                         senderRate = senderRate[i],
                                                         ncores = attr(object,"ncores"),
                                                         baseline = baseline_value)                                   
-                #colnames(diagnostics[[which_model[i]]]$residuals$standardized_residuals) <- if(senderRate[i]) variables_names[["sender_model"]][select_vars] else variables_names[["receiver_model"]][select_vars]
                 colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <- if(senderRate[i]) variables_names[["sender_model"]][select_vars] else variables_names[["receiver_model"]][select_vars]
                 # lambdas (event rates)
                 diagnostics[[which_model[i]]]$rates <- diagnostics[[which_model[i]]]$residuals$rates   
@@ -1870,9 +1919,9 @@ residuals.remstimate <- function(object, reh, stats, ...)
             }
         }
     }
-    diagnostics$reh.processed <- reh
-    class(diagnostics) <- c("remstimate","residuals")
-    diagnostics$stats.method <- stats_attr_method
+    diagnostics$.reh.processed <- reh   
+    diagnostics$.reh.processed$stats.method <- stats_attr_method
+    class(diagnostics) <- c("remstimate","diagnostics")
     return(diagnostics) 
 }
 
@@ -1884,8 +1933,10 @@ residuals.remstimate <- function(object, reh, stats, ...)
 # predict.remstimate
 #' @title predict.remstimate
 #' @rdname predict.remstimate
-#' @description A function that returns predictions given a 'remstimate' object.
+#' @description A function that returns in-sample A-steps ahead predictions given a 'remstimate' object.
 #' @param object is a \code{remstimate} object 
+#' @param A is the number of steps ahead to predict
+#' @param diagnostics a object of class \code{"remstimate","diagnostics"}
 #' @param ... further arguments to be passed to the 'predict' method depending on the estimator used
 #' @method predict remstimate
 #' @export
@@ -1894,15 +1945,18 @@ residuals.remstimate <- function(object, reh, stats, ...)
 #' 
 #' # No examples available at the moment
 #' 
-predict.remstimate <- function(object, ...)
+predict.remstimate <- function(object, A, diagnostics, ...)
 {
-    # write a predict method here
-    # - in-sample predictive performance : the function knows that the model was estimated on the events that the user wants to predict
-    # - out-of-sample predictions : the function knows that the model was not estimated on the events that the user wants to predict
+    # - In-sample predictions
 
+    
     # A-steps ahead A = 1, ... 
     # if in-sample, comparison with actual observed dyads
     #if out-of-sample, find comparison measures
+
+    # Out-of-sample predictions 
+    #  code here an out-of-sample approach for predictions
+
     return(paste('this function at the moment does nothing'))
 }
 
@@ -1915,208 +1969,216 @@ predict.remstimate <- function(object, ...)
 #' @rdname plot.remstimate
 #' @description A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
 #' @param x is a \code{remstimate} object
-#' @param reh 'remify' object 
-#' @param residuals is a \code{"remstimate" "residuals"} object
+#' @param which one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model.
+#' @param reh 'remify' object, the same used for the 'remstimate' object
+#' @param diagnostics is a \code{"remstimate" "diagnostics"} object
 #' @param ... further arguments to be passed to the 'plot' method depending: for instance the remstats object with statistics ('stats')
 #' @method plot remstimate
 #' @export
 #' 
 #' @examples 
 #' 
-#' # No examples available at the moment
+#' # ------------------------------------ #
+#' #       tie-oriented model: "MLE"      #
+#' # ------------------------------------ #
 #' 
-plot.remstimate <- function(x, reh, residuals = NULL, ...)
+#' # loading data
+#' data(tie_data)
+#' 
+#' # processing event sequence with remify
+#' tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+#'   
+#' # specifying linear predictor
+#' tie_model <- ~ 1 + 
+#'                remstats::indegreeSender()+
+#'                remstats::inertia()+
+#'                remstats::reciprocity() 
+#' 
+#' # calculating statistics
+#' tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+#'                                     tie_effects = tie_model)
+#' 
+#' # running estimation
+#' tie_mle <- remstimate::remstimate(reh = tie_reh,
+#'                                   stats = tie_reh_stats,
+#'                                   method = "MLE",
+#'                                   ncores = 1)
+#' 
+#' # diagnostics
+#' tie_diagnostics <- diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats)
+#' 
+#' # plot
+#' plot(x = tie_mle, reh  = tie_reh, diagnostics = tie_diagnostics)
+#' 
+plot.remstimate <- function(x, 
+                            reh, 
+                            which = c(1:2), 
+                            diagnostics = NULL, ...)
 {
+    # which plot
+    selected <- which
+    which <- rep(FALSE,2)
+    which[selected] <- TRUE
+
     if(attr(x,"model") != attr(reh,"model")){
         stop("'x' and 'reh' have different attribute 'model'")
     }
-
-    if(is.null(residuals)){
+    # if diagnostics is NULL, then look for object 'stats' in '...' argument and compute diagnostics
+    if(is.null(diagnostics)){
         additional_input_args <- list(...) # check for stats argument
         if(!any(names(additional_input_args) %in% "stats")){
-            stop("'stats' must be provided if argument 'residuals' is NULL")
+            stop("'stats' must be provided if argument 'diagnostics' is NULL")
         }
         else{
-            residuals <- residuals(object = x, reh = reh, stats = additional_input_args$stats)
+            diagnostics <- diagnostics(object = x, reh = reh, stats = additional_input_args$stats)
         }
     }
-    else if(!all(inherits(residuals,c("remstimate","residuals"),TRUE))){
-            stop("'residuals' must be an object of class 'remstimate' 'residuals'")
+    else if(!all(inherits(diagnostics,c("remstimate","diagnostics"),TRUE))){
+            stop("'diagnostics' must be an object of class 'remstimate' 'diagnostics'")
     }
 
-    # overwriting reh with one coming from residuals(), because there pt/pe methods and start/stop from remstats are already processed
-    reh <- residuals$reh.processed
+    # overwriting reh with one coming from diagnostics(), because there pt/pe methods and start/stop from remstats are already processed in there
+    reh <- diagnostics$.reh.processed
 
-    if(attr(x,"model") == "tie"){ # tie-oriented modeling
+    # saving current graphic parameters
+    op <- par(no.readonly = TRUE)
+    on.exit(expr = par(op))
+
+    # tie-oriented modeling
+    if(attr(x,"model") == "tie"){ 
 
         # (1) waiting times vs. theoretical distribution
-        if(!attr(reh,"ordinal")){
-            sum_rates <- lapply(residuals$rates,sum)
-            observed <- sort(reh$intereventTime*unlist(sum_rates))
-            theoretical <- stats::qexp(p = c(1:reh$M)/reh$M, rate = 1)
-            plot(theoretical,observed, xlab = "Theoretical Quantiles", 
-            ylab = "Observed Quantiles") # use bquote() / Observed quatiles : ~(t[m]-t[m-1])*Sigma[e](lambda[e](t[m])) / Theoretical Quantiles ~Exp(1)
-            mtext(text = "Q-Q waiting times", side = 3, line = 2,cex=1.5)
-            abline(a=0,b=1,lty=2,lwd=1.5)
+        if(which[1L]){
+            if(!attr(reh,"ordinal")){
+                sum_rates <- lapply(diagnostics$rates,sum)
+                observed <- sort(reh$intereventTime*unlist(sum_rates))
+                theoretical <- stats::qexp(p = c(1:reh$M)/reh$M, rate = 1)
+                par(mfrow=c(1,2))
+                plot(theoretical,observed, xlab = "Theoretical Quantiles", 
+                ylab = "Observed Quantiles",cex=0.8) # use bquote() / Observed quatiles : ~(t[m]-t[m-1])*Sigma[e](lambda[e](t[m])) / Theoretical Quantiles ~Exp(1)
+                mtext(text = "Q-Q waiting times", side = 3, line = 2,cex=1.5)
+                abline(a=0,b=1,lty=2,lwd=1.5)
+                density_observed <- density(observed)
+                density_observed$y <- density_observed$y/max(density_observed$y) # rescaling max density to 1 (to compare with dexp)
+                curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lwd=1.5,xlab="waiting times")
+                lines(density_observed,col=2,lwd=1.5)
+                mtext(text = "Density plot of waiting times", side = 3, line = 2,cex=1.5)
+                legend("topright", legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2))
+                par(op)
+            }
         }
 
         # (2) standardized Schoenfeld's residuals
-        P <- dim(residuals$residuals$standardized_residuals[[1]])[2] # number of statistics
-        #m_exclude <- (reh$M-dim(residuals$residuals$standardized_residuals)[1])
-        n_repeats_per_time_point <- rep(1,dim(residuals$residuals$standardized_residuals)[1])# for attr(residuals, "stats.method") = "pe"
-        if(residuals$stats.method == "pt"){
-            n_repeats_per_time_point <- sapply(1:dim(residuals$residuals$standardized_residuals)[1], function(v) dim(residuals$residuals$standardized_residuals[[v]])[1])
-        }
-        t_p <- rep(cumsum(reh$intereventTime),n_repeats_per_time_point) # skipping first time point #reh$edgelist$time #[-c(1:m_exclude)]
-        for(p in 1:P){
-            y_p <-  unlist(sapply(1:dim(residuals$residuals$standardized_residuals)[1], function(v) residuals$residuals$standardized_residuals[[v]][,p])) #skipping first time point
-            qrt_p <- quantile(y_p, probs=c(0.25,0.75))
-            lb_p <- qrt_p[1] - diff(qrt_p)*3
-            ub_p <- qrt_p[2] + diff(qrt_p)*3
-            ylim_p <- c(min(y_p),max(y_p))
-            if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
-                ylim_p <- c(lb_p,ub_p)
+        if(which[2L]){
+            P <- dim(diagnostics$residuals$standardized_residuals[[1]])[2] # number of statistics
+            n_repeats_per_time_point <- rep(1,dim(diagnostics$residuals$standardized_residuals)[1]) # for attr(residuals, "stats.method") = "pe"
+            if(reh$stats.method == "pt"){
+                n_repeats_per_time_point <- sapply(1:dim(diagnostics$residuals$standardized_residuals)[1], function(v) dim(diagnostics$residuals$standardized_residuals[[v]])[1])
             }
-            w_p <- rep(residuals$residuals$smoothing_weights[,p],n_repeats_per_time_point) # skipping first time point
-            w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
-            par(mfrow=c(1,1))
-            plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p) # plotting standardized Schoenfeld's residuals
-            lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=1.5,col=2) # plotting smoothed weighted regression of the residuals
-            abline(h=0,col="gray40",lwd=1.5,lty=2)
-            mtext(text = colnames(residuals$residuals$smoothing_weights)[p], side = 3, line = 1,cex=1.5)
+            if(!attr(reh,"ordinal")){
+                t_p <- rep(cumsum(reh$intereventTime),n_repeats_per_time_point)
+            }
+            else{
+                t_p <- rep(cumsum(rep(1,reh$M)),n_repeats_per_time_point)
+            }
+            for(p in 1:P){
+                y_p <-  unlist(sapply(1:dim(diagnostics$residuals$standardized_residuals)[1], function(v) diagnostics$residuals$standardized_residuals[[v]][,p]))
+                qrt_p <- quantile(y_p, probs=c(0.25,0.75))
+                lb_p <- qrt_p[1] - diff(qrt_p)*1.5
+                ub_p <- qrt_p[2] + diff(qrt_p)*1.5
+                ylim_p <- c(min(y_p),max(y_p))
+                #if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
+                    ylim_p <- c(lb_p,ub_p)
+                #}
+                w_p <- rep(diagnostics$residuals$smoothing_weights[,p],n_repeats_per_time_point)
+                w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
+                if(all(w_p <= 0.0)){
+                    w_p <- rep(1/length(w_p),length(w_p)) # assigning equal weights
+                }
+                par(mfrow=c(1,1))
+                plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
+                lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
+                abline(h=0,col="black",lwd=3,lty=2)
+                mtext(text = colnames(diagnostics$residuals$smoothing_weights)[p], side = 3, line = 1,cex=1.5)
+                par(op)
+            }
         }
-
-        # (3) observed event rates with top % event rate shaded regions
-        #observed <- sapply(1:reh$M, function(y) residuals$rates[[y]][attr(reh,"dyadID")[y]]) 
-        #thres <- sapply(1:reh$M, function(y) quantile(residuals$rates[[y]],probs=c(0.75,0.90,0.95))) # M x nPercentiles 
-        #discrete_scale_colors <- c("#64f75739", "#e7f75739", "#f7a25739", "#f7575739")
-        # plot observed event rate
-        #plot(reh$edgelist$time,observed,ylim=c(min(observed),max(observed)),xlab="time",ylab=bquote(lambda(e[m])),cex=0.8,col="#000000ad")
-        # plot colored polygons
-        # <5%
-        #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(thres[3,], rep(max(observed,thres),reh$M)), col = discrete_scale_colors[1],lty=0)
-        # 5-10%
-        #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(thres[2,], rev(thres[3,])), col = discrete_scale_colors[2],lty=0)
-        # 10-25%
-        #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(thres[1,], rev(thres[2,])), col = discrete_scale_colors[3],lty=0)
-        # >25%
-        #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(rep(min(observed,thres),reh$M), rev(thres[1,])), col = discrete_scale_colors[4],lty=0)
-        #mtext(text = "Event rates of observed events", side = 3, line = 2,cex=1.5)
-        #mtext(text = "(colored regions based on thresholds of rates)", side = 3, line = 1,cex=1)
-        # legend
-        #legend("bottom", legend=c(">25%","10%-25%","5%-10%","<5%"),col=discrete_scale_colors, lty=1, lwd =rep(20,4), cex=1,horiz=TRUE)
-        #dev.flush()
-
-        # (3) top% classification vs. time
-        # the claculation of obs_percentile maybe different for 'manual' risk sets
-        #obs_percentile <- sapply(1:reh$M, function(y) {
-        #ordered_decr <- c(1:reh$D)[order(residuals$rates[[y]],decreasing=TRUE)]
-        #which(ordered_decr==attr(reh,"dyadID")[y])/reh$D
-        #})
-        #classification <- cut(x = obs_percentile, breaks = c(0,0.05,0.10,0.25,1), labels = c("<0.05","0.05-0.1","0.1-0.25",">0.25"), right = TRUE, ordered_result = TRUE)
-        #plot(reh$edgelist$time,classification)
-        #dev.flush()
-        
     }
 
-    else if(attr(x,"model") == "actor"){ # actor-oriented modeling
-        # code here for actor-oriented modeling
+    # actor-oriented modeling
+    else if(attr(x,"model") == "actor"){ 
         which_model <- c("sender_model","receiver_model")
         title_model <- c("Rate model (sender)","Choice model (receiver)")
         for(i in 1:2){
             if(!is.null(x[[which_model[i]]])){
+
                 # (1) waiting times vs. theoretical distribution
-                if(!attr(reh,"ordinal") & i==1){
-                    sum_rates <- lapply(residuals[[which_model[i]]]$rates,sum)
-                    observed <- sort(reh$intereventTime*unlist(sum_rates))
-                    theoretical <- stats::qexp(p = c(1:reh$M)/reh$M, rate = 1)
-                    plot(theoretical,observed, xlab = "Theoretical Quantiles", 
-                    ylab = "Observed Quantiles") # use bquote() / Observed quatiles : ~(t[m]-t[m-1])*Sigma[e](lambda[e](t[m])) / Theoretical Quantiles ~Exp(1)
-                    mtext(text = "Q-Q waiting times", side = 3, line = 2,cex=1.5)
-                    mtext(text = title_model[i], side = 3, line = 1,cex=1)
-                    abline(a=0,b=1,lty=2,lwd=1.5)
+                if(which[1L]){
+                    if(!attr(reh,"ordinal") & i==1){
+                        sum_rates <- lapply(diagnostics[[which_model[i]]]$rates,sum)
+                        observed <- sort(reh$intereventTime*unlist(sum_rates))
+                        theoretical <- stats::qexp(p = c(1:reh$M)/reh$M, rate = 1)
+                        par(mfrow=c(1,2))
+                        plot(theoretical,observed, xlab = "Theoretical Quantiles", 
+                        ylab = "Observed Quantiles",cex=0.8) # use bquote() / Observed quatiles : ~(t[m]-t[m-1])*Sigma[e](lambda[e](t[m])) / Theoretical Quantiles ~Exp(1)
+                        mtext(text = "Q-Q waiting times", side = 3, line = 2,cex=1.5)
+                        mtext(text = title_model[i], side = 3, line = 1,cex=1)
+                        abline(a=0,b=1,lty=2,lwd=1.5)
+                        density_observed <- density(observed)
+                        density_observed$y <- density_observed$y/max(density_observed$y) # rescaling max density to 1 (to compare with dexp)
+                        curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lwd=1.5,xlab="waiting times",ylab="Density")
+                        lines(density_observed,col=2,lwd=1.5)
+                        mtext(text = "Density plot of waiting times", side = 3, line = 2,cex=1.5)
+                        mtext(text = title_model[i], side = 3, line = 1,cex=1)
+                        legend("topright", legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2))
+                        par(op)
+                    }
                 }
 
                 # (2) standardized Schoenfeld's residuals
-                #m_exclude <- (reh$M-dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1])
-                P <- dim(residuals[[which_model[i]]]$residuals$standardized_residuals[[1]])[2] # number of statistics
-                n_repeats_per_time_point <- rep(1,dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1])
-                if(i == 1){
-                    if((residuals$stats.method == "pt")){
-                        n_repeats_per_time_point <- sapply(1:dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) dim(residuals[[which_model[i]]]$residuals$standardized_residuals[[v]])[1])
+                if(which[2L]){
+                    P <- dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals[[1]])[2] # number of statistics
+                    n_repeats_per_time_point <- rep(1,dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals)[1]) # for attr(residuals, "stats.method") = "pe"
+                    if(i == 1){
+                        if(reh$stats.method == "pt"){
+                            n_repeats_per_time_point <- sapply(1:dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals[[v]])[1])
+                        }
+                        if(!attr(reh,"ordinal")){
+                            t_p <- rep(cumsum(reh$intereventTime),n_repeats_per_time_point)
+                        }
+                        else{
+                            t_p <- rep(cumsum(rep(1,reh$M)),n_repeats_per_time_point)
+                        }
                     }
-                    t_p <- rep(cumsum(reh$intereventTime),n_repeats_per_time_point)
-                }
-                else if(i == 2){
-                    t_p <- cumsum(n_repeats_per_time_point)
-                }
-                for(p in 1:P){
-                    y_p <- unlist(sapply(1:dim(residuals[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) residuals[[which_model[i]]]$residuals$standardized_residuals[[v]][,p])) # skipping first time point
-                    qrt_p <- quantile(y_p, probs=c(0.25,0.75))
-                    lb_p <- qrt_p[1] - diff(qrt_p)*3
-                    ub_p <- qrt_p[2] + diff(qrt_p)*3
-                    ylim_p <- c(min(y_p),max(y_p))
-                    if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
-                        ylim_p <- c(lb_p,ub_p)
+                    else if(i == 2){
+                        t_p <- cumsum(n_repeats_per_time_point)
                     }
-                    w_p <- rep(residuals[[which_model[i]]]$residuals$smoothing_weights[,p],n_repeats_per_time_point) # skipping first time point
-                    w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
-                    par(mfrow=c(1,1))
-                    plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p) # plotting standardized Schoenfeld's residuals
-                    lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=1.5,col=2) # plotting smoothed weighted regression of the residuals
-                    abline(h=0,col="gray40",lwd=1.5,lty=2)
-                    mtext(text = colnames(residuals[[which_model[i]]]$residuals$smoothing_weights)[p], side = 3, line = 2,cex=1.5)
-                    mtext(text = title_model[i], side = 3, line = 1, cex = 1)
+                    for(p in 1:P){
+                        y_p <- unlist(sapply(1:dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) diagnostics[[which_model[i]]]$residuals$standardized_residuals[[v]][,p]))
+                        qrt_p <- quantile(y_p, probs=c(0.25,0.75))
+                        lb_p <- qrt_p[1] - diff(qrt_p)*1.5
+                        ub_p <- qrt_p[2] + diff(qrt_p)*1.5
+                        #ylim_p <- c(min(y_p),max(y_p))
+                        #if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 95% of the observations
+                            ylim_p <- c(lb_p,ub_p)
+                        #}
+                        w_p <- rep(diagnostics[[which_model[i]]]$residuals$smoothing_weights[,p],n_repeats_per_time_point)
+                        w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
+                        if(all(w_p <= 0.0)){
+                            w_p <- rep(1/length(w_p),length(w_p)) # assigning equal weights
+                        }
+                        par(mfrow=c(1,1))
+                        plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
+                        lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
+                        abline(h=0,col="black",lwd=3,lty=2)
+                        mtext(text = colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights)[p], side = 3, line = 2,cex=1.5)
+                        mtext(text = title_model[i], side = 3, line = 1, cex = 1)
+                        par(op)
+                    }
                 }
-
-                # (3) observed event rates with top % event rate shaded regions
-                #which_actor <- NULL
-                #if(i==1){ # sender model
-                #    which_actor <- reh$edgelist$actor1_ID 
-                #}
-                #else{ # receiver model
-                #    which_actor <- unlist(sapply(1:reh$M, function(y) {
-                #        s <- rep(0,reh$N)
-                #        s[reh$edgelist$actor2_ID[y]] <- 1
-                #        which(s[-reh$edgelist$actor1_ID[y]] == 1)
-                #        }
-                #    ))
-                #}
-                #observed <- sapply(1:reh$M, function(y) residuals[[which_model[i]]]$rates[[y]][which_actor[y]]) 
-                #thres <- sapply(1:reh$M, function(y) quantile(residuals[[which_model[i]]]$rates[[y]],probs=c(0.75,0.90,0.95))) # M x nPercentiles 
-                #discrete_scale_colors <- c("#64f75739", "#e7f75739", "#f7a25739", "#f7575739")
-                # plot observed event rate
-                #plot(reh$edgelist$time,observed,ylim=c(min(observed),max(observed)),xlab="time",ylab="event rate",cex=0.8,col="#000000ad")
-                # plot colored polygons
-                # <5%
-                #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(thres[3,], rep(max(observed,thres),reh$M)), col = discrete_scale_colors[1],lty=0)
-                # 5-10%
-                #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(thres[2,], rev(thres[3,])), col = discrete_scale_colors[2],lty=0)
-                # 10-25%
-                #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(thres[1,], rev(thres[2,])), col = discrete_scale_colors[3],lty=0)
-                # >25%
-                #polygon(c(reh$edgelist$time, rev(reh$edgelist$time)), c(rep(min(observed,thres),reh$M), rev(thres[1,])), col = discrete_scale_colors[4],lty=0)
-                #mtext(text = "Observed event rate", side = 3, line = 2,cex=1.5)
-                #mtext(text = "(colored regions based on thresholds of rates)", side = 3, line = 1,cex=1)
-                # legend 
-                #legend("bottom", legend=c(">25%","10%-25%","5%-10%","<5%"),col=discrete_scale_colors, lty=1, lwd =rep(20,4), cex=1,horiz=TRUE)
-                #dev.flush()
-
-                # (3) top% classification vs. time
-                # the claculation of obs_percentile maybe different for 'manual' risk sets
-                #obs_percentile <- sapply(1:reh$M, function(y) {
-                #ordered_decr <- c(1:reh$D)[order(residuals[[which_model[i]]]$rates[[y]],decreasing=TRUE)]
-                #which(ordered_decr==which_actor[y])/reh$D
-                #})
-                #classification <- cut(x = obs_percentile, breaks = c(0,0.05,0.10,0.25,1), labels = c("<0.05","0.05-0.1","0.1-0.25",">0.25"), right = TRUE, ordered_result = TRUE)
-                #plot(reh$edgelist$time,classification)
-                #dev.flush()
             }
-            
         }
-
     }
-
 }
 
 

@@ -4,14 +4,16 @@
 \alias{plot.remstimate}
 \title{plot.remstimate}
 \usage{
-\method{plot}{remstimate}(x, reh, residuals = NULL, ...)
+\method{plot}{remstimate}(x, reh, which = c(1:2), diagnostics = NULL, ...)
 }
 \arguments{
 \item{x}{is a \code{remstimate} object}
 
-\item{reh}{'remify' object}
+\item{reh}{'remify' object, the same used for the 'remstimate' object}
 
-\item{residuals}{is a \code{"remstimate" "residuals"} object}
+\item{which}{one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model.}
+
+\item{diagnostics}{is a \code{"remstimate" "diagnostics"} object}
 
 \item{...}{further arguments to be passed to the 'plot' method depending: for instance the remstats object with statistics ('stats')}
 }
@@ -20,6 +22,36 @@ A function that returns a plot of diagnostics given a 'remstimate' object and de
 }
 \examples{
 
-# No examples available at the moment
+# ------------------------------------ #
+#       tie-oriented model: "MLE"      #
+# ------------------------------------ #
+
+# loading data
+data(tie_data)
+
+# processing event sequence with remify
+tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+  
+# specifying linear predictor
+tie_model <- ~ 1 + 
+               remstats::indegreeSender()+
+               remstats::inertia()+
+               remstats::reciprocity() 
+
+# calculating statistics
+tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+                                    tie_effects = tie_model)
+
+# running estimation
+tie_mle <- remstimate::remstimate(reh = tie_reh,
+                                  stats = tie_reh_stats,
+                                  method = "MLE",
+                                  ncores = 1)
+
+# diagnostics
+tie_diagnostics <- diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats)
+
+# plot
+plot(x = tie_mle, reh  = tie_reh, diagnostics = tie_diagnostics)
 
 }

@@ -306,10 +306,10 @@ expect_error(plot(tie_mle,tie_reh),"'x' and 'reh' have different attribute 'mode
 
 # stats
 attr(tie_mle, "model") <- "tie"
-expect_error(plot(x = tie_mle, reh = tie_reh,residuals = NULL),"'stats' must be provided if argument 'residuals' is NULL",fixed = TRUE)
+expect_error(plot(x = tie_mle, reh = tie_reh,diagnostics = NULL),"'stats' must be provided if argument 'diagnostics' is NULL",fixed = TRUE)
 
-# residuals object
-expect_error(plot(x = tie_mle, reh = tie_reh,residuals = list(a = "foo")),"'residuals' must be an object of class 'remstimate' 'residuals'",fixed = TRUE)
+# diagnostics object
+expect_error(plot(x = tie_mle, reh = tie_reh,diagnostics = list(a = "foo")),"'diagnostics' must be an object of class 'remstimate' 'diagnostics'",fixed = TRUE)
  
 # number of time points doesn't mach dimensions of remstats object
 ## tie-oriented modeling

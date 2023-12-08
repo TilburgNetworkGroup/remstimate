@@ -1,8 +1,8 @@
 Type: Package
 Package: remstimate
-Title: Optimization Tools for Tie-oriented and Actor-oriented Relational Event Models
-Version: 2.3.1
-Date: 2023-12-06
+Title: Optimization Frameworks for Tie-oriented and Actor-oriented Relational Event Models
+Version: 2.3.2
+Date: 2023-12-08
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
@@ -37,7 +37,7 @@ Authors@R:
              role = "ctb",
              email = "j.mulder3@tilburguniversity.edu"))
 Maintainer: Giuseppe Arena <g.arena@tilburguniversity.edu>
-Description: A set of tools for the optimization of the likelihood in a relational event modeling framework. Frequentist as well as Bayesian approaches are available inside the package.
+Description: A comprehensive set of tools designed for optimizing likelihood within a tie-oriented (Butts, C., 2008, <doi:10.1111/j.1467-9531.2008.00203.x>) or an actor-oriented modelling framework (Stadtfeld, C., & Block, P., 2017, <doi:10.15195/v4.a14>) in relational event networks. The package accommodates both frequentist and Bayesian approaches. The frequentist approaches that the package incorporates are the Maximum Likelihood Optimization ("MLE") and the Gradient-based Optimization  ("GDADAMAX"). The Bayesian methodologies included in the package are the Bayesian Sampling Importance Resampling ("BSIR") and the Hamiltonian Monte Carlo ("HMC"). The flexibility of choosing between frequentist and Bayesian optimization approaches allows researchers to select the estimation approach which aligns the most with their analytical preferences.
 License: MIT + file LICENSE
 URL: https://github.com/TilburgNetworkGroup/remstimate
 BugReports: https://github.com/TilburgNetworkGroup/remstimate/issues
@@ -49,7 +49,7 @@ Imports:
     Rcpp,
     remify (>= 3.2.4),
     trust,
-    remstats (>= 3.1.0)
+    remstats (>= 3.2.1)
 Suggests: 
     knitr,
     rmarkdown,
@@ -58,9 +58,6 @@ LinkingTo:
     Rcpp,
     RcppArmadillo,
     remify
-Remotes:
-    TilburgNetworkGroup/remify,
-    TilburgNetworkGroup/remstats
 VignetteBuilder:
     knitr
 Encoding: UTF-8
