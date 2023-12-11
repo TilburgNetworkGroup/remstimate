@@ -1974,7 +1974,7 @@ predict.remstimate <- function(object, A, diagnostics, ...)
 #' @rdname plot.remstimate
 #' @description A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
 #' @param x is a \code{remstimate} object
-#' @param which one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model.
+#' @param which one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).
 #' @param reh 'remify' object, the same used for the 'remstimate' object
 #' @param diagnostics is a \code{"remstimate" "diagnostics"} object
 #' @param ... further arguments to be passed to the 'plot' method depending: for instance the remstats object with statistics ('stats')
@@ -2017,13 +2017,37 @@ predict.remstimate <- function(object, A, diagnostics, ...)
 #' 
 plot.remstimate <- function(x, 
                             reh, 
-                            which = c(1:2), 
+                            which = c(1:4), 
                             diagnostics = NULL, ...)
 {
     # which plot
     selected <- which
-    which <- rep(FALSE,2)
+    which <- rep(FALSE,4)
     which[selected] <- TRUE
+
+    # hdi function for Highest density intervals
+    hdi <- function(x) {
+        # initializing output with NA's
+        interval <- rep(NA,2)
+        # sorting vector of numeric values
+        x <- sort.int(as.numeric(x), method='quick') # method = "quick" is fast for large vectors (which is the case of posterior draws from BSIR and HMC methods)
+        size <- length(x) # length of input vector x
+        windows_size <- floor(size * 0.975) # elements to include in the credibility interval (take the largest integer), creating a bit more conservative intervals, (can be substituted with 'ceiling', selecting the smallest integers and being less conservative). For large vectors, the choice should not matter.
+        if(windows_size < 2 | (size - windows_size) < 1){ # either the window is too narrow or we do not have enough data points
+            return(interval)
+        }
+        omit <- size - windows_size # number of elements to be omitted
+        lb <- x[1:omit]  # calculating candidates lower bounds
+        ub <- x[-c(1:(size - omit))]  # calculating candidates upper bounds
+        which_interval <- which.min(ub - lb)  # calculating intervals and selecting the smallest one
+        if(length(which_interval) > 1) { # if there are multiple minima take the rightmost
+            which_interval <- max(which_interval)
+            interval <- c(lb[which_interval], ub[which_interval])
+        } else { # otherwise return the only minimum found
+            interval <- c(lb[which_interval], ub[which_interval])
+        }
+        return(interval)
+    }
 
     if(attr(x,"model") != attr(reh,"model")){
         stop("'x' and 'reh' have different attribute 'model'")
@@ -2065,7 +2089,7 @@ plot.remstimate <- function(x,
                 abline(a=0,b=1,lty=2,lwd=1.5)
                 density_observed <- density(observed)
                 if(max(density_observed$y,na.rm=TRUE)>0){
-                density_observed$y <- density_observed$y/max(density_observed$y,na.rm=TRUE) # rescaling max density to 1 (to compare with dexp)
+                    density_observed$y <- density_observed$y/max(density_observed$y,na.rm=TRUE) # rescaling max density to 1 (to compare with dexp)
                 }
                 curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lwd=1.5,xlab="waiting times")
                 lines(density_observed,col=2,lwd=1.5)
@@ -2111,6 +2135,63 @@ plot.remstimate <- function(x,
                 lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
                 abline(h=0,col="black",lwd=3,lty=2)
                 mtext(text = colnames(diagnostics$residuals$smoothing_weights)[p], side = 3, line = 1,cex=1.5)
+                par(op)
+            }
+        }
+
+        # (3) histograms distribution of posterior draws (BSIR and HMC methods)
+        if(which[3L] & attr(x,"method") %in% c("BSIR","HMC")){
+            # code here ...
+            for(p in 1:P){
+                title_p <- bquote("Posterior distribution of " ~ beta[.(colnames(diagnostics$residuals$smoothing_weights)[p])])
+                par(mfrow=c(1,1))
+                hist(x$draws[,p],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
+                # posterior mean
+                abline(v = x$post.mean[p], col = 2, lwd = 3.5, lty = 2)
+                # hdi
+                ci <- hdi(x = x$draws[,p])
+                if(!all(is.na(ci))){
+                    abline(v = ci, col = 4, lwd = 3.5, lty = 2)
+                }
+                par(op)
+            }
+        }
+
+        # (4) trace plots posterior draws (HMC method only)
+        if(which[4L] & attr(x,"method") == "HMC"){
+            # code here ...
+            nchains <- attr(x,"nchains")
+            for(p in 1:P){
+                title_p <- bquote("Trace plot of " ~ beta[.(colnames(diagnostics$residuals$smoothing_weights)[p])])
+                par(mfrow=c(1,1))
+                if(nchains==1){
+                    plot(x$draws[,p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "HMC iteration")
+                    # posterior mean
+                    abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
+                    # hdi
+                    ci <- hdi(x = x$draws[,p])
+                    if(!all(is.na(ci))){
+                        abline(h = ci, col = 4, lwd = 3.5, lty = 2)
+                    }
+                }
+                else{
+                    ndraws_per_chain <- length(x$draws[,p])/nchains
+                    seq_chains <- seq(1,length(x$draws[,p]),by=ndraws_per_chain) 
+                    seq_chains <- cbind(seq_chains,seq_chains+ndraws_per_chain-1)
+                    chain_colors <- hcl.colors(n=nchains,palette="BluGrn")
+                    # plotting first chain
+                    plot(x$draws[seq_chains[1,1]:seq_chains[1,2],p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "HMC iteration", col = chain_colors[1],lwd=1.2)
+                    for(chain in 2:nchains){
+                        lines(x$draws[seq_chains[chain,1]:seq_chains[chain,2],p], col=chain_colors[chain],lwd=1.2)
+                    }
+                    # posterior mean
+                    abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
+                    # hdi
+                    ci <- hdi(x = x$draws[,p])
+                    if(!all(is.na(ci))){
+                        abline(h = ci, col = 4, lwd = 3.5, lty = 2)
+                    }
+                }
                 par(op)
             }
         }

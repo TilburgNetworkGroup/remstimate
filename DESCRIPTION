@@ -45,11 +45,11 @@ Depends:
     R (>= 4.0.0)
 Imports: 
     methods,
-    mvnfast,
     Rcpp,
     remify (>= 3.2.4),
     trust,
-    remstats (>= 3.2.1)
+    remstats (>= 3.2.1),
+    mvnfast
 Suggests: 
     knitr,
     rmarkdown,
