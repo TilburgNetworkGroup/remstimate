@@ -2026,19 +2026,19 @@ plot.remstimate <- function(x,
     which[selected] <- TRUE
 
     # hdi function for Highest density intervals
-    hdi <- function(x) {
+    hdi <- function(y) {
         # initializing output with NA's
         interval <- rep(NA,2)
         # sorting vector of numeric values
-        x <- sort.int(as.numeric(x), method='quick') # method = "quick" is fast for large vectors (which is the case of posterior draws from BSIR and HMC methods)
-        size <- length(x) # length of input vector x
+        y <- sort.int(as.numeric(y), method='quick') # method = "quick" is fast for large vectors (which is the case of posterior draws from BSIR and HMC methods)
+        size <- length(y) # length of input vector u
         windows_size <- floor(size * 0.975) # elements to include in the credibility interval (take the largest integer), creating a bit more conservative intervals, (can be substituted with 'ceiling', selecting the smallest integers and being less conservative). For large vectors, the choice should not matter.
         if(windows_size < 2 | (size - windows_size) < 1){ # either the window is too narrow or we do not have enough data points
             return(interval)
         }
         omit <- size - windows_size # number of elements to be omitted
-        lb <- x[1:omit]  # calculating candidates lower bounds
-        ub <- x[-c(1:(size - omit))]  # calculating candidates upper bounds
+        lb <- y[1:omit]  # calculating candidates lower bounds
+        ub <- y[-c(1:(size - omit))]  # calculating candidates upper bounds
         which_interval <- which.min(ub - lb)  # calculating intervals and selecting the smallest one
         if(length(which_interval) > 1) { # if there are multiple minima take the rightmost
             which_interval <- max(which_interval)
@@ -2140,7 +2140,7 @@ plot.remstimate <- function(x,
         }
 
         # (3) histograms distribution of posterior draws (BSIR and HMC methods)
-        if(which[3L] & attr(x,"method") %in% c("BSIR","HMC")){
+        if(which[3L] & (attr(x,"method") %in% c("BSIR","HMC"))){
             # code here ...
             for(p in 1:P){
                 title_p <- bquote("Posterior distribution of " ~ beta[.(colnames(diagnostics$residuals$smoothing_weights)[p])])
@@ -2149,7 +2149,7 @@ plot.remstimate <- function(x,
                 # posterior mean
                 abline(v = x$post.mean[p], col = 2, lwd = 3.5, lty = 2)
                 # hdi
-                ci <- hdi(x = x$draws[,p])
+                ci <- hdi(y = x$draws[,p])
                 if(!all(is.na(ci))){
                     abline(v = ci, col = 4, lwd = 3.5, lty = 2)
                 }
@@ -2158,7 +2158,7 @@ plot.remstimate <- function(x,
         }
 
         # (4) trace plots posterior draws (HMC method only)
-        if(which[4L] & attr(x,"method") == "HMC"){
+        if(which[4L] & (attr(x,"method") == "HMC")){
             # code here ...
             nchains <- attr(x,"nchains")
             for(p in 1:P){
@@ -2169,7 +2169,7 @@ plot.remstimate <- function(x,
                     # posterior mean
                     abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
                     # hdi
-                    ci <- hdi(x = x$draws[,p])
+                    ci <- hdi(y = x$draws[,p])
                     if(!all(is.na(ci))){
                         abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                     }
@@ -2187,7 +2187,7 @@ plot.remstimate <- function(x,
                     # posterior mean
                     abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
                     # hdi
-                    ci <- hdi(x = x$draws[,p])
+                    ci <- hdi(y = x$draws[,p])
                     if(!all(is.na(ci))){
                         abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                     }

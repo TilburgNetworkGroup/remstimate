@@ -206,6 +206,13 @@ ao_hmc <- remstimate::remstimate(reh = ao_reh,
                         nchains = 1L,
                         nsim = 10L,
                         burnin = 5L)
+ao_hmc_two_chains <- remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "HMC",
+                        nchains = 2L,
+                        nsim = 10L,
+                        burnin = 5L)                       
 expect_silent(ao_hmc)
 expect_inherits(ao_hmc,"remstimate")  
 expect_length(ao_hmc,2)
@@ -223,6 +230,8 @@ expect_silent(predict(ao_hmc))
 expect_silent(diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats))
 ao_reh_diagnostics <- diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats)
 expect_silent(plot(x = ao_hmc,reh = ao_reh, diagnostics = ao_reh_diagnostics))
+ao_reh_diagnostics <- diagnostics(object = ao_hmc_two_chains, reh = ao_reh, stats = ao_reh_stats) # two chains
+expect_silent(plot(x = ao_hmc_two_chains,reh = ao_reh, diagnostics = ao_reh_diagnostics)) # two chains
 expect_error(aic(ao_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)

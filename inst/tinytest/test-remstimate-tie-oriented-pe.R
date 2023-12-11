@@ -82,7 +82,7 @@ tie_bsir_no_prior <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "BSIR",
-                        nsim = 10L,
+                        nsim = 20L,
                         prior = NULL)
 expect_silent(tie_bsir_no_prior)
 expect_inherits(tie_bsir_no_prior,"remstimate")  
@@ -127,7 +127,7 @@ tie_bsir_with_prior <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "BSIR",
-                        nsim = 10L,
+                        nsim = 30L,
                         prior = priormvt,
                         mu = rep(0,dim(tie_reh_stats)[3]),
                         sigma = diag(dim(tie_reh_stats)[3]),
@@ -173,7 +173,7 @@ tie_hmc <- remstimate::remstimate(reh = tie_reh,
                         ncores = 1L,
                         method = "HMC",
                         nchains = 1L,
-                        nsim = 10L,
+                        nsim = 60L,
                         burnin = 5L)
 expect_silent(tie_hmc)
 expect_inherits(tie_hmc,"remstimate")  

@@ -234,7 +234,7 @@ In the sections below, we show the estimation of the parameters using all the me
                           stats =  tie_stats,
                           ncores = ncores,
                           method = "GDADAMAX",
-                          epochs = 100L)
+                          epochs = 200L)
   # print 
   tie_gd
 ```
@@ -283,7 +283,7 @@ In the sections below, we show the estimation of the parameters using all the me
                           stats =  tie_stats,
                           method = "HMC",
                           ncores = ncores,
-                          nsim = 120L,
+                          nsim = 200L,
                           nchains = 2L,
                           burnin = 50L,
                           thin = 2L)
