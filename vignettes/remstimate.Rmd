@@ -9,7 +9,6 @@ output:
     theme: default
     highlight: pygments
     code_folding: show
-    latex_engine: pdflatex
 header-includes:
   - \usepackage{amsmath,amssymb}
   - \usepackage{boldsymbol}
