@@ -3,6 +3,8 @@
 # loading data
 data(ao_data)
 
+set_seed <- 23929
+
 # processing data with simultaneous events (two events observed at the same time point)
 ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 
@@ -102,13 +104,15 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         ncores = 1L,
                         method = "BSIR",
                         nsim = 10L,
-                        prior = NULL))
+                        prior = NULL,
+                        seed = set_seed))
 ao_bsir_no_prior <- remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "BSIR",
                         nsim = 10L,
-                        prior = NULL)
+                        prior = NULL,
+                        seed = set_seed)
 expect_silent(ao_bsir_no_prior)
 expect_inherits(ao_bsir_no_prior,"remstimate")  
 expect_length(ao_bsir_no_prior,2)
@@ -148,14 +152,16 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         method = "BSIR",
                         nsim = 10L,
                         prior = prior_list,
-                        prior_args = prior_args))
+                        prior_args = prior_args,
+                        seed = set_seed))
 ao_bsir_with_prior <- remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "BSIR",
                         nsim = 10L,
                         prior = prior_list,
-                        prior_args = prior_args)
+                        prior_args = prior_args,
+                        seed = set_seed)
 expect_silent(ao_bsir_with_prior)
 expect_inherits(ao_bsir_with_prior,"remstimate")  
 expect_length(ao_bsir_with_prior,2)
@@ -192,14 +198,16 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         method = "HMC",
                         nchains = 1L,
                         nsim = 10L,
-                        burnin = 5L))  
+                        burnin = 5L,
+                        seed = set_seed))  
 ao_hmc <- remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "HMC",
                         nchains = 1L,
                         nsim = 10L,
-                        burnin = 5L)
+                        burnin = 5L,
+                        seed = set_seed)
 expect_silent(ao_hmc)
 expect_inherits(ao_hmc,"remstimate")  
 expect_length(ao_hmc,2)
@@ -236,7 +244,8 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         method = "HMC",
                         nchains = 1L,
                         nsim = NULL,
-                        burnin = 5L))  
+                        burnin = 5L,
+                        seed = set_seed))  
 
 # L = NULL
 expect_silent(remstimate::remstimate(reh = ao_reh,
@@ -246,7 +255,8 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         nchains = 1L,
                         nsim = 10L,
                         burnin = 5L,
-                        L = NULL))  
+                        L = NULL,
+                        seed = set_seed))  
 
 # epsilon = NULL
 expect_silent(remstimate::remstimate(reh = ao_reh,
@@ -256,7 +266,8 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         nchains = 1L,
                         nsim = 10L,
                         burnin = 5L,
-                        epsilon = NULL))  
+                        epsilon = NULL,
+                        seed = set_seed))  
 
 # ordinal likelihood (actor-oriented modeling)
 attr(ao_reh,"ordinal") <- TRUE
@@ -302,7 +313,8 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         ncores = 1L,
                         method = "BSIR",
                         nsim = 10L,
-                        prior = NULL))     
+                        prior = NULL,
+                        seed = set_seed))     
 
 ## (3.2) with a specified prior 
 priormvt <- mvnfast::dmvt
@@ -318,7 +330,8 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                                         receiver_model = list(mu = rep(0,dim(ao_reh_stats$receiver_stats)[3]),
                                                             sigma = diag(dim(ao_reh_stats$receiver_stats)[3]),
                                                             df = 1)),
-                        log = TRUE
+                        log = TRUE,
+                        seed = set_seed
                         ))
 # (4) method  = "HMC"    
 expect_silent(remstimate::remstimate(reh = ao_reh,
@@ -327,7 +340,8 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         method = "HMC",
                         nchains = 1L,
                         nsim = 10L,
-                        burnin = 5L)) 
+                        burnin = 5L,
+                        seed = set_seed)) 
 
 
 

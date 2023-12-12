@@ -3,6 +3,8 @@
 # loading data
 data(tie_data)
 
+set_seed <- 23929
+
 # processing data with simultaneous events (two or more events observed at the same time point)
 tie_data$edgelist$time <- floor(tie_data$edgelist$time) 
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
@@ -82,13 +84,15 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         ncores = 1L,
                         method = "BSIR",
                         nsim = 10L,
-                        prior = NULL))
+                        prior = NULL,
+                        seed = set_seed))
 tie_bsir_no_prior <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "BSIR",
                         nsim = 10L,
-                        prior = NULL)
+                        prior = NULL,
+                        seed = set_seed)
 expect_silent(tie_bsir_no_prior)
 expect_inherits(tie_bsir_no_prior,"remstimate")  
 expect_length(tie_bsir_no_prior,12)
@@ -125,7 +129,8 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         mu = rep(0,dim(tie_reh_stats)[3]),
                         sigma = diag(dim(tie_reh_stats)[3]),
                         df = 1,
-                        log = TRUE
+                        log = TRUE,
+                        seed = set_seed
                         ))
 tie_bsir_with_prior <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
@@ -136,7 +141,8 @@ tie_bsir_with_prior <- remstimate::remstimate(reh = tie_reh,
                         mu = rep(0,dim(tie_reh_stats)[3]),
                         sigma = diag(dim(tie_reh_stats)[3]),
                         df = 1,
-                        log = TRUE)
+                        log = TRUE,
+                        seed = set_seed)
 
 expect_silent(tie_bsir_with_prior)
 expect_inherits(tie_bsir_with_prior,"remstimate")  
@@ -170,14 +176,16 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         method = "HMC",
                         nchains = 1L,
                         nsim = 10L,
-                        burnin = 5L)) 
+                        burnin = 5L,
+                        seed = set_seed)) 
 tie_hmc <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "HMC",
                         nchains = 1L,
                         nsim = 10L,
-                        burnin = 5L)
+                        burnin = 5L,
+                        seed = set_seed)
 expect_silent(tie_hmc)
 expect_inherits(tie_hmc,"remstimate")  
 expect_length(tie_hmc,10)
@@ -248,7 +256,8 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         ncores = 1L,
                         method = "BSIR",
                         nsim = 10L,
-                        prior = NULL))     
+                        prior = NULL,
+                        seed = set_seed))     
 
 ## (3.2) with a specified prior 
 priormvt <- mvnfast::dmvt
@@ -261,7 +270,8 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         mu = rep(0,dim(tie_reh_stats)[3]),
                         sigma = diag(dim(tie_reh_stats)[3]),
                         df = 1,
-                        log = TRUE
+                        log = TRUE,
+                        seed = set_seed
                         ))
 # (4) method  = "HMC"    
 expect_silent(remstimate::remstimate(reh = tie_reh,
@@ -270,7 +280,8 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         method = "HMC",
                         nchains = 1L,
                         nsim = 10L,
-                        burnin = 5L)) 
+                        burnin = 5L,
+                        seed = set_seed)) 
 
 
 

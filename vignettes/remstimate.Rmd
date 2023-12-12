@@ -248,12 +248,13 @@ In the sections below, we show the estimation of the parameters using all the me
                           stats =  tie_stats,
                           ncores = ncores,
                           method = "BSIR",
-                          nsim = 100L,
+                          nsim = 100L, # 100 draws from the posterior distribution
                           prior = priormvt, # defining prior here, prior parameters follow below
                           mu = rep(0,dim(tie_stats)[3]), # prior mu value
                           sigma = diag(dim(tie_stats)[3])*1.5, # prior sigma value
                           df = 1, # prior df value
-                          log = TRUE # requiring log density values from the prior
+                          log = TRUE, # requiring log density values from the prior,
+                          seed = 23929 # set a seed only for reproducibility purposes
                           )
 
   # summary 
@@ -274,10 +275,12 @@ In the sections below, we show the estimation of the parameters using all the me
                           stats =  tie_stats,
                           method = "HMC",
                           ncores = ncores,
-                          nsim = 100L,
-                          nchains = 6L,
-                          burnin = 50L,
-                          thin = 2L)
+                          nsim = 100L, # 100 draws to generate per each chain
+                          nchains = 6L, # 6 chains to generate
+                          burnin = 50L, # burnin length is 50
+                          thin = 2L, # thinning size set to 2
+                          seed = 23929 # set a seed only for reproducibility purposes
+                          )
 
   # summary 
   summary(tie_hmc)
