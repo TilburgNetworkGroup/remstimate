@@ -202,15 +202,6 @@ In the sections below, we show the estimation of the parameters using all the me
   waic(tie_mle)
 ```
 
-
-#### **predict( )**
-
-```{r}
-  # predict
-  predict(tie_mle)
-
-```
-
 #### **diagnostics( )**
 
 ```{r}
@@ -283,8 +274,8 @@ In the sections below, we show the estimation of the parameters using all the me
                           stats =  tie_stats,
                           method = "HMC",
                           ncores = ncores,
-                          nsim = 200L,
-                          nchains = 2L,
+                          nsim = 100L,
+                          nchains = 6L,
                           burnin = 50L,
                           thin = 2L)
 

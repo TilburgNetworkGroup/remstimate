@@ -1876,8 +1876,11 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
                                                 )
         colnames(diagnostics$residuals$smoothing_weights) <- variables_names[select_vars]
         # lambdas (event rates)
-        diagnostics$rates <- diagnostics$residuals$rates   
-        diagnostics$residuals$rates <- NULL  
+        diagnostics$rates <- diagnostics$residuals$rates 
+        diagnostics$residuals$rates <- NULL
+        if(!is.null(attr(object,"where_is_baseline")) & (length(select_vars) < 1)){ # only the baseline is in the model
+            diagnostics$residuals <- NULL
+        }
     }
     else if(attr(object,"model") == "actor"){ # actor-oriented modeling
         # [[CHECK]] on variables names from object and stats (throw an error if they do not match)
@@ -1921,6 +1924,9 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
                 # lambdas (event rates)
                 diagnostics[[which_model[i]]]$rates <- diagnostics[[which_model[i]]]$residuals$rates   
                 diagnostics[[which_model[i]]]$residuals$rates <- NULL 
+                if(senderRate[i] & !is.null(where_is_baseline) & (length(select_vars) < 1)){ # only the baseline is in the model
+                    diagnostics[[which_model[i]]]$residuals <- NULL
+                }
             }
         }
     }
@@ -1930,40 +1936,6 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
     return(diagnostics) 
 }
 
-
-#######################################################################################
-#######################################################################################
-
-
-# predict.remstimate
-#' @title predict.remstimate
-#' @rdname predict.remstimate
-#' @description A function that returns in-sample A-steps ahead predictions given a 'remstimate' object.
-#' @param object is a \code{remstimate} object 
-#' @param A is the number of steps ahead to predict
-#' @param diagnostics a object of class \code{"remstimate","diagnostics"}
-#' @param ... further arguments to be passed to the 'predict' method depending on the estimator used
-#' @method predict remstimate
-#' @export
-#' 
-#' @examples 
-#' 
-#' # No examples available at the moment
-#' 
-predict.remstimate <- function(object, A, diagnostics, ...)
-{
-    # - In-sample predictions
-
-    
-    # A-steps ahead A = 1, ... 
-    # if in-sample, comparison with actual observed dyads
-    #if out-of-sample, find comparison measures
-
-    # Out-of-sample predictions 
-    #  code here an out-of-sample approach for predictions
-
-    return(paste('this function at the moment does nothing'))
-}
 
 #######################################################################################
 #######################################################################################
@@ -2031,7 +2003,7 @@ plot.remstimate <- function(x,
         interval <- rep(NA,2)
         # sorting vector of numeric values
         y <- sort.int(as.numeric(y), method='quick') # method = "quick" is fast for large vectors (which is the case of posterior draws from BSIR and HMC methods)
-        size <- length(y) # length of input vector u
+        size <- length(y) # length of input vector y
         windows_size <- floor(size * 0.975) # elements to include in the credibility interval (take the largest integer), creating a bit more conservative intervals, (can be substituted with 'ceiling', selecting the smallest integers and being less conservative). For large vectors, the choice should not matter.
         if(windows_size < 2 | (size - windows_size) < 1){ # either the window is too narrow or we do not have enough data points
             return(interval)
@@ -2088,23 +2060,18 @@ plot.remstimate <- function(x,
                 mtext(text = "Q-Q waiting times", side = 3, line = 2,cex=1.5)
                 abline(a=0,b=1,lty=2,lwd=1.5)
                 density_observed <- density(observed)
-                if(max(density_observed$y,na.rm=TRUE)>0){
-                    density_observed$y <- density_observed$y/max(density_observed$y,na.rm=TRUE) # rescaling max density to 1 (to compare with dexp)
+                if(max(density_observed$y,na.rm=TRUE)>0 & max(density_observed$y,na.rm=TRUE)!=Inf){
+                    density_observed$y[!is.na(density_observed$y)] <- density_observed$y[!is.na(density_observed$y)]/max(density_observed$y,na.rm=TRUE) # rescaling max density to 1 (to compare with dexp)
                 }
-                curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lwd=1.5,xlab="waiting times")
+                curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lty=2,lwd=1.5,xlab="Waiting times",ylab="Density",ylim=c(0,1))
                 lines(density_observed,col=2,lwd=1.5)
                 mtext(text = "Density plot of waiting times", side = 3, line = 2,cex=1.5)
-                # plot size
-                plot.width <- par("fin")[1] * par("plt")[1]
-                plot.height <- par("fin")[2] * par("plt")[2]
-                # legend
-                legend(x="bottom", inset = c(plot.height,plot.width), legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2),horiz=TRUE, box.lwd=0)
                 par(op)
             }
         }
 
         # (2) standardized Schoenfeld's residuals
-        if(which[2L]){
+        if(which[2L] & !is.null(diagnostics$residuals)){
             P <- dim(diagnostics$residuals$standardized_residuals[[1]])[2] # number of statistics
             n_repeats_per_time_point <- rep(1,dim(diagnostics$residuals$standardized_residuals)[1]) # for attr(residuals, "stats.method") = "pe"
             if(reh$stats.method == "pt"){
@@ -2131,7 +2098,7 @@ plot.remstimate <- function(x,
                     w_p <- rep(1/length(w_p),length(w_p)) # assigning equal weights
                 }
                 par(mfrow=c(1,1))
-                plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
+                plot(t_p,y_p,xlab = "Time", ylab = "Scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
                 lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
                 abline(h=0,col="black",lwd=3,lty=2)
                 mtext(text = colnames(diagnostics$residuals$smoothing_weights)[p], side = 3, line = 1,cex=1.5)
@@ -2141,9 +2108,10 @@ plot.remstimate <- function(x,
 
         # (3) histograms distribution of posterior draws (BSIR and HMC methods)
         if(which[3L] & (attr(x,"method") %in% c("BSIR","HMC"))){
-            # code here ...
+            P <- dim(x$draws)[2]
+            variable_name <- names(x$coefficients)
             for(p in 1:P){
-                title_p <- bquote("Posterior distribution of " ~ beta[.(colnames(diagnostics$residuals$smoothing_weights)[p])])
+                title_p <- bquote("Posterior distribution of " ~ beta[.(variable_name[p])])
                 par(mfrow=c(1,1))
                 hist(x$draws[,p],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
                 # posterior mean
@@ -2159,13 +2127,14 @@ plot.remstimate <- function(x,
 
         # (4) trace plots posterior draws (HMC method only)
         if(which[4L] & (attr(x,"method") == "HMC")){
-            # code here ...
             nchains <- attr(x,"nchains")
+            P <- dim(x$draws)[2]
+            variable_name <- names(x$coefficients)
             for(p in 1:P){
-                title_p <- bquote("Trace plot of " ~ beta[.(colnames(diagnostics$residuals$smoothing_weights)[p])])
+                title_p <- bquote("Trace plot of " ~ beta[.(variable_name[p])])
                 par(mfrow=c(1,1))
                 if(nchains==1){
-                    plot(x$draws[,p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "HMC iteration")
+                    plot(x$draws[,p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
                     # posterior mean
                     abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
                     # hdi
@@ -2178,11 +2147,11 @@ plot.remstimate <- function(x,
                     ndraws_per_chain <- length(x$draws[,p])/nchains
                     seq_chains <- seq(1,length(x$draws[,p]),by=ndraws_per_chain) 
                     seq_chains <- cbind(seq_chains,seq_chains+ndraws_per_chain-1)
-                    chain_colors <- hcl.colors(n=nchains,palette="BluGrn")
+                    chain_colors <- hcl.colors(n=nchains,palette="BuPu")
                     # plotting first chain
-                    plot(x$draws[seq_chains[1,1]:seq_chains[1,2],p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "HMC iteration", col = chain_colors[1],lwd=1.2)
+                    plot(x$draws[seq_chains[1,1]:seq_chains[1,2],p], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations \n (per each chain)", col = chain_colors[1],lwd=1.8)
                     for(chain in 2:nchains){
-                        lines(x$draws[seq_chains[chain,1]:seq_chains[chain,2],p], col=chain_colors[chain],lwd=1.2)
+                        lines(x$draws[seq_chains[chain,1]:seq_chains[chain,2],p], col=chain_colors[chain],lwd=1.8)
                     }
                     # posterior mean
                     abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
@@ -2217,24 +2186,19 @@ plot.remstimate <- function(x,
                         mtext(text = title_model[i], side = 3, line = 1,cex=1)
                         abline(a=0,b=1,lty=2,lwd=1.5)
                         density_observed <- density(observed)
-                        if(max(density_observed$y,na.rm=TRUE)>0){
-                            density_observed$y <- density_observed$y/max(density_observed$y,na.rm=TRUE) # rescaling max density to 1 (to compare with dexp)
+                        if(max(density_observed$y,na.rm=TRUE)>0 & max(density_observed$y,na.rm=TRUE)!=Inf){
+                            density_observed$y[!is.na(density_observed$y)] <- density_observed$y[!is.na(density_observed$y)]/max(density_observed$y,na.rm=TRUE) # rescaling max density to 1 (to compare with dexp)
                         }
-                        curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lwd=1.5,xlab="waiting times",ylab="Density")
+                        curve(dexp,from=min(observed),to=as.numeric(quantile(observed,probs=c(0.99))),col=1,lty=2,lwd=1.5,xlab="Waiting times",ylab="Density",ylim=c(0,1))
                         lines(density_observed,col=2,lwd=1.5)
                         mtext(text = "Density plot of waiting times", side = 3, line = 2,cex=1.5)
                         mtext(text = title_model[i], side = 3, line = 1,cex=1)
-                        # plot size
-                        plot.width <- par("fin")[1] * par("plt")[1]
-                        plot.height <- par("fin")[2] * par("plt")[2]
-                        # legend
-                        legend(x="bottom", inset = c(plot.height,plot.width), legend = c("Theoretical density","Observed density"), lwd=c(1.5,1.5), lty = c(1,1), col = c(1,2),horiz=TRUE, box.lwd=0)
                         par(op)
                     }
                 }
 
                 # (2) standardized Schoenfeld's residuals
-                if(which[2L]){
+                if(which[2L] & !is.null(diagnostics[[which_model[i]]]$residuals)){
                     P <- dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals[[1]])[2] # number of statistics
                     n_repeats_per_time_point <- rep(1,dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals)[1]) # for attr(residuals, "stats.method") = "pe"
                     if(i == 1){
@@ -2266,11 +2230,70 @@ plot.remstimate <- function(x,
                             w_p <- rep(1/length(w_p),length(w_p)) # assigning equal weights
                         }
                         par(mfrow=c(1,1))
-                        plot(t_p,y_p,xlab = "time", ylab = "scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
+                        plot(t_p,y_p,xlab = "Time", ylab = "Scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
                         lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
                         abline(h=0,col="black",lwd=3,lty=2)
                         mtext(text = colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights)[p], side = 3, line = 2,cex=1.5)
                         mtext(text = title_model[i], side = 3, line = 1, cex = 1)
+                        par(op)
+                    }
+                }
+
+                # (3) histograms distribution of posterior draws (BSIR and HMC methods)
+                if(which[3L] & (attr(x,"method") %in% c("BSIR","HMC"))){
+                    P <- dim(x[[which_model[i]]]$draws)[2]
+                    variable_name <- names(x[[which_model[i]]]$coefficients)
+                    for(p in 1:P){
+                        title_p <- bquote("Posterior distribution of " ~ beta[.(variable_name[p])])
+                        par(mfrow=c(1,1))
+                        hist(x[[which_model[[i]]]]$draws[,p],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
+                        # posterior mean
+                        abline(v = x[[which_model[[i]]]]$post.mean[p], col = 2, lwd = 3.5, lty = 2)
+                        # hdi
+                        ci <- hdi(y = x[[which_model[[i]]]]$draws[,p])
+                        if(!all(is.na(ci))){
+                            abline(v = ci, col = 4, lwd = 3.5, lty = 2)
+                        }
+                        par(op)
+                    }
+                }
+
+                # (4) trace plots posterior draws (HMC method only)
+                if(which[4L] & (attr(x,"method") == "HMC")){
+                    nchains <- attr(x,"nchains")
+                    P <- dim(x[[which_model[i]]]$draws)[2]
+                    variable_name <- names(x[[which_model[i]]]$coefficients)
+                    for(p in 1:P){
+                        title_p <- bquote("Trace plot of " ~ beta[.(variable_name[p])])
+                        par(mfrow=c(1,1))
+                        if(nchains==1){
+                            plot(x[[which_model[i]]]$draws[,p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
+                            # posterior mean
+                            abline(h = x[[which_model[i]]]$post.mean[p], col=2, lwd=3.5, lty=2)
+                            # hdi
+                            ci <- hdi(y = x[[which_model[i]]]$draws[,p])
+                            if(!all(is.na(ci))){
+                                abline(h = ci, col = 4, lwd = 3.5, lty = 2)
+                            }
+                        }
+                        else{
+                            ndraws_per_chain <- length(x[[which_model[i]]]$draws[,p])/nchains
+                            seq_chains <- seq(1,length(x[[which_model[i]]]$draws[,p]),by=ndraws_per_chain) 
+                            seq_chains <- cbind(seq_chains,seq_chains+ndraws_per_chain-1)
+                            chain_colors <- hcl.colors(n=nchains,palette="BuPu")
+                            # plotting first chain
+                            plot(x[[which_model[i]]]$draws[seq_chains[1,1]:seq_chains[1,2],p], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations (per each chain)", col = chain_colors[1],lwd=1.8)
+                            for(chain in 2:nchains){
+                                lines(x[[which_model[i]]]$draws[seq_chains[chain,1]:seq_chains[chain,2],p], col=chain_colors[chain],lwd=1.8)
+                            }
+                            # posterior mean
+                            abline(h = x[[which_model[i]]]$post.mean[p], col=2, lwd=3.5, lty=2)
+                            # hdi
+                            ci <- hdi(y = x[[which_model[i]]]$draws[,p])
+                            if(!all(is.na(ci))){
+                                abline(h = ci, col = 4, lwd = 3.5, lty = 2)
+                            }
+                        }
                         par(op)
                     }
                 }
