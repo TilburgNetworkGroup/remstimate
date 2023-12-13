@@ -320,7 +320,7 @@ Rcpp::List remDerivativesSenderRates(
         }
       }
     }
-    else{  //no dynamic riskset
+    else {  //no dynamic riskset
       double sum_lambda = sum(lambda_s);
       if(ordinal){
         loglik_m -= std::log(sum_lambda);
@@ -533,8 +533,6 @@ Rcpp::List remDerivativesReceiverChoice(
 // @param hessian boolean true/false whether to return hessian value (default is true).
 // @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false). Default is true.
 // @param N number of actors in the network. This argument is used only in the ReceiverChoice likelihood (model = "actor"). Default is NULL.
-// @param C number of event types observed in the network (reh$C). Default is NULL.
-// @param D number of dyads in the network (reh$D). Default is NULL.
 //
 // @return list of values: loglik, gradient, hessian.
 //
@@ -993,6 +991,240 @@ Rcpp::List HMC(arma::mat pars_init,
 
 // /////////////////////////////////////////////////////////////////////////////////
 // ///////////(END)            Hamiltonian Monte Carlo            (END)/////////////
+// /////////////////////////////////////////////////////////////////////////////////
+
+
+// /////////////////////////////////////////////////////////////////////////////////
+// ///////////(BEGIN)                     WAIC                  (BEGIN)/////////////
+// /////////////////////////////////////////////////////////////////////////////////
+
+
+
+// getWAIC 
+//
+// a function for computing the Watanabe Akaike's Information Criterion after estimating the model with remstimate
+//
+// @param mu vector of estimates (from MLE or GDADAMAX method). This argument will be an empty vector for method BSIR and HMC.
+// @param vcov matrix of covariances estimated from the data (via MLE or GDADAMAX method). This argument will be an empty matrix for method BSIR and HMC.
+// @param pars a matrix of posterior draws (from BSIR or HMC method). This argument will be an empty matrix for method MLE and GDADAMAX
+// @param stats is cube of M slices. Each slice is a matrix of dimensions D*U (or N*U for the actor-oriented model) with statistics of interest by column and dyads (actors, for the actor-oriented model) by row.
+// @param actor1 list of actor1's observed per each time point (attr(reh,"actor1")-1).
+// @param actor2 list of actor2's observed per each time point (attr(reh,"actor2")-1).
+// @param dyad list of dyads observed per each time point (from the attribute attr(remify,"dyad")-1).
+// @param interevent_time the time difference between the current time point and the previous event time.
+// @param omit_dyad is a list of two objects: a vector "time" and a matrix "riskset" (or "risksetSender" for the sender model). Two objects for handling changing risksets. The object is NULL if no change of the risk set structure is defined.
+// @param model either "actor" or "tie" oriented model.
+// @param approach either "Bayesian" (then expecting 'pars' to be a matrix filled with draws from the posterior distribution), "Frequentist" (then expecting 'mu' and 'vcov' to be supplied).
+// @param ordinal boolean that indicates whether to use the ordinal or interval timing likelihood (default is false).
+// @param ncores number of threads to use for the parallelization (default is 1).
+// @param senderRate boolean true/false (it is used only when model = "actor") indicates if to estimate the senderRate model (true) or the ReceiverChoice model (false). Default is true.
+// @param nsim number of draws from the posterior distribution. This argument will be used only if mu and vcov are supplied. For remstimate objects based on Bayesian methods, a sample from the posterior distribution will be drawn at R-level and supplied to this function.
+//
+// @return WAIC calculated on the deviance scale as -2 * elpdWAIC 
+//
+// [[Rcpp::export]]
+double getWAIC(arma::vec mu,
+                arma::mat vcov, 
+                arma::mat pars,
+                const arma::cube &stats,
+                const arma::field<arma::uvec> &actor1,
+                const arma::field<arma::uvec> &actor2,
+                const arma::field<arma::uvec> &dyad,
+                const arma::vec &interevent_time,
+                const Rcpp::List &omit_dyad,
+                std::string model,
+                std::string approach,
+                bool ordinal = false,
+                int ncores = 1,
+                bool senderRate = true,
+                int nsim = 500){
+
+  // select model
+  std::vector<std::string> models = {"tie","actor"};
+  std::vector<std::string>::iterator itr_model = std::find(models.begin(), models.end(), model);
+  auto which_model = std::distance(models.begin(), itr_model);
+  // select approach
+  std::vector<std::string> approaches = {"Bayesian","Frequentist"};
+  std::vector<std::string>::iterator itr_approach = std::find(approaches.begin(), approaches.end(), approach);
+  auto which_approach = std::distance(approaches.begin(), itr_approach);
+  if(which_approach == 1){ // generate parameters by approximating their posterior distribution with a Multivariate Normal distribution
+    pars = arma::mvnrnd(mu,vcov,nsim);
+  }
+
+  // declaring dimensions
+  arma::uword M = stats.n_slices; // number of events
+
+  // initializing general indices
+  arma::uword m,j;
+
+  // creating object where to store partial output (useful for parallelization)
+  arma::vec out(M,arma::fill::zeros);
+
+  // without parallelization ... at the moment 
+
+  // switch between tie-oriented and actor-oriented modeling
+  if(which_model == 0){ // tie-oriented modeling (ordinal and interval likelihood supported)
+    // omit dyad
+    arma::vec riskset_time_vec(M); 
+    arma::mat riskset_mat;
+    if(omit_dyad.size()>0){
+      riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+      riskset_mat = Rcpp::as<arma::mat>(omit_dyad["riskset"]);
+    }
+    else{
+      riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
+    }
+    // openMP instructions here
+    for(m = 0; m < M; m++)
+      {
+        int riskset_time_m = riskset_time_vec(m);
+        arma::vec out_vec_loc_log(pars.n_cols,arma::fill::zeros);
+        arma::vec out_vec_loc_p(pars.n_cols,arma::fill::zeros);
+        arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*D] we want to access dyads by column
+        arma::uvec events_occurred = dyad(m)-1;
+        double p_m = 0.0;
+        for(j = 0; j < pars.n_cols; j++){
+            double lpd_m_j = 0.0;
+            // (1)  lpd computation
+            arma::vec log_lambda = stats_m.t() * pars.col(j);
+            lpd_m_j += arma::accu(log_lambda(events_occurred));
+            // dealing with the risk set
+            if(riskset_time_m!=(-1)){ // if the 'riskset_time_m' is different from (-1), then a dynamic riskset is observed
+              arma::uvec events_at_risk = arma::find(riskset_mat.row(riskset_time_m));
+              arma::vec sum_lambda_at_risk = riskset_mat.row(riskset_time_m) * arma::exp(log_lambda);
+              if(ordinal){
+                lpd_m_j -= log(sum_lambda_at_risk(0));
+              }
+              else{
+                lpd_m_j -= sum_lambda_at_risk(0)*interevent_time(m);
+              }
+            }
+            else{ // loop over all dyad (because for all the time points the riskset is fixed)
+              double sum_lambda_at_risk = arma::accu(arma::exp(log_lambda));
+              if(ordinal){
+                lpd_m_j -= log(sum_lambda_at_risk);
+              }
+              else{
+                lpd_m_j -= sum_lambda_at_risk*interevent_time(m);
+              }
+            }
+            out_vec_loc_log[j] = lpd_m_j;
+            out_vec_loc_p[j] = exp(lpd_m_j);
+        }
+        p_m += mean(out_vec_loc_p);
+        out(m) = log(p_m) - var(out_vec_loc_log);
+      }
+  }
+  else if(which_model == 1){ // actor-oriented modeling
+    if(senderRate){ // if sender rate model
+      // omit_dyad 
+      arma::vec riskset_time_vec(M); 
+      arma::mat riskset_mat;
+
+      if(omit_dyad.size()>0){
+        riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+        riskset_mat = Rcpp::as<arma::mat>(omit_dyad["risksetSender"]);
+      }
+      else{
+        riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
+      }
+      // openMP instructions here
+      for(m = 0; m < M; m++)
+        {
+          int riskset_time_m = riskset_time_vec(m);
+          arma::vec out_vec_loc_log(pars.n_cols,arma::fill::zeros);
+          arma::vec out_vec_loc_p(pars.n_cols,arma::fill::zeros);
+          arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*N] we want to access dyads by column
+          arma::uvec sender = actor1(m)-1;
+          double p_m = 0.0;
+          for(j = 0; j < pars.n_cols; j++){
+              double lpd_m_j = 0.0;
+              // (1)  lpd computation
+              arma::vec log_lambda = stats_m.t() * pars.col(j);
+              lpd_m_j += arma::accu(log_lambda(sender));
+              // dealing with the risk set
+              if(riskset_time_m!=(-1)){ // if the 'riskset_time_m' is different from (-1), then a dynamic riskset is observed
+                arma::uvec events_at_risk = arma::find(riskset_mat.row(riskset_time_m));
+                arma::vec sum_lambda_at_risk = riskset_mat.row(riskset_time_m) * arma::exp(log_lambda);
+                if(ordinal){
+                  lpd_m_j -= log(sum_lambda_at_risk(0));
+                }
+                else{
+                  lpd_m_j -= sum_lambda_at_risk(0)*interevent_time(m);
+                }
+              }
+              else{ // loop over all dyad (because for all the time points the riskset is fixed)
+                double sum_lambda_at_risk = arma::accu(arma::exp(log_lambda));
+                if(ordinal){
+                  lpd_m_j -= log(sum_lambda_at_risk);
+                }
+                else{
+                  lpd_m_j -= sum_lambda_at_risk*interevent_time(m);
+                }
+              }
+              out_vec_loc_log[j] = lpd_m_j;
+              out_vec_loc_p[j] = exp(lpd_m_j);
+          }
+          p_m += mean(out_vec_loc_p);
+          out(m) = log(p_m) - var(out_vec_loc_log);
+        }
+    }
+    else{ // if receiver choice model
+      // omit_dyad 
+      arma::vec riskset_time_vec(M); 
+      arma::mat riskset_mat;
+      if(omit_dyad.size()>0){
+        riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+        riskset_mat = Rcpp::as<arma::mat>(omit_dyad["riskset"]);
+      }
+      else{
+        riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
+      }
+      arma::uword N = stats.n_rows;
+      // openMP instructions here
+      for(m = 0; m < M; m++)
+        {
+          int riskset_time_m = riskset_time_vec(m);
+          arma::vec out_vec_loc_log(pars.n_cols,arma::fill::zeros);
+          arma::vec out_vec_loc_p(pars.n_cols,arma::fill::zeros);
+          arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*N] we want to access dyads by column
+          arma::uvec sender = actor1(m)-1;
+          arma::uvec receiver = actor2(m)-1;
+          double p_m = 0.0;
+          for(j = 0; j < pars.n_cols; j++){
+            double lpd_m_j = 0.0;
+            // (1)  lpd computation
+            arma::vec log_lambda = stats_m.t() * pars.col(j);
+            lpd_m_j += log_lambda(receiver(0));
+            // dealing with the risk set
+            arma::vec lambda_at_risk = arma::exp(log_lambda);
+            if(riskset_time_m!=(-1)){ // if the 'riskset_time_m' is different from (-1), then a dynamic riskset is observed
+              arma::vec riskset_sel = riskset_mat(riskset_time_m,arma::span(sender(0)*N,sender(0)*N+N-1)).t();
+              lambda_at_risk %= riskset_sel; // if actors are not at risk to be receiver then there will be zeros in the vector (and this won't affect the sum)
+            }
+            lambda_at_risk(sender(0)) = 0.0;
+            lpd_m_j -= log(arma::accu(lambda_at_risk));
+            out_vec_loc_log[j] = lpd_m_j;
+            out_vec_loc_p[j] = exp(lpd_m_j);
+          }
+          p_m += mean(out_vec_loc_p);
+          out(m) = log(p_m) - var(out_vec_loc_log);
+        }
+    }
+  }
+
+  // calculating elpdWAIC per time point and WAIC as (-2)*elpdWAIC
+  double waic = 0.0;
+  waic = arma::accu(out);
+  waic *= (-2.0);
+
+  return waic;
+}
+
+
+
+// /////////////////////////////////////////////////////////////////////////////////
+// ///////////(END)                      WAIC                     (END)/////////////
 // /////////////////////////////////////////////////////////////////////////////////
 
 

@@ -13,6 +13,10 @@ HMC <- function(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, 
     .Call(`_remstimate_HMC`, pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, thin, L, epsilon)
 }
 
+getWAIC <- function(mu, vcov, pars, stats, actor1, actor2, dyad, interevent_time, omit_dyad, model, approach, ordinal = FALSE, ncores = 1L, senderRate = TRUE, nsim = 500L) {
+    .Call(`_remstimate_getWAIC`, mu, vcov, pars, stats, actor1, actor2, dyad, interevent_time, omit_dyad, model, approach, ordinal, ncores, senderRate, nsim)
+}
+
 computeDiagnostics <- function(pars, stats, actor1, actor2, dyad, omit_dyad, model, N, senderRate = TRUE, ncores = 1L, baseline = 0) {
     .Call(`_remstimate_computeDiagnostics`, pars, stats, actor1, actor2, dyad, omit_dyad, model, N, senderRate, ncores, baseline)
 }

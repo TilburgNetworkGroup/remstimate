@@ -19,6 +19,7 @@ remstimate(
   L = 50L,
   epsilon = ifelse(method == "GDADAMAX", 0.001, 0.002),
   seed = NULL,
+  WAIC = FALSE,
   silent = TRUE,
   ...
 )
@@ -51,6 +52,8 @@ remstimate(
 \item{epsilon}{[\emph{optional}] It is a parameter used in two methods: if \code{method} is \code{"GDADAMAX"}, it represents the inter-iteration difference of the loss function and it is used as stop-rule within the algorithm (default value is \code{0.001}), if \code{method} is \code{"HMC"} (default value is \code{0.002}), it is a parameter used in the leap-frog algorithm and it is proportional to the step size.}
 
 \item{seed}{[\emph{optional}] seed value for reproducibility. If \code{NULL}, seed will be assigned by the machine and saved in the output object.}
+
+\item{WAIC}{[\emph{optional}] logical value. The Watanabe Akaike's Information Criterion (WAIC) will be calculated is \code{WAIC = TRUE}. The default number of simulations used to calculate the WAIC is 500. In order to specify  a different number of simulations, the user must supply an additional argument \code{nsimWAIC} to the function.}
 
 \item{silent}{[\emph{optional}-not-yet-implemented] a \code{TRUE/FALSE} value. If \code{FALSE}, progress of optimization status will be printed out.}
 

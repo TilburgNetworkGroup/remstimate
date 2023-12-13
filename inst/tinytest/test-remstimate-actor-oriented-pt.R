@@ -47,6 +47,46 @@ expect_silent(aicc(ao_mle))
 expect_silent(bic(ao_mle))
 expect_silent(waic(ao_mle))
 
+
+# tests on "WAIC" for "MLE"
+
+# WAIC = TRUE
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE))
+# nsimWAIC is not a numeric scalar                       
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = "text"))
+# nsimWAIC is supplied                        
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100))
+ao_mle_with_waic <- remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100)
+expect_silent(print(ao_mle_with_waic))
+expect_silent(summary(ao_mle_with_waic))    
+expect_silent(waic(ao_mle_with_waic))      
+
+# WAIC for ordinal likelihod + testing omit_dyad routine for ordinal likelihood and tie-oriented model
+omit_dyad <- list()
+omit_dyad[[1]] <- list(time = c(330,585), dyad = data.frame(actor1=c(NA,"4"),actor2=c("4",NA),type=c(NA,NA))) # excluding actor 4 from the risk set between (observed) time points 330 and 585
+ao_reh_ordinal <- remify::remify(edgelist = ao_data$edgelist, model = "actor", ordinal = TRUE, omit_dyad = omit_dyad)
+ao_reh_stats_ordinal <- remstats::remstats(reh = ao_reh_ordinal, sender_effects = rate_model, receiver_effects = choice_model, method="pt")
+expect_silent(remstimate::remstimate(reh = ao_reh_ordinal,
+                        stats = ao_reh_stats_ordinal,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100))
+
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
@@ -140,9 +180,28 @@ fixed = TRUE)
 expect_error(bic(ao_bsir_no_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(ao_bsir_no_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(ao_bsir_no_prior)) 
+
+# tests on "WAIC" for "BSIR"                       
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "BSIR",
+                        nsim = 100L,
+                        prior = NULL,
+                        seed = set_seed,
+                        WAIC = TRUE,
+                        nsimWAIC = 10))
+ao_reh_bsir_waic <- remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "BSIR",
+                        nsim = 100L,
+                        prior = NULL,
+                        seed = set_seed,
+                        WAIC = TRUE,
+                        nsimWAIC = 10)
+expect_silent(summary(ao_reh_bsir_waic))
 
 ## (3.2) with a specified prior
 prior_list <- list(sender_model = mvnfast::dmvt, receiver_model = mvnfast::dmvn)
@@ -189,9 +248,7 @@ fixed = TRUE)
 expect_error(bic(ao_bsir_with_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(ao_bsir_with_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(ao_bsir_with_prior)) 
 
 # (4) method  = "HMC"   
 expect_silent(remstimate::remstimate(reh = ao_reh,
@@ -245,9 +302,19 @@ fixed = TRUE)
 expect_error(bic(ao_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(ao_hmc),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(ao_hmc)) 
+
+# tests on "WAIC" for "HMC"                      
+expect_silent(remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        ncores = 1L,
+                        method = "HMC",
+                        nchains = 1L,
+                        nsim = 100L,
+                        burnin = 5L,
+                        seed = set_seed,
+                        WAIC = TRUE,
+                        nsimWAIC = 10))
 
 # nsim = NULL
 expect_silent(remstimate::remstimate(reh = ao_reh,

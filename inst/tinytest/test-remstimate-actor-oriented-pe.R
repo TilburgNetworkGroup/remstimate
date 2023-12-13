@@ -138,9 +138,7 @@ fixed = TRUE)
 expect_error(bic(ao_bsir_no_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(ao_bsir_no_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(ao_bsir_no_prior)) 
 
 ## (3.2) with a specified prior
 prior_list <- list(sender_model = mvnfast::dmvt, receiver_model = mvnfast::dmvn)
@@ -187,9 +185,7 @@ fixed = TRUE)
 expect_error(bic(ao_bsir_with_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(ao_bsir_with_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(ao_bsir_with_prior)) 
 
 # (4) method  = "HMC"   
 expect_silent(remstimate::remstimate(reh = ao_reh,
@@ -233,9 +229,7 @@ fixed = TRUE)
 expect_error(bic(ao_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(ao_hmc),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(ao_hmc)) 
 
 # nsim = NULL
 expect_silent(remstimate::remstimate(reh = ao_reh,

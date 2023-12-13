@@ -16,6 +16,7 @@
 #' @param L [\emph{optional}] number of leap-frog steps to use in the method \code{"HMC"}. Default value is \code{50}.
 #' @param epsilon [\emph{optional}] It is a parameter used in two methods: if \code{method} is \code{"GDADAMAX"}, it represents the inter-iteration difference of the loss function and it is used as stop-rule within the algorithm (default value is \code{0.001}), if \code{method} is \code{"HMC"} (default value is \code{0.002}), it is a parameter used in the leap-frog algorithm and it is proportional to the step size.
 #' @param seed [\emph{optional}] seed value for reproducibility. If \code{NULL}, seed will be assigned by the machine and saved in the output object.
+#' @param WAIC [\emph{optional}] logical value. The Watanabe Akaike's Information Criterion (WAIC) will be calculated is \code{WAIC = TRUE}. The default number of simulations used to calculate the WAIC is 500. In order to specify  a different number of simulations, the user must supply an additional argument \code{nsimWAIC} to the function.
 #' @param silent [\emph{optional}-not-yet-implemented] a \code{TRUE/FALSE} value. If \code{FALSE}, progress of optimization status will be printed out. 
 #' @param ... additional parameters. They can be parameters of other functions defined as input in some of the arguments above. (e.g., arguments of the \code{prior} distribution)
 #'
@@ -97,6 +98,7 @@ remstimate <- function(reh,
                        L = 50L,
                        epsilon = ifelse(method=="GDADAMAX",0.001,0.002),
                        seed = NULL,
+                       WAIC = FALSE,
                        silent = TRUE,
                        ...){
 
@@ -110,6 +112,9 @@ remstimate <- function(reh,
     }
     if(!any(names(additional_input_args) %in% "ncores")){
         additional_input_args$ncores <- ncores
+    }
+    if(!any(names(additional_input_args) %in% "nsimWAIC")){
+        additional_input_args$nsimWAIC <- 500
     }
 
     # ... remify object ('reh' input argument)
@@ -486,6 +491,20 @@ remstimate <- function(reh,
         # 0.1 is a [temporary parameter] and it will change in the future releases of 'remstimate'
     }
 
+    # ... WAIC argument
+    if(is.null(WAIC)){
+        WAIC <- FALSE
+    }
+    if(!is.logical(WAIC)){
+        WAIC <- FALSE
+    }
+    if(WAIC){
+        nsimWAIC <- additional_input_args$nsimWAIC
+        if(!is.numeric(nsimWAIC)){
+            nsimWAIC <- 500 # using the default
+        }
+    }
+
     # ... init (initial values) for GDADAMAX and HMC
     if(method %in% c("GDADAMAX","HMC")){
         if(!is.null(init)){
@@ -629,6 +648,23 @@ remstimate <- function(reh,
             remstimateList$AICC <- remstimateList$AIC + 2*length(remstimateList$coefficients)*(length(remstimateList$coefficients)+1)/(reh$M-length(remstimateList$coefficients)-1)
             # BIC
             remstimateList$BIC <- length(remstimateList$coefficients)*log(reh$M) - 2*remstimateList$loglik # BIC
+            # WAIC
+            if(WAIC){
+                remstimateList$WAIC <- getWAIC(mu = remstimateList$coefficients,
+                vcov = remstimateList$vcov,
+                pars = matrix(0,2,2),
+                stats = stats,
+                actor1 = list(),
+                actor2 = list(),
+                dyad = attr(reh,"dyadID"),
+                omit_dyad = reh$omit_dyad,
+                interevent_time = reh$intereventTime,
+                model = model,
+                approach = "Frequentist",
+                nsim = nsimWAIC,
+                ordinal = ordinal,
+                ncores = ncores)
+            }
             # converged
             remstimateList$converged <- optimum_obj$converged
             # iterations
@@ -727,6 +763,23 @@ remstimate <- function(reh,
                                                                                     ordinal = ordinal,
                                                                                     ncores = ncores,
                                                                                     senderRate = TRUE)$value)
+                        # WAIC
+                        if(WAIC){
+                            remstimateList$sender_model$WAIC <- getWAIC(mu = remstimateList[[which_model[i]]]$coefficients,
+                            vcov = remstimateList[[which_model[i]]]$vcov,
+                            pars = matrix(0,2,2),
+                            stats = stats[[which_stats[i]]],
+                            actor1 = actor1ID_ls,
+                            actor2 = list(),
+                            dyad = list(),
+                            omit_dyad = omit_dyad_actor,
+                            interevent_time = reh$intereventTime,
+                            model = model,
+                            approach = "Frequentist",
+                            nsim = nsimWAIC,
+                            ordinal = ordinal,
+                            ncores = ncores)
+                        }                                                            
                     }
                     else{ # for receiver model
                         remstimateList$receiver_model$null.deviance <- ifelse(length(reh$omit_dyad)>0,2*(trust::trust(objfun = remDerivatives, 
@@ -743,6 +796,23 @@ remstimate <- function(reh,
                                                                                                                     ncores = ncores,
                                                                                                                     senderRate = FALSE,
                                                                                                                     N = reh$N)$value),-2*log(1/(reh$N-1)))
+                        # WAIC
+                        if(WAIC){
+                            remstimateList$receiver_model$WAIC <- getWAIC(mu = remstimateList[[which_model[i]]]$coefficients,
+                            vcov = remstimateList[[which_model[i]]]$vcov,
+                            pars = matrix(0,2,2),
+                            stats = stats[[which_stats[i]]],
+                            actor1 = actor1ID_ls,
+                            actor2 = attr(reh,"actor2ID"),
+                            dyad = list(),
+                            omit_dyad = omit_dyad_actor,
+                            interevent_time = reh$intereventTime,
+                            model = model,
+                            approach = "Frequentist",
+                            nsim = nsimWAIC,
+                            senderRate = FALSE,
+                            ncores = ncores)
+                        }                                                                                            
                     }
                     
                     # [[NOTE: null.deviance.choice is for the receivder model -2*log(1/(reh$N-1)) when the riskset is always (all the time points) the same.
@@ -845,6 +915,25 @@ remstimate <- function(reh,
             bsir$df.model <- dim(stats)[2]
             bsir$df.residual <- bsir$df.null - bsir$df.model
             names(bsir$coefficients) <- names(bsir$post.mean) <- rownames(bsir$vcov) <- colnames(bsir$vcov) <- names(bsir$sd) <- variables_names
+            # WAIC
+            if(WAIC){
+                sample_WAIC <- sample(x=1:dim(bsir$draws)[1],size=nsimWAIC,replace=TRUE)
+                draws_for_waic <-  bsir$draws[sample_WAIC,]
+                draws_for_waic <- t(draws_for_waic)
+                bsir$WAIC <- getWAIC(mu = c(0),
+                                        vcov = matrix(0,2,2),
+                                        pars = draws_for_waic,
+                                        stats = stats,
+                                        actor1 = list(),
+                                        actor2 = list(),
+                                        dyad = attr(reh,"dyadID"),
+                                        omit_dyad = reh$omit_dyad,
+                                        interevent_time = reh$intereventTime,
+                                        model = model,
+                                        approach = "Bayesian",
+                                        ordinal = ordinal,
+                                        ncores = ncores)
+            }
             remstimateList <- bsir
         }
         if(model == "actor"){ # Actor-oriented Model
@@ -930,6 +1019,26 @@ remstimate <- function(reh,
                     bsir_i$df.model <- dim(stats[[which_stats[i]]])[2]
                     bsir_i$df.residual <- bsir_i$df.null - bsir_i$df.model
                     names(bsir_i$coefficients) <- names(bsir_i$post.mean) <- rownames(bsir_i$vcov) <- colnames(bsir_i$vcov) <- names(bsir_i$sd) <- if(i == 1) variables_rate else variables_choice   
+                    # WAIC
+                    if(WAIC){
+                        sample_WAIC <- sample(x=1:dim(bsir_i$draws)[1],size=nsimWAIC,replace=TRUE)
+                        draws_for_waic <-  bsir_i$draws[sample_WAIC,]
+                        draws_for_waic <- t(draws_for_waic)
+                        bsir_i$WAIC <- getWAIC(mu = c(0),
+                                                vcov = matrix(0,2,2),
+                                                pars = draws_for_waic,
+                                                stats = stats[[which_stats[i]]],
+                                                actor1 = actor1ID_ls,
+                                                actor2 = attr(reh,"actor2ID"),
+                                                dyad = list(),
+                                                omit_dyad = omit_dyad_actor,
+                                                interevent_time = reh$intereventTime,
+                                                model = model,
+                                                approach = "Bayesian",
+                                                ordinal = ordinal,
+                                                senderRate = senderRate[i],
+                                                ncores = ncores)
+                    }
                     bsir[[which_model[i]]] <- bsir_i
                     # freeing some memory
                     rm(bsir_i,mle_optimum,loglik,irlw,s_irlw,post_draws)
@@ -978,7 +1087,25 @@ remstimate <- function(reh,
             hmc$df.model <- dim(stats)[2]
             hmc$df.residual <- hmc$df.null - hmc$df.model
             names(hmc$coefficients) <- names(hmc$post.mean) <- rownames(hmc$vcov) <- colnames(hmc$vcov) <- names(hmc$sd) <- variables_names
-
+            # WAIC
+            if(WAIC){
+                sample_WAIC <- sample(x=1:dim(hmc_out$draws)[1],size=nsimWAIC,replace=TRUE)
+                draws_for_waic <-  hmc_out$draws[sample_WAIC,]
+                draws_for_waic <- t(draws_for_waic)
+                hmc$WAIC <- getWAIC(mu = c(0),
+                vcov = matrix(0,2,2),
+                pars = draws_for_waic,
+                stats = stats,
+                actor1 = list(),
+                actor2 = list(),
+                dyad = attr(reh,"dyadID"),
+                omit_dyad = reh$omit_dyad,
+                interevent_time = reh$intereventTime,
+                model = model,
+                approach = "Bayesian",
+                ordinal = ordinal,
+                ncores = ncores)
+            }
             remstimateList <- c(hmc_out,hmc)
         }
         if(model == "actor"){ # Actor-oriented Model
@@ -1020,6 +1147,26 @@ remstimate <- function(reh,
                     hmc_i$df.model <- dim(stats[[which_stats[i]]])[2]
                     hmc_i$df.residual <- hmc_i$df.null - hmc_i$df.model
                     names(hmc_i$coefficients) <- names(hmc_i$post.mean) <- rownames(hmc_i$vcov) <- colnames(hmc_i$vcov) <- names(hmc_i$sd) <- if(i == 1) variables_rate else variables_choice  
+                    # WAIC
+                    if(WAIC){
+                        sample_WAIC <- sample(x=1:dim(hmc_out_i$draws)[1],size=nsimWAIC,replace=TRUE)
+                        draws_for_waic <-  hmc_out_i$draws[sample_WAIC,]
+                        draws_for_waic <- t(draws_for_waic)
+                        hmc_i$WAIC <- getWAIC(mu = c(0),
+                                                vcov = matrix(0,2,2),
+                                                pars = draws_for_waic,
+                                                stats = stats[[which_stats[i]]],
+                                                actor1 = actor1ID_ls,
+                                                actor2 = attr(reh,"actor2ID"),
+                                                dyad = list(),
+                                                omit_dyad = omit_dyad_actor,
+                                                interevent_time = reh$intereventTime,
+                                                model = model,
+                                                approach = "Bayesian",
+                                                ordinal = ordinal,
+                                                senderRate = senderRate[i],
+                                                ncores = ncores)
+                    }
                     hmc[[which_model[i]]] <- c(hmc_out_i,hmc_i)
                     rm(hmc_out_i,hmc_i)
                 }
@@ -1163,14 +1310,24 @@ print.remstimate<-function(x, ...){
             cat("\nCoefficients:\n\n")
             print(x$coefficients)
             cat("\nNull deviance:",x$null.deviance,"\nResidual deviance:",x$residual.deviance,"\n")
-            cat("AIC:",x$AIC,"AICC:",x$AICC,"BIC:",x$BIC,"\n\n")
+            cat("AIC:",x$AIC,"AICC:",x$AICC,"BIC:",x$BIC)
+            if(!is.null(x$WAIC)){
+                cat(" WAIC:", x$WAIC, "\n\n")
+            }else{
+                cat("\n\n")
+            }
         }
         else if(attr(x,"model") == "actor"){
             if(!is.null(x$sender_model)){  # printing sender model 
                 cat("\nCoefficients rate model **for sender**:\n\n")
                 print(x$sender_model$coefficients)
                 cat("\nNull deviance:",x$sender_model$null.deviance,"\nResidual deviance:",x$sender_model$residual.deviance,"\n")
-                cat("AIC:",x$sender_model$AIC,"AICC:",x$sender_model$AICC,"BIC:",x$sender_model$BIC,"\n")
+                cat("AIC:",x$sender_model$AIC,"AICC:",x$sender_model$AICC,"BIC:",x$sender_model$BIC)
+                if(!is.null(x$sender_model$WAIC)){
+                    cat(" WAIC:", x$sender_model$WAIC, "\n\n")
+                }else{
+                    cat("\n\n")
+                }
             }
             if(!is.null(x$sender_model) & !is.null(x$receiver_model)){ # if both models are estimated, separate the two print by a "-"
                 cat(paste0(rep("-", getOption("width")),collapse = ""))
@@ -1179,7 +1336,12 @@ print.remstimate<-function(x, ...){
                 cat("\n\nCoefficients choice model **for receiver**:\n\n")
                 print(x$receiver_model$coefficients)
                 cat("\nNull deviance:",x$receiver_model$null.deviance,"\nResidual deviance:",x$receiver_model$residual.deviance,"\n")
-                cat("AIC:",x$receiver_model$AIC,"AICC:",x$receiver_model$AICC,"BIC:",x$receiver_model$BIC,"\n\n")
+                cat("AIC:",x$receiver_model$AIC,"AICC:",x$receiver_model$AICC,"BIC:",x$receiver_model$BIC)
+                if(!is.null(x$receiver_model$WAIC)){
+                    cat(" WAIC:", x$receiver_model$WAIC, "\n\n")
+                }else{
+                    cat("\n\n")
+                }
             }   
         }
 
@@ -1324,6 +1486,7 @@ summary.remstimate<-function (object, ...)
                         AIC = object$AIC,
                         AICC = object$AICC,
                         BIC = object$BIC,
+                        WAIC = object$WAIC,
                         epsilon = attr(object, "epsilon"),
                         chiP = 1 - stats::pchisq(object$model.deviance, object$df.model))                
             summary_out <- do.call(c, list(keep, summary_out))
@@ -1369,6 +1532,7 @@ summary.remstimate<-function (object, ...)
                                             AIC = object$sender_model$AIC,
                                             AICC = object$sender_model$AICC,
                                             BIC = object$sender_model$BIC,
+                                            WAIC = object$sender_model$WAIC,
                                             chiP = 1 - stats::pchisq(object$sender_model$model.deviance, object$sender_model$df.model)
                                         )
             }  
@@ -1382,6 +1546,7 @@ summary.remstimate<-function (object, ...)
                                             AIC = object$receiver_model$AIC,
                                             AICC = object$receiver_model$AICC,
                                             BIC = object$receiver_model$BIC,
+                                            WAIC = object$receiver_model$WAIC,
                                             chiP = 1 - stats::pchisq(object$receiver_model$model.deviance, object$receiver_model$df.model)
                                         )
             }           
@@ -1410,7 +1575,8 @@ summary.remstimate<-function (object, ...)
                         prior = attr(object, "prior"),
                         nsim = attr(object, "nsim"),
                         seed = attr(object, "seed"),
-                        loglik = object$loglik
+                        loglik = object$loglik,
+                        WAIC = object$WAIC
                         ) 
             keep_HMC <- list()
             if(attr(object, "method") == "HMC"){         
@@ -1463,7 +1629,8 @@ summary.remstimate<-function (object, ...)
                             #df.residual = object$sender_model$df.residual,
                             df.null = object$sender_model$df.null,
                             #df.model = object$sender_model$df.model,
-                            loglik = object$sender_model$loglik
+                            loglik = object$sender_model$loglik,
+                            WAIC = object$sender_model$WAIC
                         )
             }
             if(!is.null(object$receiver_model)){
@@ -1474,7 +1641,8 @@ summary.remstimate<-function (object, ...)
                             #df.residual = object$receiver_model$df.residual,
                             df.null = object$receiver_model$df.null,
                             #df.model = object$receiver_model$df.model,
-                            loglik = object$receiver_model$loglik
+                            loglik = object$receiver_model$loglik,
+                            WAIC = object$receiver_model$WAIC
                         )  
             }                
             summary_out <- do.call(c, list(keep, summary_out))
@@ -1506,10 +1674,20 @@ summary.remstimate<-function (object, ...)
             cat("Chi-square:", summary_out$model.deviance, "on", summary_out$df.model, 
                 "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$model.deviance, 
                     summary_out$df.model), "\n")
-            cat("AIC:", summary_out$AIC, "AICC:", summary_out$AICC, "BIC:", summary_out$BIC, "\n")
+            cat("AIC:", summary_out$AIC, "AICC:", summary_out$AICC, "BIC:", summary_out$BIC)
+            if(!is.null(summary_out$WAIC)){
+            cat(" WAIC:", summary_out$WAIC, "\n")
+            }else{
+                cat("\n")
+            }
         }
         if(summary_out$approach == "Bayesian"){
-        cat("Log posterior:",summary_out$loglik,"\n")
+        cat("Log posterior:",summary_out$loglik)
+        if(!is.null(summary_out$WAIC)){
+            cat(" WAIC:", summary_out$WAIC, "\n")
+        }else{
+            cat("\n")
+        }
         # cat("Prior parameters:",paste(names(summary_out$prior.param),unlist(summary_out$prior.param),sep="="),"\n")
         }
     }
@@ -1537,10 +1715,20 @@ summary.remstimate<-function (object, ...)
                 cat("Chi-square:", summary_out$sender_model$model.deviance, "on", summary_out$sender_model$df.model, 
                     "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$sender_model$model.deviance, 
                         summary_out$sender_model$df.model), "\n")
-                cat("AIC:", summary_out$sender_model$AIC, "AICC:", summary_out$sender_model$AICC, "BIC:", summary_out$sender_model$BIC, "\n")
+                cat("AIC:", summary_out$sender_model$AIC, "AICC:", summary_out$sender_model$AICC, "BIC:", summary_out$sender_model$BIC)
+                if(!is.null(summary_out$sender_model$WAIC)){
+                    cat(" WAIC:", summary_out$sender_model$WAIC, "\n")
+                }else{
+                    cat("\n")
+                }
             }
             if(summary_out$approach == "Bayesian"){
-            cat("Log posterior:",summary_out$sender_model$loglik,"\n")
+            cat("Log posterior:",summary_out$sender_model$loglik)
+            if(!is.null(summary_out$sender_model$WAIC)){
+                cat(" WAIC:", summary_out$sender_model$WAIC, "\n")
+            }else{
+                cat("\n")
+            }
             # cat("Prior parameters:",paste(names(summary_out$sender_model$prior.param),unlist(summary_out$sender_model$prior.param),sep="="),"\n")
             }
         }
@@ -1563,10 +1751,20 @@ summary.remstimate<-function (object, ...)
                 cat("Chi-square:", summary_out$receiver_model$model.deviance, "on", summary_out$receiver_model$df.model, 
                     "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$receiver_model$model.deviance, 
                         summary_out$receiver_model$df.model), "\n")
-                cat("AIC:", summary_out$receiver_model$AIC, "AICC:", summary_out$receiver_model$AICC, "BIC:", summary_out$receiver_model$BIC, "\n")
+                cat("AIC:", summary_out$receiver_model$AIC, "AICC:", summary_out$receiver_model$AICC, "BIC:", summary_out$receiver_model$BIC)
+                if(!is.null(summary_out$receiver_model$WAIC)){
+                    cat(" WAIC:", summary_out$receiver_model$WAIC, "\n")
+                }else{
+                    cat("\n")
+                }
             }
             if(summary_out$approach == "Bayesian"){
-            cat("Log posterior:",summary_out$receiver_model$loglik,"\n")
+            cat("Log posterior:",summary_out$receiver_model$loglik)
+            if(!is.null(summary_out$receiver_model$WAIC)){
+                cat(" WAIC:", summary_out$receiver_model$WAIC, "\n")
+            }else{
+                cat("\n")
+            }
             # cat("Prior parameters:",paste(names(summary_out$receiver_model$prior.param),unlist(summary_out$receiver_model$prior.param),sep="="),"\n")
             }
         }
@@ -2542,22 +2740,19 @@ waic <- function(object,...){
 #' @method waic remstimate
 #' @export
 waic.remstimate <- function(object,...) {
-    if(attr(object, "approach") == "Frequentist"){
-        if(attr(object,"model") == "tie"){
-            return(object$WAIC)
-        }
-        else if(attr(object,"model") == "actor"){
-            WAIC <- NULL
-            if(!is.null(object$sender_model)){
-                WAIC <- c("sender model" = object$sender_model$WAIC)
-            }
-            if(!is.null(object$receiver_model)){
-                WAIC <- c(WAIC, "receiver model" = object$receiver_model$WAIC)
-            }
-            return(WAIC)
-        }
+    if(attr(object,"model") == "tie"){
+        return(object$WAIC)
     }
-    else{stop("'approach' must be 'Frequentist'")}   
+    else if(attr(object,"model") == "actor"){
+        WAIC <- NULL
+        if(!is.null(object$sender_model)){
+            WAIC <- c("sender model" = object$sender_model$WAIC)
+        }
+        if(!is.null(object$receiver_model)){
+            WAIC <- c(WAIC, "receiver model" = object$receiver_model$WAIC)
+        }
+        return(WAIC)
+    }
 }
 
 

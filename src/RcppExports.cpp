@@ -94,6 +94,31 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// getWAIC
+double getWAIC(arma::vec mu, arma::mat vcov, arma::mat pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const arma::vec& interevent_time, const Rcpp::List& omit_dyad, std::string model, std::string approach, bool ordinal, int ncores, bool senderRate, int nsim);
+RcppExport SEXP _remstimate_getWAIC(SEXP muSEXP, SEXP vcovSEXP, SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP interevent_timeSEXP, SEXP omit_dyadSEXP, SEXP modelSEXP, SEXP approachSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP senderRateSEXP, SEXP nsimSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type vcov(vcovSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor1(actor1SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type actor2(actor2SEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type dyad(dyadSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type omit_dyad(omit_dyadSEXP);
+    Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< std::string >::type approach(approachSEXP);
+    Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< bool >::type senderRate(senderRateSEXP);
+    Rcpp::traits::input_parameter< int >::type nsim(nsimSEXP);
+    rcpp_result_gen = Rcpp::wrap(getWAIC(mu, vcov, pars, stats, actor1, actor2, dyad, interevent_time, omit_dyad, model, approach, ordinal, ncores, senderRate, nsim));
+    return rcpp_result_gen;
+END_RCPP
+}
 // computeDiagnostics
 Rcpp::List computeDiagnostics(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, std::string model, int N, bool senderRate, int ncores, double baseline);
 RcppExport SEXP _remstimate_computeDiagnostics(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP modelSEXP, SEXP NSEXP, SEXP senderRateSEXP, SEXP ncoresSEXP, SEXP baselineSEXP) {
@@ -120,6 +145,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 14},
     {"_remstimate_GDADAMAX", (DL_FUNC) &_remstimate_GDADAMAX, 19},
     {"_remstimate_HMC", (DL_FUNC) &_remstimate_HMC, 20},
+    {"_remstimate_getWAIC", (DL_FUNC) &_remstimate_getWAIC, 15},
     {"_remstimate_computeDiagnostics", (DL_FUNC) &_remstimate_computeDiagnostics, 11},
     {NULL, NULL, 0}
 };

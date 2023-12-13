@@ -42,11 +42,67 @@ expect_silent(summary(tie_mle))
 expect_silent(diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats))
 tie_reh_diagnostics <- diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats)
 expect_silent(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics))
+expect_silent(plot(x = tie_mle,reh = tie_reh, stats = tie_reh_stats)) # without supplying diagnostics but supplying the array of stats
 expect_silent(aic(tie_mle))
 expect_silent(aicc(tie_mle))
 expect_silent(bic(tie_mle))
 expect_silent(waic(tie_mle))
 
+# tests on "WAIC" for "MLE"
+
+# WAIC = TRUE
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE))
+# WAIC = NULL
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        WAIC = NULL))
+# WAIC not a logical scalar
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        WAIC = 20))
+
+# nsimWAIC is not a numeric scalar                       
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = "text"))
+# nsimWAIC is supplied                        
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100))
+tie_mle_with_waic <- remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100)
+expect_silent(print(tie_mle_with_waic))
+expect_silent(summary(tie_mle_with_waic))    
+expect_silent(waic(tie_mle_with_waic))                  
+
+
+# WAIC for ordinal likelihod + testing omit_dyad routine for ordinal likelihood and tie-oriented model
+omit_dyad <- list()
+omit_dyad[[1]] <- list(time = c(120,158), dyad = data.frame(actor1=c(NA,"4"),actor2=c("4",NA),type=c(NA,NA))) # excluding actor 4 from the risk set between (observed) time points 120 and 158
+tie_reh_ordinal <- remify::remify(edgelist = tie_data$edgelist, model = "tie", ordinal = TRUE, omit_dyad = omit_dyad)
+tie_reh_stats_ordinal <- remstats::remstats(reh = tie_reh_ordinal, tie_effects = tie_model, method = "pt")
+expect_silent(remstimate::remstimate(reh = tie_reh_ordinal,
+                        stats = tie_reh_stats_ordinal,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100))
+#  testing omit_dyad routine for interval likelihood and tie-oriented model
+tie_reh_omit_test <- remify::remify(edgelist = tie_data$edgelist, model = "tie", omit_dyad = omit_dyad)
+expect_silent(remstimate::remstimate(reh = tie_reh_omit_test,
+                        stats = tie_reh_stats_ordinal,
+                        ncores = 1L))
 
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = tie_reh,
@@ -74,7 +130,7 @@ expect_silent(plot(x = tie_gdadamax,reh = tie_reh, diagnostics = tie_reh_diagnos
 expect_silent(aic(tie_gdadamax))
 expect_silent(aicc(tie_gdadamax))
 expect_silent(bic(tie_gdadamax))
-expect_silent(waic(tie_gdadamax))                   
+expect_silent(waic(tie_gdadamax))
 
 # (3) method  = "BSIR" 
 
@@ -114,9 +170,29 @@ fixed = TRUE)
 expect_error(bic(tie_bsir_no_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(tie_bsir_no_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(tie_bsir_no_prior)) 
+
+
+# tests on "WAIC" for "BSIR"                       
+expect_silent(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        method = "BSIR",
+                        nsim = 100L,
+                        prior = NULL,
+                        seed = set_seed,
+                        WAIC = TRUE,
+                        nsimWAIC = 10))
+tie_reh_bsir_waic <- remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        method = "BSIR",
+                        nsim = 100L,
+                        prior = NULL,
+                        seed = set_seed,
+                        WAIC = TRUE,
+                        nsimWAIC = 10)
+expect_silent(summary(tie_reh_bsir_waic))
 
 ## (3.2) with a specified prior 
 priormvt <- mvnfast::dmvt
@@ -165,9 +241,7 @@ fixed = TRUE)
 expect_error(bic(tie_bsir_with_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(tie_bsir_with_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(tie_bsir_with_prior)) 
 
 # (4) method  = "HMC"    
 expect_silent(remstimate::remstimate(reh = tie_reh,
@@ -182,7 +256,7 @@ tie_hmc <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "HMC",
-                        nchains = 1L,
+                        nchains = 3L,
                         nsim = 10L,
                         burnin = 5L,
                         seed = set_seed)
@@ -207,16 +281,21 @@ fixed = TRUE)
 expect_error(bic(tie_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(tie_hmc),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(tie_hmc)) 
 
-# ordinal likelihood (tie-oriented modeling)
-attr(tie_reh,"ordinal") <- TRUE
+# tests on "WAIC" for "HMC"                      
 expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
-                        method = "MLE")) 
+                        method = "HMC",
+                        nchains = 1L,
+                        nsim = 100L,
+                        burnin = 5L,
+                        seed = set_seed,
+                        WAIC = TRUE,
+                        nsimWAIC = 10))
+
+
 
 # testing with omit_dyad
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie", omit_dyad = list(list(time = c(120,148), dyad=data.frame(actor1=c("4",NA),actor2=c(NA,"4"),type=c(NA,NA))))) # removing actor "4" from time=120 to time=148

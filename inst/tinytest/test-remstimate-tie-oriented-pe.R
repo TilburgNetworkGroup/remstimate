@@ -107,9 +107,7 @@ fixed = TRUE)
 expect_error(bic(tie_bsir_no_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(tie_bsir_no_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(tie_bsir_no_prior)) 
 
 ## (3.2) with a specified prior 
 priormvt <- mvnfast::dmvt
@@ -158,9 +156,7 @@ fixed = TRUE)
 expect_error(bic(tie_bsir_with_prior),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(tie_bsir_with_prior),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(tie_bsir_with_prior)) 
 
 # (4) method  = "HMC"    
 expect_silent(remstimate::remstimate(reh = tie_reh,
@@ -200,9 +196,7 @@ fixed = TRUE)
 expect_error(bic(tie_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)
-expect_error(waic(tie_hmc),
-"'approach' must be 'Frequentist'",
-fixed = TRUE) 
+expect_silent(waic(tie_hmc)) 
 
 
 # ordinal likelihood (tie-oriented modeling)
