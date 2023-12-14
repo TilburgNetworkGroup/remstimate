@@ -92,9 +92,18 @@ expect_silent(remstimate::remstimate(reh = ao_reh_ordinal,
                         ncores = 1L,
                         WAIC = TRUE,
                         nsimWAIC = 100))
+#testing only ordinal likelihood for actor-oriented model
 ao_mle_ordinal_omit_dyad <- remstimate::remstimate(reh = ao_reh_ordinal,
                         stats = ao_reh_stats_ordinal,
                         ncores = 1L)                     
+# WAIC for interval likelihood with omit_dyad
+ao_reh_omit <- remify::remify(edgelist = ao_data$edgelist, model = "actor", omit_dyad = omit_dyad)           
+ao_reh_stats_omit <- remstats::remstats(reh = ao_reh_omit, sender_effects = rate_model, receiver_effects = choice_model, method="pt")
+expect_silent(remstimate::remstimate(reh = ao_reh_omit,
+                        stats = ao_reh_stats_omit,
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100))
 expect_silent(diagnostics(object = ao_mle_ordinal_omit_dyad,reh = ao_reh_ordinal,stats = ao_reh_stats_ordinal))
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = ao_reh,

@@ -95,7 +95,7 @@ expect_silent(summary(tie_mle_with_waic))
 expect_silent(waic(tie_mle_with_waic))                  
 
 
-# WAIC for ordinal likelihod + testing omit_dyad routine for ordinal likelihood and tie-oriented model
+# ordinal likelihood: WAIC for ordinal likelihod + testing omit_dyad routine
 omit_dyad <- list()
 omit_dyad[[1]] <- list(time = c(120,158), dyad = data.frame(actor1=c(NA,"4"),actor2=c("4",NA),type=c(NA,NA))) # excluding actor 4 from the risk set between (observed) time points 120 and 158
 tie_reh_ordinal <- remify::remify(edgelist = tie_data$edgelist, model = "tie", ordinal = TRUE, omit_dyad = omit_dyad)
@@ -105,14 +105,16 @@ expect_silent(remstimate::remstimate(reh = tie_reh_ordinal,
                         ncores = 1L,
                         WAIC = TRUE,
                         nsimWAIC = 100))
-#  testing omit_dyad routine for interval likelihood and tie-oriented model
+# interval likelihood: WAIC for ordinal likelihod + testing omit_dyad routine in estimation (remstimate) and diagnostics method
 tie_reh_omit_test <- remify::remify(edgelist = tie_data$edgelist, model = "tie", omit_dyad = omit_dyad)
 expect_silent(remstimate::remstimate(reh = tie_reh_omit_test,
                         stats = tie_reh_stats_ordinal,
-                        ncores = 1L))
+                        ncores = 1L,
+                        WAIC = TRUE,
+                        nsimWAIC = 100))
 tie_mle_omit_test <- remstimate::remstimate(reh = tie_reh_omit_test,
                         stats = tie_reh_stats_ordinal,
-                        ncores = 1L)
+                        ncores = 1L)                     
 expect_silent(diagnostics(object = tie_mle_omit_test, reh = tie_reh_omit_test, stats = tie_reh_stats_ordinal))   
                      
 # (2) method = "GDADAMAX" 

@@ -2341,7 +2341,7 @@ plot.remstimate <- function(x,
                 }
                 par(mfrow=c(1,1))
                 plot(t_p,y_p,xlab = "Time", ylab = "Scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
-                lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
+                lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=3.5,col=2) # smoothed weighted spline of the residuals
                 abline(h=0,col="black",lwd=3,lty=2)
                 mtext(text = effects_diagnostics[p], side = 3, line = 1,cex=1.5)
                 par(op)
@@ -2389,7 +2389,8 @@ plot.remstimate <- function(x,
                     seq_chains <- cbind(seq_chains,seq_chains+ndraws_per_chain-1)
                     chain_colors <- hcl.colors(n=nchains,palette="BuPu")
                     # plotting first chain
-                    plot(x$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations \n (per each chain)", col = chain_colors[1],lwd=1.8)
+                    y_lim <- range(x$draws[,which_effects[p]])
+                    plot(x$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations \n (per each chain)", col = chain_colors[1],lwd=1.8,ylim=y_lim)
                     for(chain in 2:nchains){
                         lines(x$draws[seq_chains[chain,1]:seq_chains[chain,2],which_effects[p]], col=chain_colors[chain],lwd=1.8)
                     }
@@ -2512,7 +2513,7 @@ plot.remstimate <- function(x,
                         }
                         par(mfrow=c(1,1))
                         plot(t_p,y_p,xlab = "Time", ylab = "Scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
-                        lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
+                        lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=FALSE),lwd=3.5,col=2) # smoothed weighted spline of the residuals
                         abline(h=0,col="black",lwd=3,lty=2)
                         mtext(text = effects_diagnostics[p], side = 3, line = 2,cex=1.5)
                         mtext(text = title_model[i], side = 3, line = 1, cex = 1)
@@ -2561,7 +2562,8 @@ plot.remstimate <- function(x,
                             seq_chains <- cbind(seq_chains,seq_chains+ndraws_per_chain-1)
                             chain_colors <- hcl.colors(n=nchains,palette="BuPu")
                             # plotting first chain
-                            plot(x[[which_model[i]]]$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations (per each chain)", col = chain_colors[1],lwd=1.8)
+                            y_lim <- range(x[[which_model[i]]]$draws[,which_effects[p]])
+                            plot(x[[which_model[i]]]$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations (per each chain)", col = chain_colors[1],lwd=1.8,ylim=y_lim)
                             for(chain in 2:nchains){
                                 lines(x[[which_model[i]]]$draws[seq_chains[chain,1]:seq_chains[chain,2],which_effects[p]], col=chain_colors[chain],lwd=1.8)
                             }

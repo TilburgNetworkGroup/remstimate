@@ -1,12 +1,12 @@
 ---
-title: "Modeling relational event networks"
-subtitle: "<i>a tutorial about estimation methods available in remstimate</i>"
+title: "Modeling relational event networks with remstimate"
+subtitle: "<i>A tutorial</i>"
 author: ""
 package: remstimate
 date: ""
 output: 
   rmarkdown::html_document:
-    theme: default
+    theme: spacelab
     highlight: pygments
     code_folding: show
 header-includes:
@@ -17,7 +17,7 @@ bibliography: remstimate-references.bib
 link-citations: true
 vignette: >
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteIndexEntry{A tutorial on the estimation methods for tie-oriented and actor-oriented models}
+  %\VignetteIndexEntry{Modeling relational event networks with remstimate}
   %\VignetteEncoding{UTF-8}
 ---
 
@@ -171,7 +171,9 @@ In the sections below, we show the estimation of the parameters using all the me
   tie_mle <- remstimate::remstimate(reh = tie_reh,
                           stats = tie_stats,
                           ncores = ncores,
-                          method = "MLE")             
+                          method = "MLE",
+                          WAIC = TRUE,
+                          nsimWAIC = 100)             
 ```
 
 ##### **print( )**
