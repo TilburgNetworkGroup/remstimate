@@ -4,18 +4,33 @@
 \alias{plot.remstimate}
 \title{plot.remstimate}
 \usage{
-\method{plot}{remstimate}(x, reh, which = c(1:4), diagnostics = NULL, ...)
+\method{plot}{remstimate}(
+  x,
+  reh,
+  diagnostics = NULL,
+  which = c(1:4),
+  effects = NULL,
+  sender_effects = NULL,
+  receiver_effects = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{is a \code{remstimate} object}
 
 \item{reh}{'remify' object, the same used for the 'remstimate' object}
 
-\item{which}{one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).}
-
 \item{diagnostics}{is a \code{"remstimate" "diagnostics"} object}
 
-\item{...}{further arguments to be passed to the 'plot' method depending: for instance the remstats object with statistics ('stats')}
+\item{which}{one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).}
+
+\item{effects}{[\emph{optional}] for tie-oriented modeling (model =  "tie"), the names of the statistics which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}).}
+
+\item{sender_effects}{[\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the sender model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4})}
+
+\item{receiver_effects}{[\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the receiver model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4})}
+
+\item{...}{further arguments to be passed to the 'plot' method, for instance, the remstats object with statistics ('stats') when the object 'diagnostics' is not available}
 }
 \description{
 A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.

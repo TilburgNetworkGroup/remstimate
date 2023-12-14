@@ -42,11 +42,17 @@ expect_silent(summary(ao_mle))
 expect_silent(diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats))
 ao_reh_diagnostics <- diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats)
 expect_silent(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics))
+expect_silent(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics, which = 2, sender_effects = "indegreeSender", receiver_effects = "inertia"))
 expect_silent(aic(ao_mle))
 expect_silent(aicc(ao_mle))
 expect_silent(bic(ao_mle))
 expect_silent(waic(ao_mle))
 
+# error when 'diagnostics' has at least one statistic's name wrong
+colnames(ao_reh_diagnostics$sender_model$residuals$smoothing_weights)[1] <- "INDEGREEsender"
+expect_error(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics),
+"one or more effects not found inside the object 'diagnostics'.",
+fixed=TRUE)
 
 # tests on "WAIC" for "MLE"
 
@@ -86,7 +92,10 @@ expect_silent(remstimate::remstimate(reh = ao_reh_ordinal,
                         ncores = 1L,
                         WAIC = TRUE,
                         nsimWAIC = 100))
-
+ao_mle_ordinal_omit_dyad <- remstimate::remstimate(reh = ao_reh_ordinal,
+                        stats = ao_reh_stats_ordinal,
+                        ncores = 1L)                     
+expect_silent(diagnostics(object = ao_mle_ordinal_omit_dyad,reh = ao_reh_ordinal,stats = ao_reh_stats_ordinal))
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,

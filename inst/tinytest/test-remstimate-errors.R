@@ -16,8 +16,7 @@ tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
 mle_loc <- remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         method = "MLE",
-                        ncores = 1L,
-                        model = "tie")
+                        ncores = 1L)
 
 # loading data for actor-oriented modeling, defining linear predictor and computing statistics                     
 data(ao_data)
@@ -32,7 +31,13 @@ choice_model <- ~ remstats::inertia() + remstats::reciprocity()
 # calculating statistics
 ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
 
-# testing errors 
+# ao_mle_loc 
+ao_mle_loc <- remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats,
+                        method = "MLE",
+                        ncores = 1L)
+
+# testing errors
 
 ## input `reh` is not a `remify` object
 expect_error(remstimate::remstimate(reh = data.matrix(ao_data$edgelist),
@@ -129,6 +134,19 @@ expect_error(remstimate::remstimate(reh = tie_reh,
 fixed = TRUE
 ) 
 
+#  model == "tie" - plot function of not available effects 
+expect_error(plot(x = mle_loc, reh = tie_reh, which = 2, effects = "reciprocity", stats = tie_reh_stats),
+"effects not found in object 'remstimate'",
+fixed = TRUE
+)
+
+# model == "actor" - plot function of not available effects
+expect_silent(plot(1:2))
+expect_error(plot(x = ao_mle_loc, reh = ao_reh, which = 2, sender_effects = "reciprocity", receiver_effects = "indegreeSender", stats = ao_reh_stats),
+"effects not found in object 'remstimate'",
+fixed = TRUE
+) 
+
 
 # model == "actor" AND method %in% c("GDADAMAX","HMC") AND !is.null(init) AND !is.list(init)
 expect_error(remstimate::remstimate(reh = ao_reh,
@@ -159,6 +177,7 @@ expect_error(remstimate::remstimate(reh = ao_reh,
 "each element of list 'init' must be equal to number of statistics according to the arrays supplied in 'stats'",
 fixed = TRUE
 ) 
+
 
 ## input `epochs` is negative
 expect_error(remstimate::remstimate(reh = tie_reh,
@@ -350,7 +369,6 @@ expect_error(remstimate::remstimate(reh = ao_reh,
 "'remstats' object supplied cannot work for actor-oriented modeling",
 fixed = TRUE
 ) 
-
 
 # method of remstats is not available
 attr(tie_reh_stats,"method") <- NULL

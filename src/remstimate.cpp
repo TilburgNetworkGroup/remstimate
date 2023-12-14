@@ -443,7 +443,7 @@ Rcpp::List remDerivativesReceiverChoice(
       //actors
       arma::uvec sender = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1, we will call sender[0] because actor1 is an unlisted list of vectors (so at each m there is only one sender)
       arma::uvec receiver = actor2(m)-1; // -1 because actors' IDs must range between 0 and N-1, we will call receiver[0] because actor2 is an unlisted list of vectors (so at each m there is only one receiver)
-
+      int sender_0_int = static_cast<int>(sender(0));
       // riskset_m
       int riskset_time_m = riskset_time_vec(m);
 
@@ -457,7 +457,7 @@ Rcpp::List remDerivativesReceiverChoice(
       if(riskset_time_m!=(-1)){ 
           for(n = 0; n<N; n++){
               arma::uword dyad = remify::getDyadIndex(sender(0),n,0,N,true);
-              if((n!=sender(0)) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
+              if((n!=sender_0_int) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
                   //loglik
                   denom += lambda_d(n); // exp(param_d * X_sender_i) 
                   if(hessian){
@@ -471,7 +471,7 @@ Rcpp::List remDerivativesReceiverChoice(
       }
       else{ // no changes in the riskset at m-th event
           for(n = 0;n<N; n++){ //loop throught all actors
-          if(n!=sender(0)){ // 
+          if(n!=sender_0_int){ // 
               // loglik
               denom += lambda_d(n); // exp(param_d * X_sender_i) )
               if(hessian){
@@ -1272,30 +1272,11 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
   arma::uword M = stats.n_slices;
   arma::uword P = stats.n_cols;  
   arma::uword D = stats.n_rows; // is the number of dyads in the tie-oriented model, and the number of actors in the actor-oriented model
-  arma::uword m,p,u,z,j,e;
+  arma::uword m,p,u,z,j;
   int n,l;
-
-
-  // commenting until line that creates arma::uword m_start
-  //arma::uvec m_start_vec(P);
-  //#ifdef _OPENMP
-  //omp_set_dynamic(0);         // disabling dynamic teams
-  //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-  //#pragma omp parallel for if(ncores>1) private() shared()
-  //#endif
-  //for(p = 0; p < P; p++){
-  //  arma::vec check_p = arma::sum(stats.col(p),0);
-  //  arma::uvec which_to_exclude = arma::find(check_p < 1);
-  //  m_start_vec(p) = which_to_exclude.max();
-  //}
-  //arma::uword m_start = m_start_vec.max()+1;
-  arma::uword m_start = 0;
-
-
-
-  arma::field<arma::mat> residuals_mat(M-m_start);
-  arma::field<arma::mat> residuals_std(M-m_start);
-  arma::mat smoothing_weights(M-m_start,P,arma::fill::zeros);
+  arma::field<arma::mat> residuals_mat(M);
+  arma::field<arma::mat> residuals_std(M);
+  arma::mat smoothing_weights(M,P,arma::fill::zeros);
   arma::field<arma::vec> rates(M); 
   std::vector<std::string> which_model = {"tie","actor"};
 
@@ -1311,37 +1292,16 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
       riskset_time_vec.fill(-1);
     }
 
-
-    // calculating event rates until m_start because statistics are zeros and variances can't be estimated
-
-    //#ifdef _OPENMP
-    //omp_set_dynamic(0);         // disabling dynamic teams
-    //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-    //#pragma omp parallel for if(ncores>1) private() shared()
-    //#endif
-    if(m_start > 0){
-      for(m = 0; m < m_start; m++){
-        arma::vec lambda_m = arma::exp((stats.slice(m) * pars) + baseline); // event rates
-        if(riskset_time_vec(m)!=(-1)){
-          arma::uvec which_dyads = arma::find(riskset_mat.row(riskset_time_vec(m))); // by defualt arma::find returns the indices of non-zero elements
-          rates(m) = lambda_m(which_dyads);
-        }
-        else{
-          rates(m) = lambda_m;
-        }
-      }
-    }
-
     //#ifdef _OPENMP
     //omp_set_dynamic(0);         // disabling dynamic teams
     //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
     //#pragma omp parallel for if(ncores>1) private(m,p,u,z) shared(M,P,D,dyad,stats,baseline,riskset_time_vec,riskset_mat,residuals_mat)
     //#endif
-    for(m = m_start; m < M; m++){ // starting from m=1 because at m=0 most of the statistics are zero
+    for(m = 0; m < M; m++){ // starting from m=1 because at m=0 most of the statistics are zero
       //arma::uword dyad_m = dyad(m);
       arma::uvec dyad_m = dyad(m)-1; // -1 because dyads' IDs must range between 0 and D-1
-      residuals_mat(m-m_start).set_size(dyad_m.n_elem,P);
-      residuals_std(m-m_start).set_size(dyad_m.n_elem,P);
+      residuals_mat(m).set_size(dyad_m.n_elem,P);
+      residuals_std(m).set_size(dyad_m.n_elem,P);
       arma::mat stats_m = stats.slice(m); // dimensions : [nDyads*nStats]
       arma::vec lambda = arma::exp((stats_m * pars) + baseline); // event rates
       arma::vec ws = lambda/sum(lambda);
@@ -1357,8 +1317,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
           expected_stats(p) = sum(stats_m.elem(which_dyads+p*D).t() * ws(which_dyads));
           arma::uvec which_p(1);
           which_p(0) = p; 
-          residuals_mat(m-m_start).col(p) = stats_m(dyad_m,which_p);
-          residuals_mat(m-m_start).col(p) -= expected_stats(p);
+          residuals_mat(m).col(p) = stats_m(dyad_m,which_p);
+          residuals_mat(m).col(p) -= expected_stats(p);
         }
       }
       else{
@@ -1367,8 +1327,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
           expected_stats(p) = sum(stats_m.col(p).t() * ws);
           arma::uvec which_p(1);
           which_p(0) = p;
-          residuals_mat(m-m_start).col(p) = stats_m(dyad_m,which_p);
-          residuals_mat(m-m_start).col(p) -= expected_stats(p);
+          residuals_mat(m).col(p) = stats_m(dyad_m,which_p);
+          residuals_mat(m).col(p) -= expected_stats(p);
           
         }
       }
@@ -1400,9 +1360,9 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
       for(j = 0 ; j < vcov_sel.n_rows; j++){
         l = which_stat_to_keep(j);
         //for(e = 0; e < dyad_m.n_elem; e++){ // loop over events occurred at the same time point t[m]
-          residuals_std(m-m_start).col(l) = residuals_mat(m-m_start).col(l) * inverse_vcov(j,j); // standardizing the residual
+          residuals_std(m).col(l) = residuals_mat(m).col(l) * inverse_vcov(j,j); // standardizing the residual
         //}
-        smoothing_weights(m-m_start,l) = 1/inverse_vcov(j,j); // saving the inverse variance for the smoothing spline in R
+        smoothing_weights(m,l) = 1/inverse_vcov(j,j); // saving the inverse variance for the smoothing spline in R
       }
     }
     out["standardized_residuals"] = residuals_std;
@@ -1425,47 +1385,12 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
       riskset_time_vec.fill(-1);
     }
 
-    // calculating event rates until m_start because statistics are zeros and variances can't be estimated
-    if(m_start > 0){
-      for(m = 0; m < m_start; m++){
-        if(senderRate){ // sender rate model
-          arma::vec lambda = arma::exp((stats.slice(m) * pars) + baseline); // event rates
-          if(riskset_time_vec(m)!=(-1)){
-            arma::uvec which_actors = arma::find(riskset_mat.row(riskset_time_vec(m))); 
-            rates(m) = lambda(which_actors);
-          }
-          else{
-            rates(m) = lambda;
-          }
-        }
-        else{ // receiver choice model 
-          arma::uvec actor1_m = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1
-          arma::vec lambda = arma::exp((stats.slice(m) * pars) + baseline); // event rates
-          Rcpp::IntegerVector remove_actors;
-          for(e = 0; e < actor1_m.n_elem; e++){
-            remove_actors.push_back(actor1_m[e]);
-          }
-          if(riskset_time_vec(m)!=(-1)){
-            for(e=0; e< actor1_m.n_elem; e++){
-              for(n = 0; n<N; n++){
-                int dyad_n = remify::getDyadIndex(actor1_m[e],n,0,N,true); // in the actor-oriented model, D is the number of actors
-                if((n!=actor1_m[e]) && (riskset_mat(riskset_time_vec(m),dyad_n)==0)){
-                  remove_actors.push_back(n);
-                }
-              }
-            }
-          }
-          lambda.shed_rows(Rcpp::as<arma::uvec>(remove_actors));
-          rates(m) = lambda;
-        }
-      }
-    }
     //#ifdef _OPENMP
     //omp_set_dynamic(0);         // disabling dynamic teams
     //omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
     //#pragma omp parallel for if(ncores>1) private(m,p,u,z) shared(M,P,D,dyad,stats,baseline,riskset_time_vec,riskset_mat,residuals_mat)
     //#endif
-    for(m = m_start; m < M; m++){ // starting from m=m_start because before m_start most of the statistics are zero
+    for(m = 0; m < M; m++){
       arma::mat stats_m = stats.slice(m); // dimensions : [nActors*nStats]
       arma::vec expected_stats(P,arma::fill::zeros);
       arma::mat vcov(P,P,arma::fill::zeros); // we skip the baseline (intercept parameter)
@@ -1475,8 +1400,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
         arma::uvec actor1_m = actor1(m)-1; // sender at t[m], -1 because actors' IDs must range between 0 and N-1
         arma::vec lambda = arma::exp((stats_m * pars) + baseline); // event rates
         arma::vec ws = lambda/sum(lambda); // weights
-        residuals_mat(m-m_start).set_size(actor1_m.n_elem,P);
-        residuals_std(m-m_start).set_size(actor1_m.n_elem,P);
+        residuals_mat(m).set_size(actor1_m.n_elem,P);
+        residuals_std(m).set_size(actor1_m.n_elem,P);
         // calculating expected_stats and residuals_mat
         if(riskset_time_vec(m)!=(-1)){
           arma::uvec which_actors = arma::find(riskset_mat.row(riskset_time_vec(m))); 
@@ -1485,8 +1410,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
             expected_stats(p) = sum(stats_m.elem(which_actors+p*D).t() * ws(which_actors));
             arma::uvec which_p(1);
             which_p(0) = p;
-            residuals_mat(m-m_start).col(p) = stats_m(actor1_m,which_p);
-            residuals_mat(m-m_start).col(p) -= expected_stats(p);
+            residuals_mat(m).col(p) = stats_m(actor1_m,which_p);
+            residuals_mat(m).col(p) -= expected_stats(p);
           }
         }
         else{
@@ -1495,8 +1420,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
             expected_stats(p) = sum(stats_m.col(p).t() * ws);
             arma::uvec which_p(1);
             which_p(0) = p;
-            residuals_mat(m-m_start).col(p) = stats_m(actor1_m,which_p);
-            residuals_mat(m-m_start).col(p) -= expected_stats(p);
+            residuals_mat(m).col(p) = stats_m(actor1_m,which_p);
+            residuals_mat(m).col(p) -= expected_stats(p);
           }
         }
         // calculating vcov matrix
@@ -1525,10 +1450,11 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
         arma::uvec actor1_m_vec = actor1(m)-1; // -1 because actors' IDs must range between 0 and N-1
         arma::uvec actor2_m_vec = actor2(m)-1; // -1 because actors' IDs must range between 0 and N-1
         arma::uword actor1_m = actor1_m_vec(0); // this could be improved (?)
+        int actor1_m_int = static_cast<int>(actor1_m);
         arma::uword actor2_m = actor2_m_vec(0); // this could be improved (?)
         arma::rowvec stats_actor2_m = stats_m.row(actor2_m); // perhaps it is necessary to use the transpose ? .t(); // we select it now before we reduce lambda and stats according to varying risk set
-        residuals_mat(m-m_start).set_size(1,P);
-        residuals_std(m-m_start).set_size(1,P);
+        residuals_mat(m).set_size(1,P);
+        residuals_std(m).set_size(1,P);
         arma::vec lambda = arma::exp((stats_m * pars) + baseline); // event rates
         Rcpp::IntegerVector remove_actors;
         arma::vec ws;
@@ -1537,7 +1463,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
         if(riskset_time_vec(m)!=(-1)){
           for(n = 0; n<N; n++){
             int dyad_n = remify::getDyadIndex(actor1_m,n,0,N,true); // in the actor-oriented model, D is the number of actors
-            if(n!=actor1_m && riskset_mat(riskset_time_vec(m),dyad_n)==0){
+            if(n!=actor1_m_int && riskset_mat(riskset_time_vec(m),dyad_n)==0){
               remove_actors.push_back(n);
             }
           }
@@ -1549,8 +1475,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
         
         for(p = 0; p < P; p++){
           expected_stats(p) = sum(stats_m.col(p).t() * ws);
-          residuals_mat(m-m_start).col(p) = stats_actor2_m(p);
-          residuals_mat(m-m_start).col(p) -= expected_stats(p);
+          residuals_mat(m).col(p) = stats_actor2_m(p);
+          residuals_mat(m).col(p) -= expected_stats(p);
         }
 
         // calculating vcov matrix
@@ -1575,8 +1501,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
       arma::mat inverse_vcov = arma::inv_sympd(vcov_sel,arma::inv_opts::allow_approx);
       for(j = 0 ; j < vcov_sel.n_rows; j++){
         l = which_stat_to_keep(j);
-        residuals_std(m-m_start).col(l) = residuals_mat(m-m_start).col(l) * inverse_vcov(j,j); // standardizing the residual
-        smoothing_weights(m-m_start,l) = 1/inverse_vcov(j,j); // saving the inverse variance for the smoothing spline in R
+        residuals_std(m).col(l) = residuals_mat(m).col(l) * inverse_vcov(j,j); // standardizing the residual
+        smoothing_weights(m,l) = 1/inverse_vcov(j,j); // saving the inverse variance for the smoothing spline in R
       }
     }
     out["standardized_residuals"] = residuals_std;

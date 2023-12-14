@@ -2144,10 +2144,13 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
 #' @rdname plot.remstimate
 #' @description A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
 #' @param x is a \code{remstimate} object
-#' @param which one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).
 #' @param reh 'remify' object, the same used for the 'remstimate' object
 #' @param diagnostics is a \code{"remstimate" "diagnostics"} object
-#' @param ... further arguments to be passed to the 'plot' method depending: for instance the remstats object with statistics ('stats')
+#' @param which one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).
+#' @param effects [\emph{optional}] for tie-oriented modeling (model =  "tie"), the names of the statistics which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}).  
+#' @param sender_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the sender model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4})
+#' @param receiver_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the receiver model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4})
+#' @param ... further arguments to be passed to the 'plot' method, for instance, the remstats object with statistics ('stats') when the object 'diagnostics' is not available
 #' @method plot remstimate
 #' @export
 #' 
@@ -2186,9 +2189,13 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
 #' plot(x = tie_mle, reh  = tie_reh, diagnostics = tie_diagnostics)
 #' 
 plot.remstimate <- function(x, 
-                            reh, 
+                            reh,
+                            diagnostics = NULL,  
                             which = c(1:4), 
-                            diagnostics = NULL, ...)
+                            effects = NULL, 
+                            sender_effects = NULL,
+                            receiver_effects = NULL,
+                            ...)
 {
     # which plot
     selected <- which
@@ -2245,7 +2252,37 @@ plot.remstimate <- function(x,
 
     # tie-oriented modeling
     if(attr(x,"model") == "tie"){ 
-
+        if(is.null(effects)){
+            effects <- names(x$coefficients)
+            effects_to_check <- effects
+            which_effects <- 1:length(effects)
+        }
+        else{
+            effects <- as.character(effects)
+            effects_to_check <- effects
+            available_effects <- names(x$coefficients)
+            which_effects <- unlist(sapply(1:length(effects), function(y) which(available_effects == effects[y])))
+            if(length(which_effects) == 0){
+                par(op)
+                stop("effects not found in object 'remstimate'")
+            }
+            else{
+                effects <- effects[order(which_effects)]
+                which_effects <- sort(which_effects)
+            }
+        }
+        # checking effects from 'remstimate' with effects from 'remstimate' 'diagnostics'
+        effects_diagnostics_to_check <- colnames(diagnostics$residuals$smoothing_weights)
+        if(!is.null(attr(x,"where_is_baseline")) & ("baseline" %in% tolower(effects))){
+            effects_to_check <- effects_to_check[-attr(x,"where_is_baseline")]
+        }
+        if(length(effects_to_check)>0){ # model
+            compare_remstimate_with_diagnostics <- prod(unlist(sapply(1:length(effects_to_check),function(y) effects_to_check[y] %in% effects_diagnostics_to_check)))
+            if(!compare_remstimate_with_diagnostics){
+                par(op)
+                stop("one or more effects not found inside the object 'diagnostics'.")
+            }
+        }
         # (1) waiting times vs. theoretical distribution
         if(which[1L]){
             if(!attr(reh,"ordinal")){
@@ -2270,7 +2307,14 @@ plot.remstimate <- function(x,
 
         # (2) standardized Schoenfeld's residuals
         if(which[2L] & !is.null(diagnostics$residuals)){
-            P <- dim(diagnostics$residuals$standardized_residuals[[1]])[2] # number of statistics
+            # the object diagnostics doesn't have residuals on the intercept, therefore we process the effects once again
+            effects_diagnostics <- effects
+            available_effects <- colnames(diagnostics$residuals$smoothing_weights)
+            which_effects_diagnostics <- unlist(sapply(1:length(effects_diagnostics), function(y) which(available_effects == effects_diagnostics[y])))
+            effects_diagnostics <- effects_diagnostics[order(which_effects_diagnostics)]
+            which_effects_diagnostics <- sort(which_effects_diagnostics)
+            
+            P <- length(effects_diagnostics) # number of statistics
             n_repeats_per_time_point <- rep(1,dim(diagnostics$residuals$standardized_residuals)[1]) # for attr(residuals, "stats.method") = "pe"
             if(reh$stats.method == "pt"){
                 n_repeats_per_time_point <- sapply(1:dim(diagnostics$residuals$standardized_residuals)[1], function(v) dim(diagnostics$residuals$standardized_residuals[[v]])[1])
@@ -2282,7 +2326,7 @@ plot.remstimate <- function(x,
                 t_p <- rep(cumsum(rep(1,reh$M)),n_repeats_per_time_point)
             }
             for(p in 1:P){
-                y_p <-  unlist(sapply(1:dim(diagnostics$residuals$standardized_residuals)[1], function(v) diagnostics$residuals$standardized_residuals[[v]][,p]))
+                y_p <-  unlist(sapply(1:dim(diagnostics$residuals$standardized_residuals)[1], function(v) diagnostics$residuals$standardized_residuals[[v]][,which_effects_diagnostics[p]]))
                 qrt_p <- quantile(y_p, probs=c(0.25,0.75))
                 lb_p <- qrt_p[1] - diff(qrt_p)*1.5
                 ub_p <- qrt_p[2] + diff(qrt_p)*1.5
@@ -2290,7 +2334,7 @@ plot.remstimate <- function(x,
                 #if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 90% of the observations
                     ylim_p <- c(lb_p,ub_p)
                 #}
-                w_p <- rep(diagnostics$residuals$smoothing_weights[,p],n_repeats_per_time_point)
+                w_p <- rep(diagnostics$residuals$smoothing_weights[,which_effects_diagnostics[p]],n_repeats_per_time_point)
                 w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
                 if(all(w_p <= 0.0)){
                     w_p <- rep(1/length(w_p),length(w_p)) # assigning equal weights
@@ -2299,23 +2343,22 @@ plot.remstimate <- function(x,
                 plot(t_p,y_p,xlab = "Time", ylab = "Scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
                 lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
                 abline(h=0,col="black",lwd=3,lty=2)
-                mtext(text = colnames(diagnostics$residuals$smoothing_weights)[p], side = 3, line = 1,cex=1.5)
+                mtext(text = effects_diagnostics[p], side = 3, line = 1,cex=1.5)
                 par(op)
             }
         }
 
         # (3) histograms distribution of posterior draws (BSIR and HMC methods)
         if(which[3L] & (attr(x,"method") %in% c("BSIR","HMC"))){
-            P <- dim(x$draws)[2]
-            variable_name <- names(x$coefficients)
+            P <- length(effects)
             for(p in 1:P){
-                title_p <- bquote("Posterior distribution of " ~ beta[.(variable_name[p])])
+                title_p <- bquote("Posterior distribution of " ~ beta[.(effects[p])])
                 par(mfrow=c(1,1))
-                hist(x$draws[,p],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
+                hist(x$draws[,which_effects[p]],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
                 # posterior mean
-                abline(v = x$post.mean[p], col = 2, lwd = 3.5, lty = 2)
+                abline(v = x$post.mean[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
                 # hdi
-                ci <- hdi(y = x$draws[,p])
+                ci <- hdi(y = x$draws[,which_effects[p]])
                 if(!all(is.na(ci))){
                     abline(v = ci, col = 4, lwd = 3.5, lty = 2)
                 }
@@ -2326,35 +2369,34 @@ plot.remstimate <- function(x,
         # (4) trace plots posterior draws (HMC method only)
         if(which[4L] & (attr(x,"method") == "HMC")){
             nchains <- attr(x,"nchains")
-            P <- dim(x$draws)[2]
-            variable_name <- names(x$coefficients)
+            P <- length(effects)
             for(p in 1:P){
-                title_p <- bquote("Trace plot of " ~ beta[.(variable_name[p])])
+                title_p <- bquote("Trace plot of " ~ beta[.(effects[p])])
                 par(mfrow=c(1,1))
                 if(nchains==1){
-                    plot(x$draws[,p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
+                    plot(x$draws[,which_effects[p]], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
                     # posterior mean
-                    abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
+                    abline(h = x$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
                     # hdi
-                    ci <- hdi(y = x$draws[,p])
+                    ci <- hdi(y = x$draws[,which_effects[p]])
                     if(!all(is.na(ci))){
                         abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                     }
                 }
                 else{
-                    ndraws_per_chain <- length(x$draws[,p])/nchains
-                    seq_chains <- seq(1,length(x$draws[,p]),by=ndraws_per_chain) 
+                    ndraws_per_chain <- length(x$draws[,which_effects[p]])/nchains
+                    seq_chains <- seq(1,length(x$draws[,which_effects[p]]),by=ndraws_per_chain) 
                     seq_chains <- cbind(seq_chains,seq_chains+ndraws_per_chain-1)
                     chain_colors <- hcl.colors(n=nchains,palette="BuPu")
                     # plotting first chain
-                    plot(x$draws[seq_chains[1,1]:seq_chains[1,2],p], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations \n (per each chain)", col = chain_colors[1],lwd=1.8)
+                    plot(x$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations \n (per each chain)", col = chain_colors[1],lwd=1.8)
                     for(chain in 2:nchains){
-                        lines(x$draws[seq_chains[chain,1]:seq_chains[chain,2],p], col=chain_colors[chain],lwd=1.8)
+                        lines(x$draws[seq_chains[chain,1]:seq_chains[chain,2],which_effects[p]], col=chain_colors[chain],lwd=1.8)
                     }
                     # posterior mean
-                    abline(h = x$post.mean[p], col=2, lwd=3.5, lty=2)
+                    abline(h = x$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
                     # hdi
-                    ci <- hdi(y = x$draws[,p])
+                    ci <- hdi(y = x$draws[,which_effects[p]])
                     if(!all(is.na(ci))){
                         abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                     }
@@ -2366,11 +2408,45 @@ plot.remstimate <- function(x,
 
     # actor-oriented modeling
     else if(attr(x,"model") == "actor"){ 
+        effects_ls <- list(sender_model = sender_effects, receiver_model = receiver_effects)
         which_model <- c("sender_model","receiver_model")
         title_model <- c("Rate model (sender)","Choice model (receiver)")
+        senderRate <- c(TRUE,FALSE)
         for(i in 1:2){
             if(!is.null(x[[which_model[i]]])){
-
+                if(is.null(effects_ls[[which_model[i]]])){
+                    effects <- names(x[[which_model[i]]]$coefficients)
+                    effects_to_check <- effects # for checking later with statistics names inside diagnostics
+                    which_effects <- 1:length(effects)
+                }
+                else{
+                    effects <- as.character(effects_ls[[which_model[i]]])
+                    effects_to_check <- effects # for checking later with statistics names inside diagnostics
+                    available_effects <- names(x[[which_model[i]]]$coefficients)
+                    which_effects <- unlist(sapply(1:length(effects), function(y) which(available_effects == effects[y])))
+                    if(length(which_effects) == 0){
+                        par(op)
+                        stop("effects not found in object 'remstimate'")
+                    }
+                    else{
+                        effects <- effects[order(which_effects)]
+                        which_effects <- sort(which_effects)
+                    }
+                }
+                # checking effects from 'remstimate' with effects from 'remstimate' 'diagnostics'
+                effects_diagnostics_to_check <- colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights)
+                if(senderRate[i]){
+                    if(!is.null(attr(x,"where_is_baseline")) & ("baseline" %in% tolower(effects))){
+                        effects_to_check <- effects_to_check[-attr(x,"where_is_baseline")]
+                    }
+                }
+                if(length(effects_to_check)>0){
+                    compare_remstimate_with_diagnostics <- prod(unlist(sapply(1:length(effects_to_check),function(y) effects_to_check[y] %in% effects_diagnostics_to_check)))
+                    if(!compare_remstimate_with_diagnostics){
+                        par(op)
+                        stop("one or more effects not found inside the object 'diagnostics'.")
+                    }
+                }
                 # (1) waiting times vs. theoretical distribution
                 if(which[1L]){
                     if(!attr(reh,"ordinal") & i==1){
@@ -2397,7 +2473,14 @@ plot.remstimate <- function(x,
 
                 # (2) standardized Schoenfeld's residuals
                 if(which[2L] & !is.null(diagnostics[[which_model[i]]]$residuals)){
-                    P <- dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals[[1]])[2] # number of statistics
+                    # the object diagnostics doesn't have residuals on the intercept, therefore we process the effects once again
+                    effects_diagnostics <- effects
+                    available_effects <- colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights)
+                    which_effects_diagnostics <- unlist(sapply(1:length(effects_diagnostics), function(y) which(available_effects == effects_diagnostics[y])))
+                    effects_diagnostics <- effects_diagnostics[order(which_effects_diagnostics)]
+                    which_effects_diagnostics <- sort(which_effects_diagnostics)
+                    
+                    P <- length(effects_diagnostics) # number of statistics
                     n_repeats_per_time_point <- rep(1,dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals)[1]) # for attr(residuals, "stats.method") = "pe"
                     if(i == 1){
                         if(reh$stats.method == "pt"){
@@ -2414,7 +2497,7 @@ plot.remstimate <- function(x,
                         t_p <- cumsum(n_repeats_per_time_point)
                     }
                     for(p in 1:P){
-                        y_p <- unlist(sapply(1:dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) diagnostics[[which_model[i]]]$residuals$standardized_residuals[[v]][,p]))
+                        y_p <- unlist(sapply(1:dim(diagnostics[[which_model[i]]]$residuals$standardized_residuals)[1], function(v) diagnostics[[which_model[i]]]$residuals$standardized_residuals[[v]][,which_effects_diagnostics[p]]))
                         qrt_p <- quantile(y_p, probs=c(0.25,0.75))
                         lb_p <- qrt_p[1] - diff(qrt_p)*1.5
                         ub_p <- qrt_p[2] + diff(qrt_p)*1.5
@@ -2422,7 +2505,7 @@ plot.remstimate <- function(x,
                         #if(length(which(y_p<ub_p & y_p>lb_p)) >= floor(0.95*length(y_p))){ # reduce the ylim only if the bound lb_p and ub_p include more than the 95% of the observations
                             ylim_p <- c(lb_p,ub_p)
                         #}
-                        w_p <- rep(diagnostics[[which_model[i]]]$residuals$smoothing_weights[,p],n_repeats_per_time_point)
+                        w_p <- rep(diagnostics[[which_model[i]]]$residuals$smoothing_weights[,which_effects_diagnostics[p]],n_repeats_per_time_point)
                         w_p[w_p<0] <- w_p[w_p>1e04] <- 0.0
                         if(all(w_p <= 0.0)){
                             w_p <- rep(1/length(w_p),length(w_p)) # assigning equal weights
@@ -2431,7 +2514,7 @@ plot.remstimate <- function(x,
                         plot(t_p,y_p,xlab = "Time", ylab = "Scaled Schoenfeld's residuals",ylim=ylim_p,col=grDevices::rgb(128,128,128,200,maxColorValue = 255)) # standardized Schoenfeld's residuals
                         lines(smooth.spline(x = t_p, y = y_p,w=w_p,cv=NA),lwd=3.5,col=2) # smoothed weighted spline of the residuals
                         abline(h=0,col="black",lwd=3,lty=2)
-                        mtext(text = colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights)[p], side = 3, line = 2,cex=1.5)
+                        mtext(text = effects_diagnostics[p], side = 3, line = 2,cex=1.5)
                         mtext(text = title_model[i], side = 3, line = 1, cex = 1)
                         par(op)
                     }
@@ -2439,16 +2522,15 @@ plot.remstimate <- function(x,
 
                 # (3) histograms distribution of posterior draws (BSIR and HMC methods)
                 if(which[3L] & (attr(x,"method") %in% c("BSIR","HMC"))){
-                    P <- dim(x[[which_model[i]]]$draws)[2]
-                    variable_name <- names(x[[which_model[i]]]$coefficients)
+                    P <- length(effects)
                     for(p in 1:P){
-                        title_p <- bquote("Posterior distribution of " ~ beta[.(variable_name[p])])
+                        title_p <- bquote("Posterior distribution of " ~ beta[.(effects[p])])
                         par(mfrow=c(1,1))
-                        hist(x[[which_model[[i]]]]$draws[,p],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
+                        hist(x[[which_model[[i]]]]$draws[,which_effects[p]],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
                         # posterior mean
-                        abline(v = x[[which_model[[i]]]]$post.mean[p], col = 2, lwd = 3.5, lty = 2)
+                        abline(v = x[[which_model[[i]]]]$post.mean[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
                         # hdi
-                        ci <- hdi(y = x[[which_model[[i]]]]$draws[,p])
+                        ci <- hdi(y = x[[which_model[[i]]]]$draws[,which_effects[p]])
                         if(!all(is.na(ci))){
                             abline(v = ci, col = 4, lwd = 3.5, lty = 2)
                         }
@@ -2459,35 +2541,34 @@ plot.remstimate <- function(x,
                 # (4) trace plots posterior draws (HMC method only)
                 if(which[4L] & (attr(x,"method") == "HMC")){
                     nchains <- attr(x,"nchains")
-                    P <- dim(x[[which_model[i]]]$draws)[2]
-                    variable_name <- names(x[[which_model[i]]]$coefficients)
+                    P <- length(effects)
                     for(p in 1:P){
-                        title_p <- bquote("Trace plot of " ~ beta[.(variable_name[p])])
+                        title_p <- bquote("Trace plot of " ~ beta[.(effects[p])])
                         par(mfrow=c(1,1))
                         if(nchains==1){
-                            plot(x[[which_model[i]]]$draws[,p], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
+                            plot(x[[which_model[i]]]$draws[,which_effects[p]], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
                             # posterior mean
-                            abline(h = x[[which_model[i]]]$post.mean[p], col=2, lwd=3.5, lty=2)
+                            abline(h = x[[which_model[i]]]$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
                             # hdi
-                            ci <- hdi(y = x[[which_model[i]]]$draws[,p])
+                            ci <- hdi(y = x[[which_model[i]]]$draws[,which_effects[p]])
                             if(!all(is.na(ci))){
                                 abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                             }
                         }
                         else{
-                            ndraws_per_chain <- length(x[[which_model[i]]]$draws[,p])/nchains
-                            seq_chains <- seq(1,length(x[[which_model[i]]]$draws[,p]),by=ndraws_per_chain) 
+                            ndraws_per_chain <- length(x[[which_model[i]]]$draws[,which_effects[p]])/nchains
+                            seq_chains <- seq(1,length(x[[which_model[i]]]$draws[,which_effects[p]]),by=ndraws_per_chain) 
                             seq_chains <- cbind(seq_chains,seq_chains+ndraws_per_chain-1)
                             chain_colors <- hcl.colors(n=nchains,palette="BuPu")
                             # plotting first chain
-                            plot(x[[which_model[i]]]$draws[seq_chains[1,1]:seq_chains[1,2],p], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations (per each chain)", col = chain_colors[1],lwd=1.8)
+                            plot(x[[which_model[i]]]$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations (per each chain)", col = chain_colors[1],lwd=1.8)
                             for(chain in 2:nchains){
-                                lines(x[[which_model[i]]]$draws[seq_chains[chain,1]:seq_chains[chain,2],p], col=chain_colors[chain],lwd=1.8)
+                                lines(x[[which_model[i]]]$draws[seq_chains[chain,1]:seq_chains[chain,2],which_effects[p]], col=chain_colors[chain],lwd=1.8)
                             }
                             # posterior mean
-                            abline(h = x[[which_model[i]]]$post.mean[p], col=2, lwd=3.5, lty=2)
+                            abline(h = x[[which_model[i]]]$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
                             # hdi
-                            ci <- hdi(y = x[[which_model[i]]]$draws[,p])
+                            ci <- hdi(y = x[[which_model[i]]]$draws[,which_effects[p]])
                             if(!all(is.na(ci))){
                                 abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                             }

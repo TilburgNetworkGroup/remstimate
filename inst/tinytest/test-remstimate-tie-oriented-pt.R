@@ -10,7 +10,7 @@ tie_data$edgelist$time <- floor(tie_data$edgelist$time)
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 
 # specifying linear predictor
-tie_model <- ~ 1 + remstats::indegreeSender()+remstats::inertia()+remstats::reciprocity() 
+tie_model <- ~ 1  + remstats::indegreeSender()+remstats::inertia()+remstats::reciprocity() 
 
 # calculating statistics
 tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model, method = "pt")
@@ -42,11 +42,18 @@ expect_silent(summary(tie_mle))
 expect_silent(diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats))
 tie_reh_diagnostics <- diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats)
 expect_silent(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics))
+expect_silent(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics, which = 2, effects = "inertia")) # plotting a specific effect
 expect_silent(plot(x = tie_mle,reh = tie_reh, stats = tie_reh_stats)) # without supplying diagnostics but supplying the array of stats
 expect_silent(aic(tie_mle))
 expect_silent(aicc(tie_mle))
 expect_silent(bic(tie_mle))
 expect_silent(waic(tie_mle))
+
+# error when 'diagnostics' has at least one statistic's name wrong
+colnames(tie_reh_diagnostics$residuals$smoothing_weights)[1] <- "INDEGREEsender"
+expect_error(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics),
+"one or more effects not found inside the object 'diagnostics'.",
+fixed=TRUE)
 
 # tests on "WAIC" for "MLE"
 
@@ -103,7 +110,11 @@ tie_reh_omit_test <- remify::remify(edgelist = tie_data$edgelist, model = "tie",
 expect_silent(remstimate::remstimate(reh = tie_reh_omit_test,
                         stats = tie_reh_stats_ordinal,
                         ncores = 1L))
-
+tie_mle_omit_test <- remstimate::remstimate(reh = tie_reh_omit_test,
+                        stats = tie_reh_stats_ordinal,
+                        ncores = 1L)
+expect_silent(diagnostics(object = tie_mle_omit_test, reh = tie_reh_omit_test, stats = tie_reh_stats_ordinal))   
+                     
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
