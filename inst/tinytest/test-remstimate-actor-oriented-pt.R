@@ -42,7 +42,9 @@ expect_silent(summary(ao_mle))
 expect_silent(diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats))
 ao_reh_diagnostics <- diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats)
 expect_silent(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics))
-expect_silent(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics, which = 2, sender_effects = "indegreeSender", receiver_effects = "inertia"))
+expect_silent(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics, which = 2, sender_effects = "indegreeSender", receiver_effects = "inertia")) # plotting specific effects from both models
+expect_silent(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics, which = 2, sender_effects = NA, receiver_effects = "inertia")) # plotting specific effect from one model only 
+
 expect_silent(aic(ao_mle))
 expect_silent(aicc(ao_mle))
 expect_silent(bic(ao_mle))
@@ -53,6 +55,16 @@ colnames(ao_reh_diagnostics$sender_model$residuals$smoothing_weights)[1] <- "IND
 expect_error(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics),
 "one or more effects not found inside the object 'diagnostics'.",
 fixed=TRUE)
+
+# test diagnostics with only baseline
+ao_stats_baseline <- remstats::remstats(reh = ao_reh, sender_effects = ~1 , method = "pt")
+ao_mle_only_baseline <- remstimate::remstimate(reh = ao_reh,
+                        stats = ao_stats_baseline,
+                        ncores = 1L,
+                        method = "MLE")
+expect_silent(diagnostics(object = ao_mle_only_baseline, reh = ao_reh, stats = ao_stats_baseline))
+
+
 
 # tests on "WAIC" for "MLE"
 

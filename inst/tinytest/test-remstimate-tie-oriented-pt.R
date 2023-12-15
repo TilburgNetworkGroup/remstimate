@@ -55,6 +55,15 @@ expect_error(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics),
 "one or more effects not found inside the object 'diagnostics'.",
 fixed=TRUE)
 
+# test diagnostics with only baseline
+tie_stats_baseline <- remstats::remstats(reh = tie_reh, tie_effects = ~1 , method = "pt")
+tie_mle_only_baseline <- remstimate::remstimate(reh = tie_reh,
+                        stats = tie_stats_baseline,
+                        ncores = 1L,
+                        method = "MLE")
+expect_silent(diagnostics(object = tie_mle_only_baseline, reh = tie_reh, stats = tie_stats_baseline))
+
+
 # tests on "WAIC" for "MLE"
 
 # WAIC = TRUE

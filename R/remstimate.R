@@ -1784,7 +1784,7 @@ summary.remstimate<-function (object, ...)
 #' @param ... further arguments to be passed to the 'diagnostics' method
 #' @export
 #' 
-#' @return A object of class \code{"remstimate","diagnostics"} with standardized Schoenfeld's residuals and estimated event rates given the optimized model parameters. 
+#' @return A object of class \code{"diagnostics" "remstimate"} with standardized Schoenfeld's residuals and estimated event rates given the optimized model parameters. 
 #'
 #' 
 #' @examples
@@ -2130,7 +2130,7 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
     }
     diagnostics$.reh.processed <- reh   
     diagnostics$.reh.processed$stats.method <- stats_attr_method
-    class(diagnostics) <- c("remstimate","diagnostics")
+    class(diagnostics) <- c("diagnostics","remstimate")
     return(diagnostics) 
 }
 
@@ -2144,13 +2144,13 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
 #' @rdname plot.remstimate
 #' @description A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
 #' @param x is a \code{remstimate} object
-#' @param reh 'remify' object, the same used for the 'remstimate' object
-#' @param diagnostics is a \code{"remstimate" "diagnostics"} object
+#' @param reh a \code{remify} object, the same used for the \code{remstimate} object
+#' @param diagnostics is a \code{'diagnostics' 'remstimate'} object
 #' @param which one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).
-#' @param effects [\emph{optional}] for tie-oriented modeling (model =  "tie"), the names of the statistics which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}).  
-#' @param sender_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the sender model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4})
-#' @param receiver_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the receiver model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4})
-#' @param ... further arguments to be passed to the 'plot' method, for instance, the remstats object with statistics ('stats') when the object 'diagnostics' is not available
+#' @param effects [\emph{optional}] for tie-oriented modeling (model =  "tie"), the names of the statistics which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}). Default value is \code{NULL}, selecting all the effects available in the 'remstimate' object.
+#' @param sender_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the sender model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}). If the user wants to plot only the diagnostics of one or more effects of the sender model and at the same time wants to exclude the plots of the receiver model, then set argument \code{receiver_effects = NA} and specify the vector of effects to \code{sender_effects} (or leave it \code{sender_effects = NULL} for selecting all effects of the sender model). Default value is \code{NULL}, selecting all the effects available for the sender model in the 'remstimate' object.
+#' @param receiver_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the receiver model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}). If the user wants to plot only the diagnostics of one or more effects of the receiver model and at the same time wants to exclude the plots of the sender model, then set argument \code{sender_effects = NA} and specify the vector of effects to \code{receiver_effects} (or leave it \code{receiver_effects = NULL} for selecting all effects of the receiver model). Default value is \code{NULL}, selecting all the effects available for the receiver model in the 'remstimate' object (\code{x}).
+#' @param ... further arguments to be passed to the 'plot' method, for instance, the remstats object with statistics ('stats') when the object 'diagnostics' is not supplied.
 #' @method plot remstimate
 #' @export
 #' 
@@ -2239,7 +2239,7 @@ plot.remstimate <- function(x,
             diagnostics <- diagnostics(object = x, reh = reh, stats = additional_input_args$stats)
         }
     }
-    else if(!all(inherits(diagnostics,c("remstimate","diagnostics"),TRUE))){
+    else if(!all(inherits(diagnostics,c("diagnostics","remstimate"),TRUE))){
             stop("'diagnostics' must be an object of class 'remstimate' 'diagnostics'")
     }
 
@@ -2356,7 +2356,7 @@ plot.remstimate <- function(x,
                 par(mfrow=c(1,1))
                 hist(x$draws[,which_effects[p]],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
                 # posterior mean
-                abline(v = x$post.mean[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
+                abline(v = x$coefficients[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
                 # hdi
                 ci <- hdi(y = x$draws[,which_effects[p]])
                 if(!all(is.na(ci))){
@@ -2376,7 +2376,7 @@ plot.remstimate <- function(x,
                 if(nchains==1){
                     plot(x$draws[,which_effects[p]], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
                     # posterior mean
-                    abline(h = x$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
+                    abline(h = x$coefficients[which_effects[p]], col=2, lwd=3.5, lty=2)
                     # hdi
                     ci <- hdi(y = x$draws[,which_effects[p]])
                     if(!all(is.na(ci))){
@@ -2395,7 +2395,7 @@ plot.remstimate <- function(x,
                         lines(x$draws[seq_chains[chain,1]:seq_chains[chain,2],which_effects[p]], col=chain_colors[chain],lwd=1.8)
                     }
                     # posterior mean
-                    abline(h = x$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
+                    abline(h = x$coefficients[which_effects[p]], col=2, lwd=3.5, lty=2)
                     # hdi
                     ci <- hdi(y = x$draws[,which_effects[p]])
                     if(!all(is.na(ci))){
@@ -2419,6 +2419,9 @@ plot.remstimate <- function(x,
                     effects <- names(x[[which_model[i]]]$coefficients)
                     effects_to_check <- effects # for checking later with statistics names inside diagnostics
                     which_effects <- 1:length(effects)
+                }
+                else if(is.na(effects_ls[[which_model[i]]])){
+                    next
                 }
                 else{
                     effects <- as.character(effects_ls[[which_model[i]]])
@@ -2527,14 +2530,17 @@ plot.remstimate <- function(x,
                     for(p in 1:P){
                         title_p <- bquote("Posterior distribution of " ~ beta[.(effects[p])])
                         par(mfrow=c(1,1))
-                        hist(x[[which_model[[i]]]]$draws[,which_effects[p]],freq = FALSE, col = "lavender", main = title_p, xlab =  "Posterior draw")
+                        hist(x[[which_model[[i]]]]$draws[,which_effects[p]],freq = FALSE, main = "", col = "lavender", xlab =  "Posterior draw")
                         # posterior mean
-                        abline(v = x[[which_model[[i]]]]$post.mean[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
+                        abline(v = x[[which_model[[i]]]]$coefficients[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
                         # hdi
                         ci <- hdi(y = x[[which_model[[i]]]]$draws[,which_effects[p]])
                         if(!all(is.na(ci))){
                             abline(v = ci, col = 4, lwd = 3.5, lty = 2)
                         }
+                        # title and subtitle
+                        mtext(text = title_p, side = 3, line = 2,cex=1.5)
+                        mtext(text = title_model[i], side = 3, line = 1,cex=1)
                         par(op)
                     }
                 }
@@ -2547,14 +2553,17 @@ plot.remstimate <- function(x,
                         title_p <- bquote("Trace plot of " ~ beta[.(effects[p])])
                         par(mfrow=c(1,1))
                         if(nchains==1){
-                            plot(x[[which_model[i]]]$draws[,which_effects[p]], type= "l", main = title_p, ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
+                            plot(x[[which_model[i]]]$draws[,which_effects[p]], type= "l", main = "",  ylab =  "Posterior draw", xlab = "Iteration",lwd=1.8)
                             # posterior mean
-                            abline(h = x[[which_model[i]]]$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
+                            abline(h = x[[which_model[i]]]$coefficients[which_effects[p]], col=2, lwd=3.5, lty=2)
                             # hdi
                             ci <- hdi(y = x[[which_model[i]]]$draws[,which_effects[p]])
                             if(!all(is.na(ci))){
                                 abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                             }
+                            # title and subtitle
+                            mtext(text = title_p, side = 3, line = 2,cex=1.5)
+                            mtext(text = title_model[i], side = 3, line = 1,cex=1)
                         }
                         else{
                             ndraws_per_chain <- length(x[[which_model[i]]]$draws[,which_effects[p]])/nchains
@@ -2563,17 +2572,20 @@ plot.remstimate <- function(x,
                             chain_colors <- hcl.colors(n=nchains,palette="BuPu")
                             # plotting first chain
                             y_lim <- range(x[[which_model[i]]]$draws[,which_effects[p]])
-                            plot(x[[which_model[i]]]$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = title_p, ylab = "Posterior draw", xlab = "Iterations (per each chain)", col = chain_colors[1],lwd=1.8,ylim=y_lim)
+                            plot(x[[which_model[i]]]$draws[seq_chains[1,1]:seq_chains[1,2],which_effects[p]], type= "l", main = "", ylab = "Posterior draw", xlab = "Iterations (per each chain)", col = chain_colors[1],lwd=1.8,ylim=y_lim)
                             for(chain in 2:nchains){
                                 lines(x[[which_model[i]]]$draws[seq_chains[chain,1]:seq_chains[chain,2],which_effects[p]], col=chain_colors[chain],lwd=1.8)
                             }
                             # posterior mean
-                            abline(h = x[[which_model[i]]]$post.mean[which_effects[p]], col=2, lwd=3.5, lty=2)
+                            abline(h = x[[which_model[i]]]$coefficients[which_effects[p]], col=2, lwd=3.5, lty=2)
                             # hdi
                             ci <- hdi(y = x[[which_model[i]]]$draws[,which_effects[p]])
                             if(!all(is.na(ci))){
                                 abline(h = ci, col = 4, lwd = 3.5, lty = 2)
                             }
+                            # title and subtitle
+                            mtext(text = title_p, side = 3, line = 2,cex=1.5)
+                            mtext(text = title_model[i], side = 3, line = 1,cex=1)
                         }
                         par(op)
                     }
