@@ -397,10 +397,19 @@ ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, re
 attr(ao_reh_stats,"formula") <- NULL
 
 # (1) method = "MLE"
+rate_model_two_effects <- ~ 1 + remstats::indegreeSender() + remstats::outdegreeSender()
+ao_reh_stats_2 <- remstats::remstats(reh = ao_reh, sender_effects = rate_model_two_effects, receiver_effects = choice_model, method="pt")
 expect_silent(remstimate::remstimate(reh = ao_reh,
-                        stats = ao_reh_stats,
+                        stats = ao_reh_stats_2,
                         ncores = 1L,
                         method = "MLE"))
+
+ao_mle <- remstimate::remstimate(reh = ao_reh,
+                        stats = ao_reh_stats_2,
+                        ncores = 1L,
+                        method = "MLE")
+expect_silent(diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats_2))
+
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,

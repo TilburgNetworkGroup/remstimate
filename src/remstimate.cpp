@@ -1,13 +1,12 @@
 #include <RcppArmadillo.h>
 #include <iostream>
 #include <RcppArmadilloExtensions/sample.h> // used for the sample function inside RcppArmadillo
-#include <typeinfo>
-#include <map>
 #include <iterator>
-#include <functional>
 #include <numeric>
-#include <vector>
 #include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
 #include <remify/remify.h> 
 #ifdef _OPENMP
 #include <omp.h>
@@ -634,7 +633,6 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
                   double beta2 = 0.999,
                   double epsilon = 0.01){
 
-  // link ref: https://machinelearningmastery.com/gr?adient-descent-optimization-with-adamax-from-scratch/   (properly cite the original papers, in the vignettes)               
   arma::uword P = pars.n_elem;
   double  alpha = 0.002; 
   double loglik,loglik_prev;
@@ -1264,11 +1262,6 @@ double getWAIC(arma::vec mu,
 // @param baseline intercept parameter value. Default is 0.
 //
 // @return list of: residuals, smoothing weights (for estimating a spline on the residuals over time) and rates of actor/dyads over time.
-//
-// References (report these references in the vignettes):
-// - Schoenfeld, D. (1982). Partial Residuals for The Proportional Hazards Regression Model. Biometrika, 69(1), 239–241. https://doi.org/10.2307/2335876
-// - Grambsch, P. M., & Therneau, T. M. (1994). Proportional Hazards Tests and Diagnostics Based on Weighted Residuals. Biometrika, 81(3), 515–526. https://doi.org/10.2307/2337123
-// - Winnett, A., & Sasieni, P. (2001). A Note on Scaled Schoenfeld Residuals for the Proportional Hazards Model. Biometrika, 88(2), 565–571. http://www.jstor.org/stable/2673500
 //
 // [[Rcpp::export]]
 Rcpp::List computeDiagnostics(const arma::vec &pars,

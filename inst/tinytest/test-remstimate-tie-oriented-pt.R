@@ -337,12 +337,18 @@ tie_reh <- remify::remify(edgelist = tie_data$edgelist,
                             riskset="active") 
 # calculating statistics
 tie_reh_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model, method="pt")
+attr(tie_reh_stats,"formula") <- NULL
 
 # (1) method = "MLE"
 expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "MLE"))
+tie_mle <- remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        method = "MLE")
+expect_silent(diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats))
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,

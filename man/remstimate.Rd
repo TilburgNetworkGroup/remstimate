@@ -29,7 +29,7 @@ remstimate(
 
 \item{stats}{a \code{remstats} object: when `attr(reh,"model")` is `"tie"`, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if `attr(reh,"model")` is `"actor"`, \code{stats} is a list that can contain up to two arrays named \code{"sender_stats"} and \code{"receiver_stats"} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{"sender_stats"}, receivers in the array \code{"receiver_stats"}). Furthermore, it is possible to only estimate the sender rate model or only the receiver choice model, by using the correct naming of the arrays.}
 
-\item{method}{the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}, and also the default method), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).}
+\item{method}{the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}, and also the default method), Adaptive Gradient Descent (\code{"GDADAMAX"}) based on the work of Diederik P. Kingma and Jimmy Ba, 2014 (<doi:10.48550/arXiv.1412.6980>), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).}
 
 \item{ncores}{[\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization)}
 

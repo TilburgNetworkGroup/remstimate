@@ -219,6 +219,7 @@ expect_silent(plot(x = ordinal_mle,reh = tie_reh, diagnostics = tie_reh_diagnost
 # Risk set "active"
 
 # testing estimation methods with active riskset 
+tie_data$edgelist$time[10:15] <- tie_data$edgelist$time[10]
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, 
                             model = "tie", 
                             riskset="active") 
@@ -230,6 +231,11 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,
                         ncores = 1L,
                         method = "MLE"))
+tie_mle <- remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        ncores = 1L,
+                        method = "MLE")
+expect_silent(diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats))              
 # (2) method = "GDADAMAX" 
 expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,

@@ -33,11 +33,11 @@ The aim of the function `remstimate()` is to find the set of model parameters th
 
 The mandatory input arguments of `remstimate()` are:
 
-- `reh`, which is a `remify`  object of the processed relational event history (available with the package `remify`, `install.packages("remify")`);
+- `reh`, which is a `remify`  object of the processed relational event history (processing function `remify` available with the package `remify`, `install.packages("remify")`);
 
-- `stats`, a `remstats`  object (available with the package `remstats`, `install.packages("remstats")`). A linear predictor for the model is specified via a formula object (for the actor-oriented framework, up to two linear predictors can be specified) and supplied to the function `remstats::remstats()` along with the `remify` object. When `attr(reh,"model")` is `"tie"`, `stats` consists of only one array of statistics; if `attr(reh,"model")` is `"actor"`, `stats` consists of a list that can contain up to two arrays named `"sender_stats"` and `"receiver_stats"`. The first array contains the statistics for the sender model (event rate model), the second array for the receiver model (multinomial choice model). Furthermore, it is possible to calculate the statistics for only the sender model or only the receiver model, by supplying the formula object only for one of the two models. For more details on the use of `remstats::remstats()`, see `help(topic=remstats,package=remstats)`.
+- `stats`, a `remstats`  object (the `remstats` function for calculating network statistics is available with the package `remstats`, `install.packages("remstats")`). A linear predictor for the model is specified via a formula object (for the actor-oriented framework, up to two linear predictors can be specified) and supplied to the function `remstats::remstats()` along with the `remify` object. When `attr(reh,"model")` is `"tie"`, `stats` consists of only one array of statistics; if `attr(reh,"model")` is `"actor"`, `stats` consists of a list that can contain up to two arrays named `"sender_stats"` and `"receiver_stats"`. The first array contains the statistics for the sender model (event rate model), the second array for the receiver model (multinomial choice model). Furthermore, it is possible to calculate the statistics for only the sender model or only the receiver model, by supplying the formula object only for one of the two models. For more details on the use of `remstats::remstats()`, see `help(topic=remstats,package=remstats)`.
 
-Along with the two mandatory arguments, the argument `method` refers to the optimization to use for the estimation of the model parameters and its default value is `"MLE"`. Methods available in `remstimate` are: **Maximum Likelihood Estimation** (`"MLE"`), **Adaptive Gradient Descent** (`"GDADAMAX"`), **Bayesian Sampling Importance Resampling** (`"BSIR"`), **Hamiltonian Monte Carlo** (`"HMC"`).
+Along with the two mandatory arguments, the argument `method` refers to the optimization routine to use for the estimation of the model parameters and its default value is `"MLE"`. Methods available in `remstimate` are: **Maximum Likelihood Estimation** (`"MLE"`), **Adaptive Gradient Descent** (`"GDADAMAX"`), **Bayesian Sampling Importance Resampling** (`"BSIR"`), **Hamiltonian Monte Carlo** (`"HMC"`).
 
 ---
 
@@ -56,11 +56,11 @@ $$
     \boldsymbol{\hat{\beta}}=\argmax_{\boldsymbol{\beta}}\{\mathscr{L}(\boldsymbol{\beta};E_{t_M},X)\}
 $$
 
-Whereas, the aim of the _Bayesian_ approaches is to find the set of parameters $\boldsymbol{\hat{\beta}}$ that maximizes the posterior probability of the model given the likelihood of the observed data and a prior assumption on the distribution of the model parameters, 
+Whereas, the aim of the _Bayesian_ approaches is to find the set of parameters $\boldsymbol{\hat{\beta}}$ that maximizes the posterior probability of the model which is proportional to the likelihood of the observed data and the prior distribution assumed over the model parameters, 
 
-$$P(\boldsymbol{\beta}|E_{t_M},X) \propto \mathscr{L}(\boldsymbol{\beta}; E_{t_M},X) P(\boldsymbol{\beta})$$
+$$p(\boldsymbol{\beta}|E_{t_M},X) \propto \mathscr{L}(\boldsymbol{\beta}; E_{t_M},X) p(\boldsymbol{\beta})$$
 
-where $P(\boldsymbol{\beta})$ is the prior distribution of the model parameters which, for instance, can be assumed as a multivariate normal distribution,
+where $p(\boldsymbol{\beta})$ is the prior distribution of the model parameters which, for instance, can be assumed as a multivariate normal distribution,
 
 $$ \boldsymbol{\beta} \sim \mathcal{N}(\boldsymbol{\mu_{0}},\Sigma_{0}) $$
 
@@ -79,6 +79,8 @@ library(remstimate)
 In this tutorial, we are going to use the main functions from `remify` and `remstats` by setting their arguments to the default values. However, we suggest the user to read through the documentation of the two packages and their vignettes in order to get familiar with their additional functionalities (e.g., possibility of defining time-varying risk set, calculating statistics for a specific time window, and many others).
 
 ---
+
+# Modeling frameworks {.tabset .tabset-pills}
 
 
 ## Tie-Oriented Modeling framework 
@@ -122,9 +124,10 @@ We are going to model the event rate $\lambda$ of any event event $e$ at risk at
 
 $$\begin{align}\lambda(e,t_{m},\boldsymbol{\beta}) = \exp{\left\lbrace\beta_{intercept} + \beta_{\text{indegreeSender}}\text{indegreeSender}(s_e,t_{m}) + \\ +\beta_{\text{inertia}}\text{inertia}(s_e,r_e,t_{m}) + \beta_{\text{reciprocity}}\text{reciprocity}(s_e,r_e,t_{m})\right\rbrace}\end{align}$$ 
 
-Furthermore, we know that the _statistics_ (name in subscript next to $\beta$) and _true_ parameters' values used in the generation of the event sequence are:
+Furthermore, we know that the _true_ parameters quantifying the effect of the _statistics_ (name in subscript next to $\beta$) and used in the generation of the event sequence are:
 $$\begin{bmatrix} \beta_{intercept} \\ \beta_{\text{indegreeSender}} \\ \beta_{\text{inertia}} \\ \beta_{\text{reciprocity}} \end{bmatrix} = \begin{bmatrix} -5.0 \\ 0.01 \\ -0.1 \\ 0.03\end{bmatrix}$$
-The parameters are also available as object within the list, `tie_data$true.pars`. (the event sequence was generated with a package that is not yet available on CRAN)
+The parameters are also available as object within the list, `tie_data$true.pars`.
+
 ```{r}
 # setting `ncores` to 1 (the user can change this parameter)
 ncores <- 1L
@@ -135,10 +138,10 @@ data(tie_data)
 # true parameters' values
 tie_data$true.pars
 
-# processing event sequence
+# processing the event sequence with 'remify'
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 
-# summary of the relational event network
+# summary of the (processed) relational event network
 summary(tie_reh)
 ```
 
@@ -148,11 +151,12 @@ The estimation of a model can be summarized in three steps:
 
 1. First, we define the linear predictor with the variables of interest, using the statistics available within `remstats` (statistics calculated by the user can be also supplied to `remstats::remstats()`). 
 ```{r}
-# specifying linear predictor (with `remstats`)
-tie_model <- ~ 1 + remstats::indegreeSender() + remstats::inertia() + remstats::reciprocity() 
+# specifying linear predictor (with `remstats`) using a 'formula'
+tie_model <- ~ 1 + remstats::indegreeSender() + 
+              remstats::inertia() + remstats::reciprocity() 
 ```
 
-2. Second, we calculate the statistics defined in the linear predictor with the function `remstats::remstats()`. 
+2. Second, we calculate the statistics defined in the linear predictor with the function `remstats::remstats()` from the `remstats` package. 
 ```{r}
 # calculating statistics (with `remstats`)
 tie_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
@@ -185,21 +189,23 @@ In the sections below, we show the estimation of the parameters using all the me
                           stats = tie_stats,
                           ncores = ncores,
                           method = "MLE",
-                          WAIC = TRUE,
-                          nsimWAIC = 100)             
+                          WAIC = TRUE, # setting WAIC computation to TRUE
+                          nsimWAIC = 100) # number of draws for the computation of the WAIC set to 100         
 ```
 
 #### **print( )**
 ```{r} 
-# print 
+# printing the 'remstimate' object
 tie_mle
 ```
 
 #### **summary( )**
 ```{r}     
-# summary 
+# summary of the 'remstimate' object
 summary(tie_mle)
 ```
+
+Under the column named $Pr(>|z|)$, the usual test on the `z value` for each parameter. As to the column named $Pr(=0|x)$, an approximation of the posterior probability of each parameter being equal to 0.
 
 #### **Information Critieria**
 
@@ -298,18 +304,18 @@ tie_hmc <- remstimate::remstimate(reh = tie_reh,
                         nsim = 100L, # 100 draws to generate per each chain
                         nchains = 6L, # 6 chains to generate
                         burnin = 50L, # burnin length is 50
-                        thin = 2L, # thinning size set to 2
+                        thin = 2L, # thinning size set to 2 (the final length of the chains will be 50)
                         seed = 23909 # set a seed only for reproducibility purposes
                         )
 
 # summary 
 summary(tie_hmc)
 ```
-
+`Q2.5%`, `Q50%` and `Q97.5%` are respectively the percentile 2.5, the median (50th percentile) and the percentile 97.5.
 ```{r, out.width="50%", dev=c("jpeg")}
 # diagnostics
 tie_hmc_diagnostics <- diagnostics(object = tie_hmc, reh = tie_reh, stats = tie_stats)
-# plot
+# plot (histograms and trace plot have highest posterior density intervals dashed lines in blue and posterior estimate in red)
 plot(x = tie_hmc, reh  = tie_reh, diagnostics = tie_hmc_diagnostics)
 ```
 
@@ -317,20 +323,20 @@ plot(x = tie_hmc, reh  = tie_reh, diagnostics = tie_hmc_diagnostics)
 
 ## Actor-Oriented Modeling framework 
 
-For the actor-oriented modeling we refer the modeling framework introduced by @Stadtfeld2017, in which the process of realization of a relational event is described by two steps: 
+For the actor-oriented modeling, we refer the modeling framework introduced by @Stadtfeld2017, in which the process of realization of a relational event is described by two steps: 
 
   (1) first the actor that is going to initiate the next interaction and becomes the "sender" of the future event;
-  (2) then the choice of the "receiver" of such interaction operated by the "sender" in step 1.
+  (2) then the choice of the "receiver" of the future event operated by the active "sender" in step 1.
 
-The first step is modelled via a rate model (similar to a REM), where the waiting times and the sequence of senders of the observed relational events are modelled. The second step is modelled via a choice model, where the choice of the receiver of the next event conditional to the sender of the first step is modelled.
+The first step is modelled via a rate model (similar to a REM), in which the waiting times are modelled along with the sequence of the senders of the observed relational events. The second step is modelled via a multinomial discrete choice model, where we model the choice of the receiver of the next event conditional to the active sender at the first step.
 
-Therefore, the two models can be described by two separate likelihood functions with their own set of parameters. The parameters in each model will describe the impact that explanatory variables (network dynamics and other available exogenous statistics) have on the two distinct processes. The estimation of the model parameters for each model can be carried out separately and for this reason, the user can also provide a `remstats` object containing the statistics of either both or one of the two models.
+Therefore, the two models can be described by two separate likelihood functions with their own set of parameters. The parameters in each model will describe the effect that explanatory variables (network dynamics and other available exogenous statistics) have on the two distinct processes. The estimation of the model parameters for each model can be carried out separately and for this reason, the user can also provide a `remstats` object containing the statistics of either both or one of the two models.
 
 ---
 
 ### The likelihood function
 
-Consider a time-ordered sequence of $M$ relational events, $E_{t_M}=(e_1,\ldots,e_M)$, where each event $e_{m}$ in the sequence is described by the 3-tuple $(s_{m},r_{m},t_{m})$ (we exclude here the event type), respectively sender, receiver, and time of the event. Furthermore, consider $N$ to be the number of actors in the network. For simplicity, we assume that all actors in the network can be the sender or the receiver of a relational event (i.e. _full_ risk set, see `vignette(topic="riskset",package="remify")` for more information on alternative definitions of the risk set) and we use the index $n$ to indicate any actor in the set $\mathcal{R}$ of actors at risk, thus $n \in \left\lbrace 1,2,\ldots,N\right\rbrace$.
+Consider a time-ordered sequence of $M$ relational events, $E_{t_M}=(e_1,\ldots,e_M)$, where each event $e_{m}$ in the sequence is described by the 3-tuple $(s_{m},r_{m},t_{m})$ (we exclude here the information about the event type), respectively sender, receiver, and time of the event. Furthermore, consider $N$ to be the number of actors in the network. For simplicity, we assume that all actors in the network can be the sender or the receiver of a relational event (i.e. _full_ risk set, see `vignette(topic="riskset",package="remify")` for more information on alternative definitions of the risk set) and we use the index $n$ to indicate any actor in the set $\mathcal{R}$ of actors at risk, thus $n \in \left\lbrace 1,2,\ldots,N\right\rbrace$.
 
 ---
 
@@ -351,6 +357,12 @@ where:
 - $\mathcal{R}$ describes the set of actors at risk of initiating an interaction, becoming then the future sender of a relational event (the set also includes the actor that is sender of the event at time $t_m$). In this tutorial, the risk set of the sender model is assumed to be the _full_ risk set, where all the actors in the network can be "the sender" of a relational event at any time point in the event sequence;
 - $(t_{m}-t_{m-1})$ is the waiting time between two subsequent relational events.
 
+If the time of occurrence of the events is not available and we know only their order of occurrence, then the likelihood function for the sender model reduces to the Cox proportional-hazard survival model [@Cox1972],
+
+$$ \mathscr{L}_{\text{sender model}}(\boldsymbol{\theta}; E_{t_M},X)=
+\prod_{m=1}^{M}{\Bigg[\frac{\tau(s_{m},t_{m},\boldsymbol{\theta})}{\sum_{n\in \mathcal{R}}^{}{\tau(n,t_{m},\boldsymbol{\theta})}}}\Bigg]
+$$
+
 ---
 
 #### Receiver choice model
@@ -365,14 +377,14 @@ where:
 
 - $\exp{\left\lbrace\boldsymbol{\beta}^{T}U_{[m,r_m,.]}\right\rbrace} \backslash \sum_{n \in \mathcal{R} \setminus \left\lbrace s_m \right\rbrace }^{}{\exp{\left\lbrace\boldsymbol{\beta}^{T}U_{[m,n,.]}\right\rbrace}}$ is the conditional probability that the sender $s_m$ active at time $t_m$ chooses $r_m$ as  the receiver of the next interaction, and:
   - $\boldsymbol{\beta}$ is the vector of $K$ parameters of interest. Such parameters describe the effect that the sufficient statistics (explanatory variables) have on the choice of a receiver;
-  - $\boldsymbol{\beta}^{T}U_{[m,n,.]} = \sum_{k=1}^{K}{\beta_k U_{[m,n,p]}}$ is the linear predictor of the event at time $t_{m}$ in which the sender is $s_m$ and the receiver is any of the possible receivers, $n$ with $n \neq s_m$. The object $U$ is a three dimensional array with number of rows equal to the number of events in the sequence (see `vignette(package="remstats")` for more information about statistics calculated _per unique time point_ or _per observed event_), number of columns equal to number of actors ($N$), number of slices equal to the number of variables in the linear predictor ($K$).
-- $r_m$ refers to the receiver observed at time $t_m$ and $n$ refers to any actor that can be the receiver of the event at time $t_m$ (excluding $s_m$)
-- $\mathcal{R}$ describes the set of actors at risk of becoming the receiver of the next interaction. In the case of the receiver model, the risk set composition _changes_ over time because at each time point the actor that is currently the sender cannot be also the receiver of the interaction and is excluded from the set of potential receivers. In this tutorial, the risk set of the reiceiver model is assumet to be the _full_ risk set where all actors (excluding the current sender at each time point) can be "the receiver" at any time point.
+  - $\boldsymbol{\beta}^{T}U_{[m,n,.]} = \sum_{k=1}^{K}{\beta_k U_{[m,n,k]}}$ is the linear predictor of the event at time $t_{m}$ in which the sender is $s_m$ and the receiver is any of the possible receivers, $n$ with $n \neq s_m$. The object $U$ is a three dimensional array with number of rows equal to the number of events in the sequence (see `vignette(package="remstats")` for more information about statistics calculated _per unique time point_ or _per observed event_), number of columns equal to number of actors ($N$), number of slices equal to the number of variables in the linear predictor ($K$).
+- $r_m$ refers to the receiver observed at time $t_m$ and $n$ refers to any actor that can be the receiver of the event at time $t_m$ (excluding the sender at time $t_m$)
+- $\mathcal{R}$ describes the set of actors at risk of becoming the receiver of the next interaction. In the case of the receiver model, the risk set composition _changes_ over time because at each time point the actor that is currently the sender cannot be also the receiver of the interaction and is excluded from the set of potential receivers. In this tutorial, the risk set of the reiceiver model is assumed to be the _full_ risk set where all actors (excluding the current sender at each time point) can be "the receiver" at any time point.
 
 ---
 
 #### A toy example on the actor oriented modeling framework 
-Consider the data `ao_data`, that is a list containing an simulated relational event sequence where events were generating by following a actor-oriented framework.
+Consider the data `ao_data`, that is a list containing a simulated relational event sequence where events were generated by following the two-steps process described in the section above.
 We are going to model the sender activity rate and the receiver choice as:
 
 $$ \tau(n,t_{m},\boldsymbol{\theta}) = \exp{\left\lbrace \theta_{\text{intercept}}  + \theta_{indegreeSender}\text{indegreeSender}(n,t_{m})\right\rbrace} $$
@@ -381,14 +393,15 @@ $$ \tau(n,t_{m},\boldsymbol{\theta}) = \exp{\left\lbrace \theta_{\text{intercept
 $$ \exp{\left\lbrace \boldsymbol{\beta}^{T}U_{[m,n,.]} \right\rbrace} = \exp{\left\lbrace \beta_{\text{inertia}}\text{inertia}(s_m,n,t_{m})  + \beta_{\text{reciprocity}}\text{reciprocity}(s_m,n,t_{m})\right\rbrace}$$ 
 
 
-Furthermore, we know that the _statistics_ (name in subscript next to the model parameters $\theta$ and $\beta$) and _true_ parameters' values used in the generation of the event sequence are:
+Furthermore, we know that _true_ parameters quantifying the effect of the _statistics_ (name in subscript next to the model parameters $\theta$ and $\beta$) used in the generation of the event sequence are:
 
 - for the sender model,
 $$\begin{bmatrix} \theta_{intercept} \\ \theta_{\text{indegreeSender}} \end{bmatrix} = \begin{bmatrix} -5.0 \\ 0.01 \end{bmatrix}$$
 - for the receiver model
 $$\begin{bmatrix}  \beta_{\text{inertia}} \\ \beta_{\text{reciprocity}} \end{bmatrix} = \begin{bmatrix} -0.1 \\ 0.03\end{bmatrix}$$
 
-The parameters are also available as object within the list, `ao_data$true.pars`. The event sequence was generated with another the package that will be available on CRAN.
+The parameters are also available as object within the list, `ao_data$true.pars`.
+
 ```{r}
 # setting `ncores` to 1 (the user can change this parameter)
 ncores <- 1L
@@ -399,7 +412,7 @@ data(ao_data)
 # true parameters' values
 ao_data$true.pars
 
-# processing event sequence
+# processing event sequence with 'remify'
 ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
 
 # summary of the relational event network
@@ -418,7 +431,7 @@ choice_model <- ~ remstats::inertia() + remstats::reciprocity()
 
 ```
 
-2. Second, we calculate the statistics defined in the linear predictor with the function `remstats::remstats()`. 
+2. Second, we calculate the statistics defined in the linear predictor with the function `remstats::remstats()` from the `remstats` package. 
 ```{r}
 # calculating statistics (with `remstats`)
 ao_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
@@ -436,7 +449,7 @@ remstimate::remstimate(reh = ao_reh,
                           ncores = ncores)    
 ```
 
-In the sections below, we show the estimation of the parameters using all the methods available and we also show the usage and output of the methods available for a `remstimate` object.
+In the sections below, as already done with the tie-oriented framework, we show the estimation of the parameters using all the methods available and we also show the usage and output of the methods available for a `remstimate` object.
 
 ---
 
@@ -450,19 +463,19 @@ ao_mle <- remstimate::remstimate(reh = ao_reh,
                         stats = ao_stats,
                         ncores = ncores,
                         method = "MLE",
-                        WAIC = TRUE,
-                        nsimWAIC = 100)             
+                        WAIC = TRUE, # setting WAIC computation to TRUE
+                        nsimWAIC = 100) # number of draws for the computation of the WAIC set to 100            
 ```
 
 ##### **print( )**
 ```{r} 
-# print 
+# printing the 'remstimate' object 
 ao_mle
 ```
 
 #### **summary( )**
 ```{r}     
-# summary 
+# summary of the 'remstimate' object
 summary(ao_mle)
 ```
 
@@ -502,20 +515,20 @@ plot(x = ao_mle, reh  = ao_reh, diagnostics = ao_mle_diagnostics)
 #### **Adaptive Gradient Descent Optimization (GDADAMAX)**
 
 ```{r}
-tie_gd <- remstimate::remstimate(reh = ao_reh,
+ao_gd <- remstimate::remstimate(reh = ao_reh,
                         stats =  ao_stats,
                         ncores = ncores,
                         method = "GDADAMAX",
                         epochs = 200L)
 # print 
-tie_gd
+ao_gd
 ```
 
 ```{r, out.width="50%", dev=c("jpeg")}
 # diagnostics
-tie_gd_diagnostics <- diagnostics(object = tie_gd, reh = ao_reh, stats = ao_stats)
+ao_gd_diagnostics <- diagnostics(object = ao_gd, reh = ao_reh, stats = ao_stats)
 # plot
-plot(x = tie_gd, reh  = ao_reh, diagnostics = tie_gd_diagnostics)
+plot(x = ao_gd, reh  = ao_reh, diagnostics = ao_gd_diagnostics)
 ```
 
 ---
@@ -527,7 +540,7 @@ plot(x = tie_gd, reh  = ao_reh, diagnostics = tie_gd_diagnostics)
 ```{r}
 library(mvnfast) # loading package for fast simulation from a multivariate Student t distribution
 priormvt <- mvnfast::dmvt # defining which distribution we want to use from the 'mvnfast' package
-tie_bsir <- remstimate::remstimate(reh = ao_reh,
+ao_bsir <- remstimate::remstimate(reh = ao_reh,
                         stats =  ao_stats,
                         ncores = ncores,
                         method = "BSIR",
@@ -544,14 +557,14 @@ tie_bsir <- remstimate::remstimate(reh = ao_reh,
                         )
 
 # summary 
-summary(tie_bsir)
+summary(ao_bsir)
 ```
 
 ```{r, out.width="50%", dev=c("jpeg")}
 # diagnostics
-tie_bsir_diagnostics <- diagnostics(object = tie_bsir, reh = ao_reh, stats = ao_stats)
+ao_bsir_diagnostics <- diagnostics(object = ao_bsir, reh = ao_reh, stats = ao_stats)
 # plot
-plot(x = tie_bsir, reh  = ao_reh, diagnostics = tie_bsir_diagnostics)
+plot(x = ao_bsir, reh  = ao_reh, diagnostics = ao_bsir_diagnostics)
 ```
 
 --- 
@@ -559,27 +572,28 @@ plot(x = tie_bsir, reh  = ao_reh, diagnostics = tie_bsir_diagnostics)
 #### **Hamiltonian Monte Carlo (HMC)**
 
 ```{r}
-tie_hmc <- remstimate::remstimate(reh = ao_reh,
+ao_hmc <- remstimate::remstimate(reh = ao_reh,
                         stats =  ao_stats,
                         method = "HMC",
                         ncores = ncores,
                         nsim = 200L, # 200 draws to generate per each chain
-                        nchains = 6L, # 6 chains to generate
-                        burnin = 300L, # burnin length is 50
-                        thin = 2L, # thinning size set to 2
+                        nchains = 6L, # 6 chains (each one long 200 draws) to generate
+                        burnin = 300L, # burnin length 
+                        thin = 2L, # thinning size (this will reduce the final length of each chain)
                         seed = 23029 # set a seed only for reproducibility purposes
                         )
 
 # summary 
-summary(tie_hmc)
+summary(ao_hmc)
 ```
 
 ```{r, out.width="50%", dev=c("jpeg")}
 # diagnostics
-tie_hmc_diagnostics <- diagnostics(object = tie_hmc, reh = ao_reh, stats = ao_stats)
-# plot
-plot(x = tie_hmc, reh  = ao_reh, diagnostics = tie_hmc_diagnostics)
+ao_hmc_diagnostics <- diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_stats)
+# plot (only for the receiver_model, by setting sender_model = NA)
+plot(x = ao_hmc, reh  = ao_reh, diagnostics = ao_hmc_diagnostics, sender_model = NA)
 ```
+
 ---
 
 

@@ -18,6 +18,20 @@ mle_loc <- remstimate::remstimate(reh = tie_reh,
                         method = "MLE",
                         ncores = 1L)
 
+# testing assignment c(1,reh$M) in diagnostics (no error is return)
+subset_stats <- attr(tie_reh_stats, "subset")
+attr(tie_reh_stats, "subset") <- NULL
+expect_silent(diagnostics(object = mle_loc, reh = tie_reh, stats = tie_reh_stats))
+attr(tie_reh_stats, "subset") <- subset_stats
+
+## ... remstimate object incompatible with stats object
+mle_loc_incompatible <- mle_loc
+mle_loc_incompatible$coefficients <- mle_loc_incompatible$coefficients[1]
+expect_error(diagnostics(object = mle_loc_incompatible, reh = tie_reh, stats = tie_reh_stats),
+"input 'object' not compatible with input 'stats'",
+fixed = TRUE)
+ 
+
 # loading data for actor-oriented modeling, defining linear predictor and computing statistics                     
 data(ao_data)
 
@@ -37,7 +51,15 @@ ao_mle_loc <- remstimate::remstimate(reh = ao_reh,
                         method = "MLE",
                         ncores = 1L)
 
-# testing errors
+# testing errors on 'remstimate' and 'diagnostics'
+
+## ... remstimate object incompatible with stats object
+ao_mle_loc_incompatible <- ao_mle_loc
+ao_mle_loc_incompatible[["sender_model"]]$coefficients <- ao_mle_loc_incompatible[["sender_model"]]$coefficients[1]
+ao_mle_loc_incompatible[["receiver_model"]]$coefficients <- ao_mle_loc_incompatible[["receiver_model"]]$coefficients[1]
+expect_error(diagnostics(object = ao_mle_loc_incompatible, reh = ao_reh, stats = ao_reh_stats),
+"input 'object' not compatible with input 'stats'",
+fixed = TRUE)
 
 ## input `reh` is not a `remify` object
 expect_error(remstimate::remstimate(reh = data.matrix(ao_data$edgelist),
@@ -46,7 +68,11 @@ expect_error(remstimate::remstimate(reh = data.matrix(ao_data$edgelist),
                         ncores = 1L),
 "'reh' must be a 'remify' object (see ?remify::remify).",
 fixed = TRUE
-)         
+)   
+# same error in 'diagnostics'
+expect_error(diagnostics(object = mle_loc, reh = data.matrix(ao_data$edgelist), stats = tie_reh_stats),
+"'reh' must be a 'remify' object (see ?remify::remify).",
+fixed=TRUE)
 
 ## input `method` is not available or it is mistyped
 expect_error(remstimate::remstimate(reh = tie_reh,
@@ -56,6 +82,22 @@ expect_error(remstimate::remstimate(reh = tie_reh,
 "The `method` specified is not available or it is mistyped.",
 fixed = TRUE
 )
+# modeling framework error in 'diagnostics'
+
+# ... for the remify object
+attr(tie_reh,"model") <- NULL
+expect_error(diagnostics(object = mle_loc, reh = tie_reh, stats = tie_reh_stats),
+"attribute 'model' of input 'reh' must be either 'actor' or 'tie'",
+fixed=TRUE)
+attr(tie_reh,"model") <- "tie"
+
+# ... for the remstats and remstimate object
+attr(mle_loc,"model") <- "actor"
+expect_error(diagnostics(object = mle_loc, reh = tie_reh, stats = tie_reh_stats),
+"attribute 'model' of input 'object' and 'stats' must be the same as the attribute of input 'reh'",
+fixed=TRUE)
+attr(mle_loc,"model") <- "tie"
+
 
 ## directed = FALSE and model = "actor"
 attr(ao_reh,"directed") <- FALSE
@@ -92,6 +134,12 @@ expect_error(remstimate::remstimate(reh = tie_reh,
 fixed = TRUE
 ) 
 
+# ... checking for attributes method in 
+expect_error(diagnostics(object = mle_loc, reh = tie_reh, stats = tie_reh_stats),
+"'stats' must be a 'remstats' object from the package 'remstats' (>= 3.2.0), suitable for tie-oriented modeling ('tomstats') or actor-oriented modeling ('aomstats')",
+fixed = TRUE
+) 
+
 # tie-oriented modeling with a aomstats object
 class(tie_reh_stats) <- c("aomstats","remstats")
 attr(tie_reh,"model") <- "tie" 
@@ -100,6 +148,11 @@ expect_error(remstimate::remstimate(reh = tie_reh,
                         method = "MLE",
                         ncores = 1L),
 "'remstats' object supplied cannot work for tie-oriented modeling",
+fixed = TRUE
+) 
+
+# ... testing the same in diagnostics
+expect_error(diagnostics(object = mle_loc, reh = tie_reh, stats = tie_reh_stats),"'remstats' object supplied cannot work for tie-oriented modeling",
 fixed = TRUE
 ) 
 
@@ -317,37 +370,65 @@ attr(tie_mle, "approach") <- ""
 expect_error(summary(tie_mle),
 "invalid 'remstimate' object",
 fixed = TRUE)
-
+attr(tie_mle, "approach") <- "Frequentist"
 
 # invalid 'remstimate' object
 attr(tie_mle, "model") <- "actor"
 expect_error(plot(tie_mle,tie_reh),"'x' and 'reh' have different attribute 'model'",fixed = TRUE)
+attr(tie_mle, "model") <- "tie"
 
 # stats
-attr(tie_mle, "model") <- "tie"
 expect_error(plot(x = tie_mle, reh = tie_reh,diagnostics = NULL),"'stats' must be provided if argument 'diagnostics' is NULL",fixed = TRUE)
 
 # diagnostics object
 expect_error(plot(x = tie_mle, reh = tie_reh,diagnostics = list(a = "foo")),"'diagnostics' must be an object of class 'remstimate' 'diagnostics'",fixed = TRUE)
- 
+
+
 # number of time points doesn't mach dimensions of remstats object
 ## tie-oriented modeling
-tie_reh_stats <- tie_reh_stats[1:10,,]
-class(tie_reh_stats) <- c("tomstats", "remstats")
-attr(tie_reh_stats,"method") <- "pt"
+tie_reh_stats_loc <- tie_reh_stats[1:10,,]
+class(tie_reh_stats_loc) <- c("tomstats", "remstats")
+attr(tie_reh_stats_loc,"method") <- "pt"
+attr(tie_reh_stats_loc,"model") <- "tie"
 expect_error(remstimate::remstimate(reh = tie_reh,
-                        stats = tie_reh_stats,
+                        stats = tie_reh_stats_loc,
                         method = "MLE",
                         ncores = 1L),
 "the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
 fixed = TRUE)
+
+## ... test the same in diagnostics
+expect_error(diagnostics(object = mle_loc, reh = tie_reh, stats = tie_reh_stats_loc),
+"the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
+fixed = TRUE)
+
+# method of remstats is not available
+attr(tie_reh_stats,"method") <- NULL
+expect_error(remstimate::remstimate(reh = tie_reh,
+                        stats = tie_reh_stats,
+                        method = "MLE",
+                        ncores = 1L),
+"attribute 'method' not found inside object 'remstats'. Input argument 'stats' must be an object of class 'remstats' from the package 'remstats' (>=3.2.0)",
+fixed = TRUE)
+
+# ... testing the same in diagnostics
+expect_error(diagnostics(object = mle_loc, reh = tie_reh, stats = tie_reh_stats),
+"attribute 'method' not found inside object 'remstats'. Input argument 'stats' must be an object of class 'remstats' from the package 'remstats' (>=3.2.0)",
+fixed = TRUE)
+
 ## actor-oriented modeling
 data(ao_data)
 # processing data with simultaneous events (two events observed at the same time point)
-ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
+omit_dyad_ao <- list()
+omit_dyad_ao[[1]] <- list(time = c(ao_data$edgelist$time[41],ao_data$edgelist$time[47]), dyad = data.frame(actor1=c(NA,"1"),actor2=c("1",NA),type =c(NA,NA) ))
+ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor",omit_dyad = omit_dyad_ao)
 rate_model <- ~ 1 + remstats::indegreeSender()
 choice_model <- ~ remstats::inertia() + remstats::reciprocity()
 ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
+ao_mle_loc <- remstimate::remstimate(reh = ao_reh, stats = ao_reh_stats, ncores = 1L)
+expect_silent(diagnostics(object = ao_mle_loc, reh = ao_reh, stats = ao_reh_stats))
+
+# testing errors on remstimate and diagnostics when dimensions of stats differ from the dimensions in the remify object
 ao_reh_stats$sender_stats <- ao_reh_stats$sender_stats[1:10,,]
 ao_reh_stats$receiver_stats <- ao_reh_stats$receiver_stats[1:10,,]
 class(ao_reh_stats) <- c("aomstats","remstats")
@@ -356,6 +437,11 @@ expect_error(remstimate::remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         method = "MLE",
                         ncores = 1L),
+"the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
+fixed = TRUE)
+
+# ... testing the same on diagnostics
+expect_error(diagnostics(object = ao_mle_loc, reh = ao_reh, stats = ao_reh_stats),
 "the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object",
 fixed = TRUE)
 
@@ -370,11 +456,13 @@ expect_error(remstimate::remstimate(reh = ao_reh,
 fixed = TRUE
 ) 
 
-# method of remstats is not available
-attr(tie_reh_stats,"method") <- NULL
-expect_error(remstimate::remstimate(reh = tie_reh,
-                        stats = tie_reh_stats,
-                        method = "MLE",
-                        ncores = 1L),
-"attribute 'method' not found inside object 'remstats'. Input argument 'stats' must be an object of class 'remstats' from the package 'remstats' (>=3.2.0)",
-fixed = TRUE)
+# ... testing the same on diagnostics
+expect_error(diagnostics(object = ao_mle_loc,reh = ao_reh,stats = ao_reh_stats),"'remstats' object supplied cannot work for actor-oriented modeling",
+fixed = TRUE
+) 
+
+
+# testing that diagnostics runs without error when method = "pe" in actor-oriented modeling framework
+ao_reh_stats_pe <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model,method="pe")
+ao_mle_loc <- remstimate::remstimate(reh = ao_reh, stats = ao_reh_stats_pe, ncores = 1L)
+expect_silent(diagnostics(object = ao_mle_loc, reh = ao_reh, stats = ao_reh_stats_pe))

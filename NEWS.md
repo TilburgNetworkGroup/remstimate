@@ -1,4 +1,4 @@
-# NEWS (last update on April 13, 2023)
+# NEWS (last update on December 18, 2023)
 
 
 
@@ -43,3 +43,16 @@ _30/06/2023_ `remstimate 2.2.0`:
 
 _14/11/2023_ `remstimate 2.3.0`:
 * Simultaneous events (likelihood functions adapted)
+
+_18/12/2023_ `remstimate 2.3.7`:
+* remstimate 2.3.7 is submitted to CRAN in its current form. Added functionalities are:
+    - trace plot for posterior draws (only via `"HMC"` method) with highest posterior density intervals;
+    - histograms of posterior draws (for both `"BSIR"` and `"HMC"` method) with highest posterior density intervals;
+    - the content of `summary.remstimate()` can be saved by assigning it to a variable;
+    - Watanabe-Akaike's Information Criterion (WAIC) calculation available. New argument, logical value, `WAIC`, with default `FALSE`. If `WAIC=TRUE`, then an optional argument `nsimWAIC` (number of draws to estimate the WAIC) is set by default to `500` (the user can supply a different value);
+    - updated parallelization of routines as to the computation of likelihood, gradient and hessian in the actor-oriented modeling framework;
+    - updated parallelization of routines for computing model residuals and WAIC;
+    - new tests, increased coverage.
+
+
+

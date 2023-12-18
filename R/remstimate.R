@@ -4,7 +4,7 @@
 #'
 #' @param reh a \code{remify} object of the processed relational event history. Output object of the function \code{remify::remify()}.
 #' @param stats a \code{remstats} object: when `attr(reh,"model")` is `"tie"`, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if `attr(reh,"model")` is `"actor"`, \code{stats} is a list that can contain up to two arrays named \code{"sender_stats"} and \code{"receiver_stats"} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{"sender_stats"}, receivers in the array \code{"receiver_stats"}). Furthermore, it is possible to only estimate the sender rate model or only the receiver choice model, by using the correct naming of the arrays.
-#' @param method the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}, and also the default method), Adaptive Gradient Descent (\code{"GDADAMAX"}), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).
+#' @param method the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}, and also the default method), Adaptive Gradient Descent (\code{"GDADAMAX"}) based on the work of Diederik P. Kingma and Jimmy Ba, 2014 (<doi:10.48550/arXiv.1412.6980>), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).
 #' @param ncores [\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization)
 #' @param prior [\emph{optional}] prior distribution when \code{method} is \code{"BSIR"}. Default value is \code{NULL}, which means that no prior is assumed. For the tie-oriented modeling, the argument \code{prior} is the name of the function in the format \code{name_package::name_density_function}. The parameters of the prior distribution can be supplied as inputs to the remstimate function (e.g., \code{remstimate::remstimate(reh=reh,stats=stats,method="BSIR",ncores=5,prior=mvnfast::dmvn,mu=rep(0,3),sigma=diag(3)*2,log=TRUE)} ). For actor-oriented modeling the argument \code{prior} is a named list of two objects \code{"sender_model"}, which calls the prior function for the sender rate model, and, \code{"receiver_model"}, which calls the prior function for the receiver choice model. For the specification of the prior parameters, the user must define an optional argument called \code{prior_args}, which is also a named list (with names \code{"sender_model"} and \code{"receiver_model"}): each list is a list of objects named after the prior arguments and with value of the prior argument (e.g., \code{prior_args$sender_model = list(mu = rep(1.5,3), sigma = diag(3)*0.5, log = TRUE)}). Finally, both in tie-oriented and actor-oriented modeling prior functions must have an argument that returns the value of the density on a logarithmic scale (i.e., \code{log=TRUE}). \code{log=TRUE} is already set up internally by \code{remstimate()}.
 #' @param nsim  [\emph{optional}] when \code{method} is \code{"HMC"}, \code{nsim} is the number of simulations (iterations) in each chain, when \code{method} is \code{"BSIR"}, then \code{nsim} is the number of samples from the proposal distribution. Default value is \code{1000}.
@@ -123,8 +123,8 @@ remstimate <- function(reh,
     }
 
     # ... model
-    model <- attr(reh, "model") # attribute from reh object
-    if(is.null(model) | !(model %in% c("actor","tie"))){
+    model <- ifelse(is.null(attr(reh, "model")),"",attr(reh, "model")) # attribute from reh object
+    if(!(model %in% c("actor","tie"))){
         stop("attribute 'model' of input 'reh' must be either 'actor' or 'tie'")
     }
     if(!is.null(attr(stats,"model"))){
@@ -1839,15 +1839,16 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
     }
 
     # ... model
-    model <- attr(reh, "model") # attribute from reh object
-    if(is.null(model) | !(model %in% c("actor","tie"))){
+    model <- ifelse(is.null(attr(reh, "model")),"",attr(reh, "model")) # attribute from reh object
+    if(!(model %in% c("actor","tie"))){
         stop("attribute 'model' of input 'reh' must be either 'actor' or 'tie'")
     }
-    if(!is.null(attr(stats,"model"))){
-        if(attr(stats,"model")!=attr(reh,"model")){
-            stop("attribute 'model' of input 'reh' and input 'stats' must be the same")
-        }
+    model_object <- ifelse(is.null(attr(object, "model")),"",attr(object, "model"))
+    model_stats <- ifelse(is.null(attr(stats, "model")),"",attr(stats, "model"))
+    if((model_stats != model) | (model_object != model)){
+        stop("attribute 'model' of input 'object' and 'stats' must be the same as the attribute of input 'reh'")
     }
+
 
     # ... active riskset? then overwrite two objects (this prevents from coding many ifelse() to switch between active-oriented riskset objects and full-oriented riskset objects)
     if((attr(reh,"riskset") == "active")){
@@ -1863,8 +1864,8 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
     ordinal <- attr(reh,"ordinal")
 
     # ... ncores
-    if(!is.null(attr(remstimate,"ncores"))){
-        ncores <- attr(remstimate,"ncores")
+    if(!is.null(attr(object,"ncores"))){
+        ncores <- attr(object,"ncores")
     }
 
     # ... omit dyad
@@ -2053,8 +2054,15 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
     ## diagnostics per model type (tie-oriented and actor-oriented)
 
     if(attr(object,"model") == "tie"){ # tie-oriented modeling
-        # [[CHECK]] on variables names from object and stats (throw an error if they do not match)
-        # [[CHECK]] on reh and object characteristics (throw an error if they do not match)
+        length_comparison <- length(object$coefficients) == dim(stats)[2] # check number of coefficients and dimension of 'stats'object
+        name_comparison <- FALSE
+        if(length_comparison){
+            name_comparison <- all(names(object$coefficients) == dimnames(stats)[[2]]) # check that names are the same
+        }
+        if(!name_comparison | !length_comparison){
+            stop("input 'object' not compatible with input 'stats'")
+        }
+
         variables_names <- attr(object, "statistics")
         where_is_baseline <- attr(object,"where_is_baseline")
         select_vars <- if(is.null(where_is_baseline)) 1:length(variables_names) else c(1:length(variables_names))[-where_is_baseline]
@@ -2068,7 +2076,7 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
                                                 dyad = attr(reh,"dyadID"),
                                                 omit_dyad = reh$omit_dyad,
                                                 model = attr(reh,"model"),
-                                                ncores = attr(object,"ncores"),
+                                                ncores = ncores,
                                                 baseline = baseline_value,
                                                 N = reh$N
                                                 )
@@ -2081,8 +2089,30 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
         }
     }
     else if(attr(object,"model") == "actor"){ # actor-oriented modeling
-        # [[CHECK]] on variables names from object and stats (throw an error if they do not match)
-        # [[CHECK]] on reh and object characteristics (throw an error if they do not match)
+        compare_input_sender <- compare_input_receiver <- FALSE
+        if(!is.null(stats[["sender_stats"]])){
+            length_comparison <- length(object[["sender_model"]]$coefficients) == dim(stats[["sender_stats"]])[2] # check number of coefficients and dimension of 'stats'object
+            name_comparison <- FALSE
+            if(length_comparison){
+                name_comparison <- all(names(object[["sender_model"]]$coefficients) == dimnames(stats[["sender_stats"]])[[2]]) # check that names are the same
+            }
+            if(!name_comparison | !length_comparison){
+                compare_input_sender <- TRUE
+            }
+        }
+        if(!is.null(stats[["receiver_stats"]])){
+            length_comparison <- length(object[["receiver_model"]]$coefficients) == dim(stats[["receiver_stats"]])[2] # check number of coefficients and dimension of 'stats'object
+            name_comparison <- FALSE
+            if(length_comparison){
+                name_comparison <- all(names(object[["receiver_model"]]$coefficients) == dimnames(stats[["receiver_stats"]])[[2]]) # check that names are the same
+            }
+            if(!name_comparison | !length_comparison){
+                compare_input_receiver <- TRUE
+            }
+        }
+        if(compare_input_sender | compare_input_receiver){
+            stop("input 'object' not compatible with input 'stats'")
+        }
         variables_names <- attr(object, "statistics")
         where_is_baseline <- attr(object,"where_is_baseline")
         senderRate <- c(TRUE,FALSE)
@@ -2116,7 +2146,7 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
                                                         model = attr(reh,"model"),
                                                         N = reh$N,
                                                         senderRate = senderRate[i],
-                                                        ncores = attr(object,"ncores"),
+                                                        ncores = ncores,
                                                         baseline = baseline_value)                                   
                 colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <- if(senderRate[i]) variables_names[["sender_model"]][select_vars] else variables_names[["receiver_model"]][select_vars]
                 # lambdas (event rates)

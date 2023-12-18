@@ -11,4 +11,5 @@
 ^README\.md$
 ^man\figures\$
 ^NEWS\.md$
+^CRAN-SUBMISSION$
 ^analyses$
