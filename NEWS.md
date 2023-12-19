@@ -59,5 +59,5 @@ _19/12/2023_ `remstimate 2.3.8`:
     - DESCRIPTION file, removed quotes from acronyms
     - documentation (return values added where missing)
     - tests (removed test on 'ncores' argument)
-    - vignette (switched to 'html_vignette', edited seed value and parameters for HMC method)
+    - vignette (switched to 'html_document', edited seed value and parameters for HMC method)
 
