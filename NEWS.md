@@ -54,5 +54,10 @@ _18/12/2023_ `remstimate 2.3.7`:
     - updated parallelization of routines for computing model residuals and WAIC;
     - new tests, increased coverage.
 
-
+_18/12/2023_ `remstimate 2.3.7`:
+* remstimate 2.3.8 contains minor fixes as to:
+    - DESCRIPTION file, removed quotes from acronyms
+    - documentation (return values added where missing)
+    - tests (removed test on 'ncores' argument)
+    - vignette (switched to 'html_vignette', edited seed value and parameters for HMC method)
 
