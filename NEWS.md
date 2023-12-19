@@ -54,7 +54,7 @@ _18/12/2023_ `remstimate 2.3.7`:
     - updated parallelization of routines for computing model residuals and WAIC;
     - new tests, increased coverage.
 
-_18/12/2023_ `remstimate 2.3.7`:
+_19/12/2023_ `remstimate 2.3.8`:
 * remstimate 2.3.8 contains minor fixes as to:
     - DESCRIPTION file, removed quotes from acronyms
     - documentation (return values added where missing)
