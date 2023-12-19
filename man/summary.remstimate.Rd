@@ -7,12 +7,15 @@
 \method{summary}{remstimate}(object, ...)
 }
 \arguments{
-\item{object}{is a \code{remstimate} object}
+\item{object}{is a \code{remstimate} object.}
 
-\item{...}{further arguments to be passed to the 'summary' method}
+\item{...}{further arguments to be passed to the 'summary' method.}
+}
+\value{
+no return value. Prints out the summary of a 'remstimate' object. The output can be save in a list, which contains the information printed out by the summary method.
 }
 \description{
-A function that returns the summary of a remstimate object
+A function that returns the summary of a remstimate object.
 }
 \examples{
 

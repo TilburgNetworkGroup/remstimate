@@ -10,12 +10,15 @@ waic(object, ...)
 \method{waic}{remstimate}(object, ...)
 }
 \arguments{
-\item{object}{is a \code{remstimate} object}
+\item{object}{is a \code{remstimate} object.}
 
-\item{...}{further arguments to be passed to the 'waic' method}
+\item{...}{further arguments to be passed to the 'waic' method.}
+}
+\value{
+WAIC value of a 'remstimate' object.
 }
 \description{
-A function that returns the WAIC (Watanabe-Akaike's Information Criterion) value in a 'remstimate' object
+A function that returns the WAIC (Watanabe-Akaike's Information Criterion) value in a 'remstimate' object.
 }
 \section{Methods (by class)}{
 \itemize{

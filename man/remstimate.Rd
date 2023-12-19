@@ -31,7 +31,7 @@ remstimate(
 
 \item{method}{the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}, and also the default method), Adaptive Gradient Descent (\code{"GDADAMAX"}) based on the work of Diederik P. Kingma and Jimmy Ba, 2014 (<doi:10.48550/arXiv.1412.6980>), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).}
 
-\item{ncores}{[\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization)}
+\item{ncores}{[\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization).}
 
 \item{prior}{[\emph{optional}] prior distribution when \code{method} is \code{"BSIR"}. Default value is \code{NULL}, which means that no prior is assumed. For the tie-oriented modeling, the argument \code{prior} is the name of the function in the format \code{name_package::name_density_function}. The parameters of the prior distribution can be supplied as inputs to the remstimate function (e.g., \code{remstimate::remstimate(reh=reh,stats=stats,method="BSIR",ncores=5,prior=mvnfast::dmvn,mu=rep(0,3),sigma=diag(3)*2,log=TRUE)} ). For actor-oriented modeling the argument \code{prior} is a named list of two objects \code{"sender_model"}, which calls the prior function for the sender rate model, and, \code{"receiver_model"}, which calls the prior function for the receiver choice model. For the specification of the prior parameters, the user must define an optional argument called \code{prior_args}, which is also a named list (with names \code{"sender_model"} and \code{"receiver_model"}): each list is a list of objects named after the prior arguments and with value of the prior argument (e.g., \code{prior_args$sender_model = list(mu = rep(1.5,3), sigma = diag(3)*0.5, log = TRUE)}). Finally, both in tie-oriented and actor-oriented modeling prior functions must have an argument that returns the value of the density on a logarithmic scale (i.e., \code{log=TRUE}). \code{log=TRUE} is already set up internally by \code{remstimate()}.}
 
@@ -41,7 +41,7 @@ remstimate(
 
 \item{burnin}{[\emph{optional}] number of initial iterations to be added as burnin for \code{method = "HMC"}. Default value is \code{500}.}
 
-\item{thin}{[\emph{optional}] number of steps to skip in the posterior draws for \code{method = "HMC"}. Default value is \code{10}. If \code{nsim<100}, thin is set to \code{1}}
+\item{thin}{[\emph{optional}] number of steps to skip in the posterior draws for \code{method = "HMC"}. Default value is \code{10}. If \code{nsim<100}, thin is set to \code{1}.}
 
 \item{init}{[\emph{optional}] vector of initial values if tie-oriented model, or a named list of two vectors ('sender_model' and 'receiver_model') if both models of the actor-oriented framework are specified. \code{init} can also be a list of only one vector (named 'sender_model' or 'receiver_model'), if the interest is to estimate one specific model of the actor-oriented framework. \code{init} is used for the methods \code{"GDADAMAX"} and \code{"HMC"}. If \code{init} is \code{NULL}, then it will be assigned internally.}
 
@@ -60,7 +60,7 @@ remstimate(
 \item{...}{additional parameters. They can be parameters of other functions defined as input in some of the arguments above. (e.g., arguments of the \code{prior} distribution)}
 }
 \value{
-'remstimate' S3 object
+'remstimate' S3 object.
 }
 \description{
 A function for the optimization of tie-oriented and actor-oriented likelihood. There are four optimization algorithms: two Frequentists, Maximum Likelihood Estimation (\code{MLE}) and Adaptive Gradient Descent (\code{GDADAMAX}), and two Bayesian, Bayesian Sampling Importance Resampling (\code{BSIR}) and Hamiltonian Monte Carlo (\code{HMC}).

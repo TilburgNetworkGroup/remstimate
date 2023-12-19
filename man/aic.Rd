@@ -10,12 +10,15 @@ aic(object, ...)
 \method{aic}{remstimate}(object, ...)
 }
 \arguments{
-\item{object}{is a \code{remstimate} object}
+\item{object}{is a \code{remstimate} object.}
 
-\item{...}{further arguments to be passed to the 'aic' method}
+\item{...}{further arguments to be passed to the 'aic' method.}
+}
+\value{
+AIC value of a 'remstimate' object.
 }
 \description{
-A function that returns the AIC (Akaike's Information Criterion) value in a 'remstimate' object
+A function that returns the AIC (Akaike's Information Criterion) value in a 'remstimate' object.
 }
 \section{Methods (by class)}{
 \itemize{

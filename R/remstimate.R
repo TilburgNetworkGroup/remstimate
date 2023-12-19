@@ -5,12 +5,12 @@
 #' @param reh a \code{remify} object of the processed relational event history. Output object of the function \code{remify::remify()}.
 #' @param stats a \code{remstats} object: when `attr(reh,"model")` is `"tie"`, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if `attr(reh,"model")` is `"actor"`, \code{stats} is a list that can contain up to two arrays named \code{"sender_stats"} and \code{"receiver_stats"} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{"sender_stats"}, receivers in the array \code{"receiver_stats"}). Furthermore, it is possible to only estimate the sender rate model or only the receiver choice model, by using the correct naming of the arrays.
 #' @param method the optimization method to estimate model parameters. Methods available are: Maximum Likelihood Estimation (\code{"MLE"}, and also the default method), Adaptive Gradient Descent (\code{"GDADAMAX"}) based on the work of Diederik P. Kingma and Jimmy Ba, 2014 (<doi:10.48550/arXiv.1412.6980>), Bayesian Sampling Importance Resampling (\code{"BSIR"}), Hamiltonian Monte Carlo (\code{"HMC"}). (default method is \code{"MLE"}).
-#' @param ncores [\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization)
+#' @param ncores [\emph{optional}] number of threads for the parallelization. (default value is \code{1}, which means no parallelization).
 #' @param prior [\emph{optional}] prior distribution when \code{method} is \code{"BSIR"}. Default value is \code{NULL}, which means that no prior is assumed. For the tie-oriented modeling, the argument \code{prior} is the name of the function in the format \code{name_package::name_density_function}. The parameters of the prior distribution can be supplied as inputs to the remstimate function (e.g., \code{remstimate::remstimate(reh=reh,stats=stats,method="BSIR",ncores=5,prior=mvnfast::dmvn,mu=rep(0,3),sigma=diag(3)*2,log=TRUE)} ). For actor-oriented modeling the argument \code{prior} is a named list of two objects \code{"sender_model"}, which calls the prior function for the sender rate model, and, \code{"receiver_model"}, which calls the prior function for the receiver choice model. For the specification of the prior parameters, the user must define an optional argument called \code{prior_args}, which is also a named list (with names \code{"sender_model"} and \code{"receiver_model"}): each list is a list of objects named after the prior arguments and with value of the prior argument (e.g., \code{prior_args$sender_model = list(mu = rep(1.5,3), sigma = diag(3)*0.5, log = TRUE)}). Finally, both in tie-oriented and actor-oriented modeling prior functions must have an argument that returns the value of the density on a logarithmic scale (i.e., \code{log=TRUE}). \code{log=TRUE} is already set up internally by \code{remstimate()}.
 #' @param nsim  [\emph{optional}] when \code{method} is \code{"HMC"}, \code{nsim} is the number of simulations (iterations) in each chain, when \code{method} is \code{"BSIR"}, then \code{nsim} is the number of samples from the proposal distribution. Default value is \code{1000}.
 #' @param nchains [\emph{optional}] number of chains to generate in the case of \code{method = "HMC"}. Default value is \code{1}.
 #' @param burnin [\emph{optional}] number of initial iterations to be added as burnin for \code{method = "HMC"}. Default value is \code{500}.
-#' @param thin [\emph{optional}] number of steps to skip in the posterior draws for \code{method = "HMC"}. Default value is \code{10}. If \code{nsim<100}, thin is set to \code{1}
+#' @param thin [\emph{optional}] number of steps to skip in the posterior draws for \code{method = "HMC"}. Default value is \code{10}. If \code{nsim<100}, thin is set to \code{1}.
 #' @param init [\emph{optional}] vector of initial values if tie-oriented model, or a named list of two vectors ('sender_model' and 'receiver_model') if both models of the actor-oriented framework are specified. \code{init} can also be a list of only one vector (named 'sender_model' or 'receiver_model'), if the interest is to estimate one specific model of the actor-oriented framework. \code{init} is used for the methods \code{"GDADAMAX"} and \code{"HMC"}. If \code{init} is \code{NULL}, then it will be assigned internally.
 #' @param epochs [\emph{optional}] It is the number of iteration used in the method \code{"GDADAMAX"}. Default value is \code{1000}.
 #' @param L [\emph{optional}] number of leap-frog steps to use in the method \code{"HMC"}. Default value is \code{50}.
@@ -20,7 +20,7 @@
 #' @param silent [\emph{optional}-not-yet-implemented] a \code{TRUE/FALSE} value. If \code{FALSE}, progress of optimization status will be printed out. 
 #' @param ... additional parameters. They can be parameters of other functions defined as input in some of the arguments above. (e.g., arguments of the \code{prior} distribution)
 #'
-#' @return  'remstimate' S3 object
+#' @return  'remstimate' S3 object.
 #' 
 #' @examples 
 #' 
@@ -161,7 +161,12 @@ remstimate <- function(reh,
     # ... ncores
     if(is.null(ncores)) ncores <- attr(reh,"ncores")
     if(((parallel::detectCores() > 2L) & (ncores > floor(parallel::detectCores()-2L))) | ((parallel::detectCores() == 2L) & (ncores > 1L))){
-            stop("'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)")
+        if((parallel::detectCores() <= 2L)){
+            ncores <- 1L # for 2 or 1 core available, ncores is set to 1
+        }
+        else{
+            ncores <- parallel::detectCores() - 2L # for 3 or more cores available 
+        }
     }
 
     # ... omit dyad
@@ -1227,9 +1232,12 @@ remstimate <- function(reh,
 #' @title print.remstimate
 #' @rdname print.remstimate
 #' @description A function that prints out the estimates returned by a 'remstimate' object.
-#' @param x is a \code{remstimate} object 
-#' @param ... further arguments to be passed to the print method
+#' @param x is a \code{remstimate} object.
+#' @param ... further arguments to be passed to the print method.
 #' @method print remstimate
+#' 
+#' @return no return value. Prints out the main characteristics of a 'remstimate' object.
+#' 
 #' @export
 #' 
 #' @examples
@@ -1378,10 +1386,13 @@ print.remstimate<-function(x, ...){
 # summary.remstimate
 #' @title Generate the summary of a remstimate object
 #' @rdname summary.remstimate
-#' @description A function that returns the summary of a remstimate object
-#' @param object is a \code{remstimate} object 
-#' @param ... further arguments to be passed to the 'summary' method
+#' @description A function that returns the summary of a remstimate object.
+#' @param object is a \code{remstimate} object.
+#' @param ... further arguments to be passed to the 'summary' method.
 #' @method summary remstimate
+#' 
+#' @return no return value. Prints out the summary of a 'remstimate' object. The output can be save in a list, which contains the information printed out by the summary method.
+#' 
 #' @export
 #' 
 #' @examples
@@ -1778,13 +1789,13 @@ summary.remstimate<-function (object, ...)
 # diagnostics
 #' @title diagnostics
 #' @description A function that returns the diagnostics of a \code{remstimate} object. The output object of the method \code{diagnostics} contains the residuals of the model estimated in the \code{remstimate} object, and the event rates estimated from the model at each tiem point. For tie-oriented modeling frameworks the object contains: a list \code{residuals} with two objects, \code{standardized_residuals} containing standardized Schoenfeld's residuals (Schoenfeld, D., 1982, <doi:10.2307/2335876>; Grambsch, P. M., & Therneau, T. M., 1994, <doi:10.2307/2337123>; Winnett, A., & Sasieni, P., 2001, <jstor.org/stable/2673500>), and \code{smoothing_weights} (a matrix of weights used for the red smooth splines in the plot of the residuals), an array structure \code{rates} with the event rates estimated from the optimized model parameters, and \code{.reh.processed} which is a pseudo-hidden object containing a further processed \code{remify} object that helps speed up the plotting function \code{plot.remstimate} and that the user is not supposed to modify. As to the actor-oriented modeling frameworks, in the diagnostics output there are two main list objects named after \code{sender_model} and \code{receiver_model}. After selecting the model, the structure of diagnostics is the same as for the tie-oriented model. Each model's diagnostics (sender or receiver) is available only if the corresponding model is found in the \code{remstimate} object.
-#' @param object is a \code{remstimate} object 
-#' @param reh is a \code{remify} object, the same used for the 'remstimate' object
-#' @param stats is a \code{remstats} object, the same used for the 'remstimate' object
-#' @param ... further arguments to be passed to the 'diagnostics' method
+#' @param object is a \code{remstimate} object.
+#' @param reh is a \code{remify} object, the same used for the 'remstimate' object.
+#' @param stats is a \code{remstats} object, the same used for the 'remstimate' object.
+#' @param ... further arguments to be passed to the 'diagnostics' method.
 #' @export
 #' 
-#' @return A object of class \code{"diagnostics" "remstimate"} with standardized Schoenfeld's residuals and estimated event rates given the optimized model parameters. 
+#' @return a object of class \code{"diagnostics" "remstimate"} with standardized Schoenfeld's residuals and estimated event rates given the optimized model parameters. 
 #'
 #' 
 #' @examples
@@ -2173,15 +2184,18 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
 #' @title plot.remstimate
 #' @rdname plot.remstimate
 #' @description A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
-#' @param x is a \code{remstimate} object
-#' @param reh a \code{remify} object, the same used for the \code{remstimate} object
-#' @param diagnostics is a \code{'diagnostics' 'remstimate'} object
+#' @param x is a \code{remstimate} object.
+#' @param reh a \code{remify} object, the same used for the \code{remstimate} object.
+#' @param diagnostics is a \code{'diagnostics' 'remstimate'} object.
 #' @param which one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).
 #' @param effects [\emph{optional}] for tie-oriented modeling (model =  "tie"), the names of the statistics which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}). Default value is \code{NULL}, selecting all the effects available in the 'remstimate' object.
 #' @param sender_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the sender model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}). If the user wants to plot only the diagnostics of one or more effects of the sender model and at the same time wants to exclude the plots of the receiver model, then set argument \code{receiver_effects = NA} and specify the vector of effects to \code{sender_effects} (or leave it \code{sender_effects = NULL} for selecting all effects of the sender model). Default value is \code{NULL}, selecting all the effects available for the sender model in the 'remstimate' object.
 #' @param receiver_effects [\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the receiver model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}). If the user wants to plot only the diagnostics of one or more effects of the receiver model and at the same time wants to exclude the plots of the sender model, then set argument \code{sender_effects = NA} and specify the vector of effects to \code{receiver_effects} (or leave it \code{receiver_effects = NULL} for selecting all effects of the receiver model). Default value is \code{NULL}, selecting all the effects available for the receiver model in the 'remstimate' object (\code{x}).
 #' @param ... further arguments to be passed to the 'plot' method, for instance, the remstats object with statistics ('stats') when the object 'diagnostics' is not supplied.
 #' @method plot remstimate
+#' 
+#' @return no return value. The function plots the diagnostics of a 'remstimate' object.
+#' 
 #' @export
 #' 
 #' @examples 
@@ -2631,9 +2645,12 @@ plot.remstimate <- function(x,
 
 # aic
 #' @title aic
-#' @description A function that returns the AIC (Akaike's Information Criterion) value in a 'remstimate' object
-#' @param object is a \code{remstimate} object 
-#' @param ... further arguments to be passed to the 'aic' method
+#' @description A function that returns the AIC (Akaike's Information Criterion) value in a 'remstimate' object.
+#' @param object is a \code{remstimate} object.
+#' @param ... further arguments to be passed to the 'aic' method.
+#' 
+#' @return AIC value of a 'remstimate' object.
+#' 
 #' @export
 #' 
 #' @examples
@@ -2703,9 +2720,12 @@ aic.remstimate <- function(object,...) {
 
 # aicc
 #' @title aicc 
-#' @description A function that returns the AICC (Akaike's Information Corrected Criterion) value in a 'remstimate' object
-#' @param object is a \code{remstimate} object 
-#' @param ... further arguments to be passed to the 'aicc' method
+#' @description A function that returns the AICC (Akaike's Information Corrected Criterion) value in a 'remstimate' object.
+#' @param object is a \code{remstimate} object. 
+#' @param ... further arguments to be passed to the 'aicc' method.
+#' 
+#' @return AICC value of a 'remstimate' object.
+#' 
 #' @export
 #' 
 #' @examples
@@ -2775,9 +2795,12 @@ aicc.remstimate <- function(object,...) {
 
 # bic
 #' @title bic
-#' @description A function that returns the BIC (Bayesian Information Criterion) value in a 'remstimate' object
-#' @param object is a \code{remstimate} object 
-#' @param ... further arguments to be passed to the 'bic' method
+#' @description A function that returns the BIC (Bayesian Information Criterion) value in a 'remstimate' object.
+#' @param object is a \code{remstimate} object. 
+#' @param ... further arguments to be passed to the 'bic' method.
+#' 
+#' @return BIC value of a 'remstimate' object.
+#' 
 #' @export
 #' 
 #' @examples
@@ -2847,9 +2870,12 @@ bic.remstimate <- function(object,...) {
 
 # waic
 #' @title waic
-#' @description A function that returns the WAIC (Watanabe-Akaike's Information Criterion) value in a 'remstimate' object
-#' @param object is a \code{remstimate} object 
-#' @param ... further arguments to be passed to the 'waic' method
+#' @description A function that returns the WAIC (Watanabe-Akaike's Information Criterion) value in a 'remstimate' object.
+#' @param object is a \code{remstimate} object. 
+#' @param ... further arguments to be passed to the 'waic' method.
+#' 
+#' @return WAIC value of a 'remstimate' object.
+#' 
 #' @export
 #' 
 #' @examples 

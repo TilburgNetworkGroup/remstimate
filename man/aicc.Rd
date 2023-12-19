@@ -10,12 +10,15 @@ aicc(object, ...)
 \method{aicc}{remstimate}(object, ...)
 }
 \arguments{
-\item{object}{is a \code{remstimate} object}
+\item{object}{is a \code{remstimate} object.}
 
-\item{...}{further arguments to be passed to the 'aicc' method}
+\item{...}{further arguments to be passed to the 'aicc' method.}
+}
+\value{
+AICC value of a 'remstimate' object.
 }
 \description{
-A function that returns the AICC (Akaike's Information Corrected Criterion) value in a 'remstimate' object
+A function that returns the AICC (Akaike's Information Corrected Criterion) value in a 'remstimate' object.
 }
 \section{Methods (by class)}{
 \itemize{

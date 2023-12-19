@@ -16,11 +16,11 @@
 )
 }
 \arguments{
-\item{x}{is a \code{remstimate} object}
+\item{x}{is a \code{remstimate} object.}
 
-\item{reh}{a \code{remify} object, the same used for the \code{remstimate} object}
+\item{reh}{a \code{remify} object, the same used for the \code{remstimate} object.}
 
-\item{diagnostics}{is a \code{'diagnostics' 'remstimate'} object}
+\item{diagnostics}{is a \code{'diagnostics' 'remstimate'} object.}
 
 \item{which}{one or more numbers between 1 and 2. Plots described in order: (1) two plots: a Q-Q plot of the waiting times where theoretical quantiles (Exponential distribution with rate 1) are plotted against observed quantiles (these are calculated as the multiplication at each time point between the sum of the event rates and the corresponding waiting time, which should be distributed as an exponential with rate 1). Next to the q-q plot, a density plot of the rescaled waiting times (in red) vs. the theoretical distribution (exponential distribution with rate 1, in black). The observed density is truncated at the 99th percentile of the waiting times, (2) standardized Schoenfeld's residuals (per each variable in the model, excluding the baseline) with smoothed weighted spline (line in red). The Schoenfeld's residuals help understand the potential presence of time dependence of the effects of statistics specified in the model, (3) distributions of posterior draws with histograms (only for BSIR and HMC method), (4) trace plots of posterior draws after thinning (only for HMC method).}
 
@@ -31,6 +31,9 @@
 \item{receiver_effects}{[\emph{optional}] for actor-oriented modeling (model =  "actor"), the names of the statistics as to the receiver model which the user wants to plot the diagnostics for (default value is set to all the statistics available inside the object 'diagnostics'). The user can specify this argument for the standardized Schoenfeld's residuals (\code{which = 2}), histograms of posterior distributions (\code{which = 3}) and trace plots (\code{which = 4}). If the user wants to plot only the diagnostics of one or more effects of the receiver model and at the same time wants to exclude the plots of the sender model, then set argument \code{sender_effects = NA} and specify the vector of effects to \code{receiver_effects} (or leave it \code{receiver_effects = NULL} for selecting all effects of the receiver model). Default value is \code{NULL}, selecting all the effects available for the receiver model in the 'remstimate' object (\code{x}).}
 
 \item{...}{further arguments to be passed to the 'plot' method, for instance, the remstats object with statistics ('stats') when the object 'diagnostics' is not supplied.}
+}
+\value{
+no return value. The function plots the diagnostics of a 'remstimate' object.
 }
 \description{
 A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.

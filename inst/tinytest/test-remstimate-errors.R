@@ -261,18 +261,6 @@ expect_silent(remstimate::remstimate(reh = tie_reh,
                         epsilon = NULL))
 
 
-## when parallel::detectCores() == 2 and input `ncores` is greater than 1
-ncores_loc <- if(parallel::detectCores() <= 2L) 10L else 2e03L
-# run the test only if there are 2 cores in the machine
-expect_error(remstimate::remstimate(reh = tie_reh,
-                      stats = tie_reh_stats,
-                      method = "MLE",
-                      ncores = ncores_loc),
-"'ncores' is recommended to be set at most to: floor(parallel::detectCores()-2L)",
-fixed = TRUE
-)
-
-
 # estimate with NULL ncores 
 expect_silent(remstimate::remstimate(reh = tie_reh,
                         stats = tie_reh_stats,

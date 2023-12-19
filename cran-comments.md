@@ -1,7 +1,7 @@
-# remstimate 2.3.7
+# remstimate 2.3.8
  
-* Date: 2023-12-18
-* This is the 2.3.7 version of the package. This is the first version of the remstimate package published on CRAN.
+* Date: 2023-12-19
+* This is the 2.3.8 version of the package. Minor fixes on documentation of return values as to the remstimate methods, adjusting description file and removing test on input ncores.
  
 ## Test environments 
 * Local macOS Sonoma 14.0, R version 4.3.1 

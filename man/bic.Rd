@@ -10,12 +10,15 @@ bic(object, ...)
 \method{bic}{remstimate}(object, ...)
 }
 \arguments{
-\item{object}{is a \code{remstimate} object}
+\item{object}{is a \code{remstimate} object.}
 
-\item{...}{further arguments to be passed to the 'bic' method}
+\item{...}{further arguments to be passed to the 'bic' method.}
+}
+\value{
+BIC value of a 'remstimate' object.
 }
 \description{
-A function that returns the BIC (Bayesian Information Criterion) value in a 'remstimate' object
+A function that returns the BIC (Bayesian Information Criterion) value in a 'remstimate' object.
 }
 \section{Methods (by class)}{
 \itemize{

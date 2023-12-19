@@ -9,7 +9,7 @@
 ^\.github$
 ^cran-comments\.md$
 ^README\.md$
-^man\figures\$
+^man/figures/
 ^NEWS\.md$
 ^CRAN-SUBMISSION$
 ^analyses$

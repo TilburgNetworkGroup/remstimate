@@ -6,9 +6,8 @@ package: remstimate
 date: ""
 output: 
   rmarkdown::html_document:
-    theme: spacelab
-    highlight: pygments
-    code_folding: show
+    toc: true
+    depth: 2
 header-includes:
   - \usepackage{amsmath,amssymb}
   - \usepackage{boldsymbol}
@@ -21,7 +20,10 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
----
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dpi = 72) # set global knitr options
+```
+
 
 The aim of the function `remstimate()` is to find the set of model parameters that optimizes either: (1) the likelihood function given the observed data or (2) the posterior probability of the parameters given the prior information on their distribution and the likelihood of the data. Furthermore, the likelihood function may differ depending on the modeling framework used, be it tie-oriented or actor-oriented:
 
@@ -80,7 +82,7 @@ In this tutorial, we are going to use the main functions from `remify` and `rems
 
 ---
 
-# Modeling frameworks {.tabset .tabset-pills}
+# Modeling frameworks
 
 
 ## Tie-Oriented Modeling framework 
@@ -247,16 +249,18 @@ tie_gd <- remstimate::remstimate(reh = tie_reh,
                         stats =  tie_stats,
                         ncores = ncores,
                         method = "GDADAMAX",
-                        epochs = 200L)
+                        epochs = 200L, # number of iterations for the Gradient-Descent algorithm
+                        WAIC = TRUE, # setting WAIC computation to TRUE
+                        nsimWAIC = 100) # number of draws for the computation of the WAIC set to 100     
 # print 
 tie_gd
 ```
 
-```{r, out.width="50%", dev=c("jpeg")}
+```{r}
 # diagnostics
 tie_gd_diagnostics <- diagnostics(object = tie_gd, reh = tie_reh, stats = tie_stats)
 # plot
-plot(x = tie_gd, reh  = tie_reh, diagnostics = tie_gd_diagnostics)
+# plot(x = tie_gd, reh  = tie_reh, diagnostics = tie_gd_diagnostics) # uncomment to use the plot function
 ```
 
 --- 
@@ -272,24 +276,26 @@ tie_bsir <- remstimate::remstimate(reh = tie_reh,
                         stats =  tie_stats,
                         ncores = ncores,
                         method = "BSIR",
-                        nsim = 100L, # 100 draws from the posterior distribution
+                        nsim = 200L, # 200 draws from the posterior distribution
                         prior = priormvt, # defining prior here, prior parameters follow below
                         mu = rep(0,dim(tie_stats)[3]), # prior mu value
                         sigma = diag(dim(tie_stats)[3])*1.5, # prior sigma value
                         df = 1, # prior df value
                         log = TRUE, # requiring log density values from the prior,
-                        seed = 23909 # set a seed only for reproducibility purposes
+                        seed = 23029, # set a seed only for reproducibility purposes
+                        WAIC = TRUE, # setting WAIC computation to TRUE
+                        nsimWAIC = 100 # number of draws for the computation of the WAIC set to 100     
                         )
 
 # summary 
 summary(tie_bsir)
 ```
 
-```{r, out.width="50%", dev=c("jpeg")}
+```{r}
 # diagnostics
 tie_bsir_diagnostics <- diagnostics(object = tie_bsir, reh = tie_reh, stats = tie_stats)
 # plot
-plot(x = tie_bsir, reh  = tie_reh, diagnostics = tie_bsir_diagnostics)
+# plot(x = tie_bsir, reh  = tie_reh, diagnostics = tie_bsir_diagnostics) # uncomment to use the plot function
 ```
 
 ---
@@ -301,11 +307,13 @@ tie_hmc <- remstimate::remstimate(reh = tie_reh,
                         stats =  tie_stats,
                         method = "HMC",
                         ncores = ncores,
-                        nsim = 100L, # 100 draws to generate per each chain
-                        nchains = 6L, # 6 chains to generate
-                        burnin = 50L, # burnin length is 50
-                        thin = 2L, # thinning size set to 2 (the final length of the chains will be 50)
-                        seed = 23909 # set a seed only for reproducibility purposes
+                        nsim = 200L, # 200 draws to generate per each chain
+                        nchains = 4L, # 4 chains to generate
+                        burnin = 200L, # burnin length is 200
+                        thin = 2L, # thinning size set to 2 (the final length of the chains will be 100)
+                        seed = 23029, # set a seed only for reproducibility purposes
+                        WAIC = TRUE, # setting WAIC computation to TRUE
+                        nsimWAIC = 100 # number of draws for the computation of the WAIC set to 100     
                         )
 
 # summary 
@@ -519,16 +527,18 @@ ao_gd <- remstimate::remstimate(reh = ao_reh,
                         stats =  ao_stats,
                         ncores = ncores,
                         method = "GDADAMAX",
-                        epochs = 200L)
+                        epochs = 200L, # number of iterations of the Gradient-Descent algorithm
+                        WAIC = TRUE, # setting WAIC computation to TRUE
+                        nsimWAIC = 100) # number of draws for the computation of the WAIC set to 100     
 # print 
 ao_gd
 ```
 
-```{r, out.width="50%", dev=c("jpeg")}
+```{r}
 # diagnostics
 ao_gd_diagnostics <- diagnostics(object = ao_gd, reh = ao_reh, stats = ao_stats)
 # plot
-plot(x = ao_gd, reh  = ao_reh, diagnostics = ao_gd_diagnostics)
+# plot(x = ao_gd, reh  = ao_reh, diagnostics = ao_gd_diagnostics) # uncomment to use the plot function
 ```
 
 ---
@@ -553,18 +563,20 @@ ao_bsir <- remstimate::remstimate(reh = ao_reh,
                                                             sigma = diag(dim(ao_stats$receiver_stats)[3])*1.5, # prior sigma value for receiver_model
                                                             df = 1)), # prior df value
                         log = TRUE, # requiring log density values from the prior,
-                        seed = 20929 # set a seed only for reproducibility purposes
+                        seed = 20929, # set a seed only for reproducibility purposes
+                        WAIC = TRUE, # setting WAIC computation to TRUE
+                        nsimWAIC = 100 # number of draws for the computation of the WAIC set to 100     
                         )
 
 # summary 
 summary(ao_bsir)
 ```
 
-```{r, out.width="50%", dev=c("jpeg")}
+```{r}
 # diagnostics
 ao_bsir_diagnostics <- diagnostics(object = ao_bsir, reh = ao_reh, stats = ao_stats)
-# plot
-plot(x = ao_bsir, reh  = ao_reh, diagnostics = ao_bsir_diagnostics)
+# plot (only for the receiver_model, by setting sender_model = NA)
+# plot(x = ao_bsir, reh  = ao_reh, diagnostics = ao_bsir_diagnostics, sender_model = NA) # uncomment to use the plot function
 ```
 
 --- 
@@ -576,11 +588,15 @@ ao_hmc <- remstimate::remstimate(reh = ao_reh,
                         stats =  ao_stats,
                         method = "HMC",
                         ncores = ncores,
-                        nsim = 200L, # 200 draws to generate per each chain
-                        nchains = 6L, # 6 chains (each one long 200 draws) to generate
-                        burnin = 300L, # burnin length 
-                        thin = 2L, # thinning size (this will reduce the final length of each chain)
-                        seed = 23029 # set a seed only for reproducibility purposes
+                        nsim = 300L, # 300 draws to generate per each chain
+                        nchains = 4L, # 4 chains (each one long 200 draws) to generate
+                        burnin = 300L, # burnin length is 300
+                        L = 100L, # number of leap-frog steps
+                        epsilon = 0.1/100, # size of a leap-frog step
+                        thin = 2L, # thinning size (this will reduce the final length of each chain will be 150)
+                        seed = 23029, # set a seed only for reproducibility purposes
+                        WAIC = TRUE, # setting WAIC computation to TRUE
+                        nsimWAIC = 100 # number of draws for the computation of the WAIC set to 100     
                         )
 
 # summary 
@@ -597,8 +613,6 @@ plot(x = ao_hmc, reh  = ao_reh, diagnostics = ao_hmc_diagnostics, sender_model =
 ---
 
 
----
-
-### References
+#### References
 
 <div id="refs"></div>

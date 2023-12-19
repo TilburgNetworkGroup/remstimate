@@ -7,9 +7,12 @@
 \method{print}{remstimate}(x, ...)
 }
 \arguments{
-\item{x}{is a \code{remstimate} object}
+\item{x}{is a \code{remstimate} object.}
 
-\item{...}{further arguments to be passed to the print method}
+\item{...}{further arguments to be passed to the print method.}
+}
+\value{
+no return value. Prints out the main characteristics of a 'remstimate' object.
 }
 \description{
 A function that prints out the estimates returned by a 'remstimate' object.
