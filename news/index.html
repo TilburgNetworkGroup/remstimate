@@ -6,7 +6,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
     
 
-    <nav class="navbar fixed-top navbar-dark navbar-expand-lg bg-primary" data-bs-theme="dark"><div class="container">
+    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light" data-bs-theme="light"><div class="container">
     
     <a class="navbar-brand me-2" href="../index.html">remstimate</a>
 
@@ -75,25 +75,22 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.3.9" id="remstimate-239">remstimate 2.3.9<a class="anchor" aria-label="anchor" href="#remstimate-239"></a></h2>
-<ul><li>minor fix on titles of Schoenfeld’s residuals plots.</li>
-<li>correction on learning rate parameter of “GDADAMAX” method</li>
+<ul><li>minor fix on titles of Schoenfeld’s residuals plots;</li>
+<li>correction on learning rate parameter of “GDADAMAX” method.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.3.8" id="remstimate-238">remstimate 2.3.8<a class="anchor" aria-label="anchor" href="#remstimate-238"></a></h2><p class="text-muted">CRAN release: 2023-12-20</p>
-<ul><li>DESCRIPTION file, removed quotes from acronyms</li>
-<li>documentation (return values added where missing)</li>
-<li>tests (removed test on ‘ncores’ argument)</li>
-<li>vignette (switched to ‘html_document’, edited seed value and parameters for HMC method)</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="2.3.7" id="remstimate-237-initial-cran-release">remstimate 2.3.7 (initial CRAN release)<a class="anchor" aria-label="anchor" href="#remstimate-237-initial-cran-release"></a></h2>
-<ul><li>trace plot for posterior draws (only via <code>"HMC"</code> method) with highest posterior density intervals;</li>
-<li>histograms of posterior draws (for both <code>"BSIR"</code> and <code>"HMC"</code> method) with highest posterior density intervals;</li>
-<li>the content of <code><a href="../reference/summary.remstimate.html">summary.remstimate()</a></code> can be saved by assigning it to a variable;</li>
-<li>Watanabe-Akaike’s Information Criterion (WAIC) calculation available. New argument, logical value, <code>WAIC</code>, with default <code>FALSE</code>. If <code>WAIC=TRUE</code>, then an optional argument <code>nsimWAIC</code> (number of draws to estimate the WAIC) is set by default to <code>500</code> (the user can supply a different value);</li>
-<li>updated parallelization of routines as to the computation of likelihood, gradient and hessian in the actor-oriented modeling framework;</li>
-<li>updated parallelization of routines for computing model residuals and WAIC;</li>
-<li>added new tests, increased coverage.</li>
+<ul><li><p>DESCRIPTION file, removed quotes from acronyms;</p></li>
+<li><p>documentation (return values added where missing);</p></li>
+<li><p>tests (removed test on ‘ncores’ argument);</p></li>
+<li><p>vignette (switched to ‘html_document’, edited seed value and parameters for <code>"HMC"</code> method). . # remstimate 2.3.7 (initial CRAN release)</p></li>
+<li><p>trace plot for posterior draws (only via <code>"HMC"</code> method) with highest posterior density intervals;</p></li>
+<li><p>histograms of posterior draws (for both <code>"BSIR"</code> and <code>"HMC"</code> method) with highest posterior density intervals;</p></li>
+<li><p>the content of <code><a href="../reference/summary.remstimate.html">summary.remstimate()</a></code> can be saved by assigning it to a variable;</p></li>
+<li><p>Watanabe-Akaike’s Information Criterion (WAIC) calculation available. New argument, logical value, <code>WAIC</code>, with default <code>FALSE</code>. If <code>WAIC=TRUE</code>, then an optional argument <code>nsimWAIC</code> (number of draws to estimate the WAIC) is set by default to <code>500</code> (the user can supply a different value);</p></li>
+<li><p>updated parallelization of routines as to the computation of likelihood, gradient and hessian in the actor-oriented modeling framework;</p></li>
+<li><p>updated parallelization of routines for computing model residuals and WAIC;</p></li>
+<li><p>added new tests, increased coverage.</p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.3.6" id="remstimate-236---231">remstimate 2.3.6 - 2.3.1<a class="anchor" aria-label="anchor" href="#remstimate-236---231"></a></h2>
@@ -101,71 +98,63 @@
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.3.0" id="remstimate-230">remstimate 2.3.0<a class="anchor" aria-label="anchor" href="#remstimate-230"></a></h2>
-<ul><li>Simultaneous events are supported (likelihood functions adapted)</li>
+<ul><li>Simultaneous events are supported (likelihood functions adapted).</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.2.0" id="remstimate-220">remstimate 2.2.0:<a class="anchor" aria-label="anchor" href="#remstimate-220"></a></h2>
-<ul><li>major updates of Rcpp functions</li>
-<li>now using <code>tinytest</code> for testing (all tests are converted from <code>testthat</code>)</li>
-<li>new examples to all functions in the package</li>
-<li>remove Rcpp functions (<code>emp_dist_longest_batch()</code>, for tuning L parameter in HMC method)</li>
-<li>vignette created for actor-oriented modeling framework</li>
+<ul><li>major updates of Rcpp functions;</li>
+<li>now using <code>tinytest</code> for testing (all tests are converted from <code>testthat</code>);</li>
+<li>new examples to all functions in the package;</li>
+<li>remove Rcpp functions (<code>emp_dist_longest_batch()</code>, for tuning L parameter in <code>"HMC"</code> method);</li>
+<li>vignette created for actor-oriented modeling framework.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.1.0" id="remstimate-210">remstimate 2.1.0:<a class="anchor" aria-label="anchor" href="#remstimate-210"></a></h2>
-<ul><li>new remstimate logo</li>
-<li>update of functions’ description</li>
+<ul><li>new remstimate logo;</li>
+<li>update of functions’ description;</li>
 <li>major update of <code><a href="../reference/remstimate.html">remstimate()</a></code> function:
-<ul><li>removed input argument <code>model</code>
-</li>
-<li>initial controls of input argument</li>
-<li>output structure</li>
-<li>HMC for actor-oriented framework</li>
-<li>added initial values of HMC method (experimental)</li>
+<ul><li>removed input argument <code>model</code>;</li>
+<li>initial controls of input argument;</li>
+<li>output structure;</li>
+<li>
+<code>"HMC"</code> for actor-oriented framework;</li>
+<li>added initial values of <code>"HMC"</code> method (experimental);</li>
 </ul></li>
 <li>major updates of Rcpp functions:
-<ul><li>new experimental Rcpp function <code>set_seed</code>
-</li>
-<li>input argument <code>edgelist</code> changed with <code>dyad</code>
-</li>
-<li>new input arguments <code>actor1</code> and <code>actor2</code> (for actor-oriented routines)</li>
-<li>removed old Rcpp functions: <code>getDyadIndex()</code>, <code>getDyadComposition()</code>
-</li>
-<li>added dependency of exported C++ routines from <code>remify</code>, using now <code>remify::getDyadIndex()</code> and <code>remify::getDyadComposition()</code>
-</li>
+<ul><li>new experimental Rcpp function <code>set_seed</code>;</li>
+<li>input argument <code>edgelist</code> changed with <code>dyad</code>;</li>
+<li>new input arguments <code>actor1</code> and <code>actor2</code> (for actor-oriented routines);</li>
+<li>removed old Rcpp functions: <code>getDyadIndex()</code>, <code>getDyadComposition()</code>;</li>
+<li>added dependency of exported C++ routines from <code>remify</code>, using now <code>remify::getDyadIndex()</code> and <code>remify::getDyadComposition()</code>;</li>
 </ul></li>
-<li>added new tests using <code>testthat</code>. Tests are divided in multiple .R scripts depending on what is tested</li>
-<li>update summary and print of actor-oriented framework in <code>summary.remstimate</code>
-</li>
+<li>added new tests using <code>testthat</code>. Tests are divided in multiple .R scripts depending on what is tested;</li>
+<li>update summary and print of actor-oriented framework in <code>summary.remstimate</code>;</li>
 <li>
-<code>predict.remstimate</code> and <code>plot.remstimate</code> function are not yet available</li>
-<li>added dependencies: <code>remify</code> and <code>remstats</code>
-</li>
-<li>added data for tie-oriented and actor-oriented examples</li>
-<li>new README.md with badges</li>
+<code>predict.remstimate</code> and <code>plot.remstimate</code> function are not yet available;</li>
+<li>added dependencies: <code>remify</code> and <code>remstats</code>;</li>
+<li>added data for tie-oriented and actor-oriented examples;</li>
+<li>new README.md with badges.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.0.0" id="remstimate-200">remstimate 2.0.0:<a class="anchor" aria-label="anchor" href="#remstimate-200"></a></h2>
-<ul><li>This version is adapted to the latest changes coming from <code>remify 2.0.0</code> and it can estimate a Tie-Oriented model as well as an Actor-Oriented model. Models can be estimated by means of different methods: <em>MLE</em>, <em>GDADAMAX</em> (replacing the former <em>GD</em> and <em>GDADAM</em>), <em>BSIR</em> and <em>HMC</em>. Methods like <em>BSIR</em> and <em>HMC</em> are ready-to-use but still under a continuous development in order to improve the user-experience.</li>
-<li>removed experimental “fast method” to compute the likelihood</li>
-<li>added dependencies <code>trust</code> and <code>parallel</code>
-</li>
-<li>experimental Rcpp functions <code>posteriorRank()</code> and <code>remDerivativesStandard_lambdas()</code> (added but finally removed in the version 2.0.0)</li>
-<li>added new Rcpp functions: <code>getDyadIndex()</code>, <code>getDyadComposition()</code>
-</li>
+<ul><li>This version is adapted to the latest changes coming from <code>remify 2.0.0</code> and it can estimate a Tie-Oriented model as well as an Actor-Oriented model. Models can be estimated by means of different methods: <code>"MLE"</code>, <code>"GDADAMAX"</code> (replacing the former <code>"GD"</code> and <code>"GDADAM"</code>), <code>"BSIR"</code> and <code>"HMC"</code>. Methods like <code>"BSIR"</code> and <code>"HMC"</code> are ready-to-use but still under a continuous development in order to improve the user-experience;</li>
+<li>removed experimental “fast method” to compute the likelihood;</li>
+<li>added dependencies <code>trust</code> and <code>parallel</code>;</li>
+<li>experimental Rcpp functions <code>posteriorRank()</code> and <code>remDerivativesStandard_lambdas()</code> (added but finally removed in the version 2.0.0);</li>
+<li>added new Rcpp functions: <code>getDyadIndex()</code>, <code>getDyadComposition()</code>.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.0" id="remstimate-100">remstimate 1.0.0:<a class="anchor" aria-label="anchor" href="#remstimate-100"></a></h2>
 <ul><li>
 <em>11/12/2020</em>:
-<ul><li>Methods working with the function <code><a href="../reference/remstimate.html">remstimate()</a></code> are: <em>MLE</em>, <em>GD</em>, <em>GDADAM</em>, <em>BSIR</em>, <em>HMC</em>. However the output lacks of a structure attributes and methods.</li>
+<ul><li>Methods working with the function <code><a href="../reference/remstimate.html">remstimate()</a></code> are: <code>"MLE"</code>, <code>"GD"</code>, <code>"GDADAM"</code>, <code>"BSIR"</code>, <code>"HMC"</code>. However the output lacks of a structure attributes and methods;</li>
 </ul></li>
 <li>
 <em>04/09/2020</em> :
 <ul><li>
 <em>messages</em> becomes again an Rcpp file. This exstension appears to suit better the intent of the content/aim of error and warning messages;</li>
 <li>
-<em>remstimate.R</em> contains the main function <code><a href="../reference/remstimate.html">remstimate()</a></code> which is aimed to run either a MLE or a Bayesian approach by using different optimization/methods. It also includes a switch to the “fast method” to compute the likelihood. The “fast method” is run if the actual improvement (percentage of improvement) is higher than a threshold set by the user (default is <code>0.5</code>);</li>
+<em>remstimate.R</em> contains the main function <code><a href="../reference/remstimate.html">remstimate()</a></code> which is aimed to run either a Frequentist or a Bayesian approach by using different optimization/methods. It also includes a switch to the “fast method” to compute the likelihood. The “fast method” is run if the actual improvement (percentage of improvement) is higher than a threshold set by the user (default is <code>0.5</code>);</li>
 <li>
 <em>reh.cpp</em> : contains <code>getRisksetMatrix()</code>, <code>getRisksetCube()</code>, <code>convertInputREH()</code>, <code>getBinaryREH()</code> and <code>reh()</code>. This last function is the one that preprocesses the input given by the user which consists in: edgelist, riskset and covariates. intereventTime variable and covariates input still need to be preprocessed via specific utility functions;</li>
 <li>
@@ -178,25 +167,25 @@
 <code>reh()</code> will be the only preprocessing function and it is coded in Rcpp (see <em>reh.cpp</em> file) whereas the R function and the <em>reh.R</em> file are removed;</li>
 <li>utility functions called inside <code>reh()</code> are added inside the <em>reh.cpp</em> file, before the <code>reh()</code> function itself;</li>
 <li>
-<em>messages.cpp</em> becomes a header file <em>messages.h</em> and the aim/content remains the same.</li>
+<em>messages.cpp</em> becomes a header file <em>messages.h</em> and the aim/content remains the same;</li>
 </ul></li>
 <li>
 <em>03/07/2020</em> :
 <ul><li>
 <em>reh.h</em> changed to <em>reh.cpp</em> and it contains utility functions used in <em>reh.R</em> within the R function <code>reh(...)</code> ;</li>
 <li>
-<em>messages.cpp</em> will contain functions <code>errorMessage(cond)</code> and <code>warningMessage(cond)</code> that will return appropriate error/warning messages according to the <em>cond</em> argument.</li>
+<em>messages.cpp</em> will contain functions <code>errorMessage(cond)</code> and <code>warningMessage(cond)</code> that will return appropriate error/warning messages according to the <em>cond</em> argument;</li>
 </ul></li>
 <li>
 <em>11/06/2020</em> :
 <ul><li>Created <em>reh.h</em> were the utility functions to preprocess data will be developed;</li>
 <li>
-<em>remstimateBoost.h</em> will contain the routines that speed up the computation of the loglikelihood and its first and second derivatives.</li>
+<em>remstimateBoost.h</em> will contain the routines that speed up the computation of the loglikelihood and its first and second derivatives;</li>
 </ul></li>
 <li>
 <em>20/04/2020</em> :
 <ul><li>created repository with first commit;</li>
-<li>package only contains three functions: <code>remCpp(...)</code> (uses optim to find the maximum likelihood estimates of REM), <code>nllik(...)</code> (returns the negative log-likelihood value for an observed event sequence, by specifying a vector of parameters and statistics), <code>lpd(...)</code> (calculates the same as <code>nllik(...)</code> but only for a specific time point and without taking the negative of the value);</li>
+<li>package only contains three functions: <code>remCpp(...)</code> (uses optim to find the maximum likelihood estimates of REM), <code>nllik(...)</code> (returns the negative log-likelihood value for an observed event sequence, by specifying a vector of parameters and statistics), <code>lpd(...)</code> (calculates the same as <code>nllik(...)</code> but only for a specific time point and without taking the negative of the value).</li>
 </ul></li>
 </ul></div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

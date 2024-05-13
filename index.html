@@ -23,7 +23,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
     
 
-    <nav class="navbar fixed-top navbar-dark navbar-expand-lg bg-primary" data-bs-theme="dark"><div class="container">
+    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light" data-bs-theme="light"><div class="container">
     
     <a class="navbar-brand me-2" href="index.html">remstimate</a>
 
@@ -90,37 +90,52 @@
   </div>
 </nav><div class="container template-home">
 <div class="row">
-  <main id="main" class="col-md-9"><p><img align="right" width="185" src="reference/figures/remstimate-logo.svg"></p>
-<div class="section level1">
-<div class="page-header"><h1 id="remstimate">remstimate<a class="anchor" aria-label="anchor" href="#remstimate"></a>
-</h1></div>
+  <main id="main" class="col-md-9"><p><br></p>
+<p><img align="right" width="185" src="reference/figures/remstimate-logo.svg"></p>
+<div class="section level2">
+<h2 id="remstimate">
+<strong>remstimate</strong><a class="anchor" aria-label="anchor" href="#remstimate"></a>
+</h2>
+<div class="section level3">
+<h3 id="optimization-tools-for-relational-event-history-data">
+<em>Optimization Tools for Relational Event History data</em><a class="anchor" aria-label="anchor" href="#optimization-tools-for-relational-event-history-data"></a>
+</h3>
 <!-- badges: start -->
 
-<div class="section level3">
-<h3 id="optimization-tools-for-relational-event-history-data">Optimization Tools for Relational Event History data<a class="anchor" aria-label="anchor" href="#optimization-tools-for-relational-event-history-data"></a>
-</h3>
-<p>The <code>remstimate</code> package provides a set of functions that perform necessary calculations when modeling a Relational Event History. It can perform tie-oriented as well as actor-oriented modeling. The main function is <code><a href="reference/remstimate.html">remstimate::remstimate()</a></code> which provides four different estimation methods:</p>
+<p><br> The <code>remstimate</code> package provides a set of functions that perform necessary calculations when modeling a Relational Event History. It can perform tie-oriented as well as actor-oriented modeling. The main function is <code><a href="reference/remstimate.html">remstimate::remstimate()</a></code> which provides four different estimation methods:</p>
 <ul>
 <li>
-<code>"MLE"</code>, maximizing the model likelihood</li>
+<code>"MLE"</code>, maximizing the model likelihood;</li>
 <li>
-<code>"GDADAMAX"</code>, optimization based on the gradient</li>
+<code>"GDADAMAX"</code>, optimization based on the gradient;</li>
 <li>
-<code>"BSIR"</code>, Bayesian Sampling Importance Resampling</li>
+<code>"BSIR"</code>, Bayesian Sampling Importance Resampling;</li>
 <li>
-<code>"HMC"</code>, Hamiltonian Monte Carlo</li>
+<code>"HMC"</code>, Hamiltonian Monte Carlo.</li>
 </ul>
+<p><br></p>
 </div>
 <div class="section level3">
 <h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h3>
 <p>Install the package in R from CRAN:</p>
 <pre><code><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remstimate"</span><span class="op">)</span></span></code></pre>
+<p><br></p>
 </div>
 <div class="section level3">
-<h3 id="author-and-maintainer">Author and maintainer<a class="anchor" aria-label="anchor" href="#author-and-maintainer"></a>
+<h3 id="vignettes">Vignettes<a class="anchor" aria-label="anchor" href="#vignettes"></a>
 </h3>
-<p>Giuseppe Arena, Tilburg University (Tilburg, The Netherlands). (<a href="mailto:g.arena@tilburguniversity.edu" class="email">g.arena@tilburguniversity.edu</a>)</p>
+<p>List all the vignettes available with <code>remstimate</code> using:</p>
+<pre><code><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span>package <span class="op">=</span> <span class="st">"remstimate"</span><span class="op">)</span> </span></code></pre>
+<p>Open the vignette of a specific topic with:</p>
+<pre><code><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span>topic <span class="op">=</span> <span class="st">"remstimate"</span>, package <span class="op">=</span> <span class="st">"remstimate"</span><span class="op">)</span> <span class="co"># or simply vignette("remstimate") </span></span></code></pre>
+<p><br></p>
+</div>
+<div class="section level3">
+<h3 id="problems-while-remstimat-ing">Problems while remstimat-ing?<a class="anchor" aria-label="anchor" href="#problems-while-remstimat-ing"></a>
+</h3>
+<p>Should you encounter errors while using the package, should you have questions that are not answered in the Vignettes, or for reporting any kind of malfunction of the package, you can open an issue <a href="https://github.com/TilburgNetworkGroup/remstimate/issues" class="external-link">here</a>.</p>
+<p>When opening an issue, please, use a descriptive title that clearly states the issue, be as thorough as possible when describing the issue, provide code snippets that can reproduce the issue. <br></p>
 </div>
 <div class="section level3">
 <h3 id="funding">Funding<a class="anchor" aria-label="anchor" href="#funding"></a>
