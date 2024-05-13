@@ -1,6 +1,6 @@
 # remstimate 2.3.9
  
-* Date: 2024-05-08
+* Date: 2024-05-13
 * This is the 2.3.9 version of the package. Minor fixes on "learning_rate" parameter for method "GDADAMAX" and on plot.remstimate().
  
 ## Test environments 
