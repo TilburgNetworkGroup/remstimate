@@ -2,7 +2,7 @@
 % Please edit documentation in R/remstimate.R
 \name{remstimate}
 \alias{remstimate}
-\title{remstimate}
+\title{remstimate - optimization of tie-oriented and actor-oriented likelihood}
 \usage{
 remstimate(
   reh,

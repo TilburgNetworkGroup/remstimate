@@ -2,7 +2,7 @@
 % Please edit documentation in R/remstimate.R
 \name{plot.remstimate}
 \alias{plot.remstimate}
-\title{plot.remstimate}
+\title{Plot diagnostics of a \code{remstimate} object}
 \usage{
 \method{plot}{remstimate}(
   x,

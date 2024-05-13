@@ -3,7 +3,7 @@
 \name{diagnostics}
 \alias{diagnostics}
 \alias{diagnostics.remstimate}
-\title{diagnostics}
+\title{Compute the diagnostics of a \code{remstimate} object}
 \usage{
 diagnostics(object, reh, stats, ...)
 

@@ -1,0 +1,84 @@
+url: ~
+template:
+  bootstrap: 5
+  bootswatch: flatly
+  bslib:
+    base_font: {google: "Open Sans"}
+    heading_font: {google: "Open Sans"}
+
+navbar:
+  title: "remstimate"
+  left:
+    - icon: fa-home fa-lg
+      href: index.html
+    - text: "Vignettes"
+      href: articles/index.html
+    - text: "Functions"
+      href: reference/index.html
+    - text: "News"
+      href: news/index.html
+    - text: "Other Packages"
+      menu:
+        - text: "remverse"
+          href: https://github.com/TilburgNetworkGroup/remverse
+        - text: "remify"
+          href: https://github.com/TilburgNetworkGroup/remify
+        - text: "remstats"
+          href: https://github.com/TilburgNetworkGroup/remstats
+        - text: "remulate"
+          href: https://github.com/TilburgNetworkGroup/remulate     
+        - text: "bremory"
+          href: https://github.com/TilburgNetworkGroup/bremory
+        - text: "remx"
+          href: https://github.com/TilburgNetworkGroup/remx
+    - text: "remverse"
+      href: https://github.com/TilburgNetworkGroup/remverse
+  right:
+   - icon: fa-twitter
+     href: https://twitter.com/TiUNetworkGroup
+   - icon: fa-github
+     href: https://github.com/TilburgNetworkGroup/remstimate
+
+
+articles:
+  - title: ""
+    desc: >
+      This vignette provides a tutorial on how to estimate a tie-oriented and a actor-oriented relational event model using
+      the **remstimate** package.
+    contents:
+      - remstimate
+
+reference:
+  - title: "Data"
+    desc: >
+      Relational event history available inside remstimate
+    contents:
+      - ao_data
+      - tie_data 
+  - title: "Remstimate"
+    desc: > 
+      Function for the optimization of tie-oriented and actor-oriented likelihood.
+    contents:
+      - remstimate
+      - print.remstimate
+      - summary.remstimate
+  - title: "Diagnostics"
+    desc: > 
+      Function for computing the diagnostics of a `remstimate` object
+    contents:
+      - diagnostics
+  - title: "Plot"
+    desc: > 
+      Function plotting diagnostics of a 'remstimate' object.
+    contents:
+      - plot.remstimate
+  - title: "Goodness of fit"
+    desc: > 
+      Functions for extracting several goodness of fit measures from a `remstimate` object.
+    contents:
+      - aic
+      - aicc
+      - bic
+      - waic
+
+

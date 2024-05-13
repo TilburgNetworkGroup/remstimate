@@ -13,3 +13,6 @@
 ^NEWS\.md$
 ^CRAN-SUBMISSION$
 ^analyses$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

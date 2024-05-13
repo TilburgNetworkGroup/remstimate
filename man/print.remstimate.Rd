@@ -2,7 +2,7 @@
 % Please edit documentation in R/remstimate.R
 \name{print.remstimate}
 \alias{print.remstimate}
-\title{print.remstimate}
+\title{Print out a quick overview of a \code{remstimate} object}
 \usage{
 \method{print}{remstimate}(x, ...)
 }

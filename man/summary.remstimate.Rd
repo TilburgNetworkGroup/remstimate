@@ -2,7 +2,7 @@
 % Please edit documentation in R/remstimate.R
 \name{summary.remstimate}
 \alias{summary.remstimate}
-\title{Generate the summary of a remstimate object}
+\title{Generate the summary of a \code{remstimate} object}
 \usage{
 \method{summary}{remstimate}(object, ...)
 }
@@ -15,7 +15,7 @@
 no return value. Prints out the summary of a 'remstimate' object. The output can be save in a list, which contains the information printed out by the summary method.
 }
 \description{
-A function that returns the summary of a remstimate object.
+A function that returns the summary of a \code{remstimate} object.
 }
 \examples{
 

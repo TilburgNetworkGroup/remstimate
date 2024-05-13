@@ -634,7 +634,6 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
                   double epsilon = 0.01){
 
   arma::uword P = pars.n_elem;
-  double  alpha = 0.002; 
   double loglik,loglik_prev;
   int i = 0;
   arma::vec moment(P,arma::fill::zeros);
@@ -679,7 +678,7 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
     }
 
     // updating parameter value
-    step_size(0) = alpha/(1-std::pow(beta1,i+1));
+    step_size(0) = learning_rate/(1-std::pow(beta1,i+1));
 
     // updating gradient
     arma::vec delta = moment / inf_norm;

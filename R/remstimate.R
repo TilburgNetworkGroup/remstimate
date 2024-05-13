@@ -1,6 +1,7 @@
-#' remstimate  
+# remstimate
+#' @title remstimate - optimization of tie-oriented and actor-oriented likelihood
 #'
-#' A function for the optimization of tie-oriented and actor-oriented likelihood. There are four optimization algorithms: two Frequentists, Maximum Likelihood Estimation (\code{MLE}) and Adaptive Gradient Descent (\code{GDADAMAX}), and two Bayesian, Bayesian Sampling Importance Resampling (\code{BSIR}) and Hamiltonian Monte Carlo (\code{HMC}).
+#' @description A function for the optimization of tie-oriented and actor-oriented likelihood. There are four optimization algorithms: two Frequentists, Maximum Likelihood Estimation (\code{MLE}) and Adaptive Gradient Descent (\code{GDADAMAX}), and two Bayesian, Bayesian Sampling Importance Resampling (\code{BSIR}) and Hamiltonian Monte Carlo (\code{HMC}).
 #'
 #' @param reh a \code{remify} object of the processed relational event history. Output object of the function \code{remify::remify()}.
 #' @param stats a \code{remstats} object: when `attr(reh,"model")` is `"tie"`, \code{stats} is an array of statistics with dimensions \code{[M x D x P]}: where \code{M} is the number of events, \code{D} is the number of possible dyads (full riskset), \code{P} is the number of statistics; if `attr(reh,"model")` is `"actor"`, \code{stats} is a list that can contain up to two arrays named \code{"sender_stats"} and \code{"receiver_stats"} with dimensions \code{[M x N x P]}, where \code{N} are the actors (senders in the array \code{"sender_stats"}, receivers in the array \code{"receiver_stats"}). Furthermore, it is possible to only estimate the sender rate model or only the receiver choice model, by using the correct naming of the arrays.
@@ -1229,7 +1230,7 @@ remstimate <- function(reh,
 
 
 # print.remstimate
-#' @title print.remstimate
+#' @title Print out a quick overview of a \code{remstimate} object
 #' @rdname print.remstimate
 #' @description A function that prints out the estimates returned by a 'remstimate' object.
 #' @param x is a \code{remstimate} object.
@@ -1384,9 +1385,9 @@ print.remstimate<-function(x, ...){
 
 
 # summary.remstimate
-#' @title Generate the summary of a remstimate object
+#' @title Generate the summary of a \code{remstimate} object
 #' @rdname summary.remstimate
-#' @description A function that returns the summary of a remstimate object.
+#' @description A function that returns the summary of a \code{remstimate} object.
 #' @param object is a \code{remstimate} object.
 #' @param ... further arguments to be passed to the 'summary' method.
 #' @method summary remstimate
@@ -1787,7 +1788,7 @@ summary.remstimate<-function (object, ...)
 
 
 # diagnostics
-#' @title diagnostics
+#' @title Compute the diagnostics of a \code{remstimate} object
 #' @description A function that returns the diagnostics of a \code{remstimate} object. The output object of the method \code{diagnostics} contains the residuals of the model estimated in the \code{remstimate} object, and the event rates estimated from the model at each tiem point. For tie-oriented modeling frameworks the object contains: a list \code{residuals} with two objects, \code{standardized_residuals} containing standardized Schoenfeld's residuals (Schoenfeld, D., 1982, <doi:10.2307/2335876>; Grambsch, P. M., & Therneau, T. M., 1994, <doi:10.2307/2337123>; Winnett, A., & Sasieni, P., 2001, <jstor.org/stable/2673500>), and \code{smoothing_weights} (a matrix of weights used for the red smooth splines in the plot of the residuals), an array structure \code{rates} with the event rates estimated from the optimized model parameters, and \code{.reh.processed} which is a pseudo-hidden object containing a further processed \code{remify} object that helps speed up the plotting function \code{plot.remstimate} and that the user is not supposed to modify. As to the actor-oriented modeling frameworks, in the diagnostics output there are two main list objects named after \code{sender_model} and \code{receiver_model}. After selecting the model, the structure of diagnostics is the same as for the tie-oriented model. Each model's diagnostics (sender or receiver) is available only if the corresponding model is found in the \code{remstimate} object.
 #' @param object is a \code{remstimate} object.
 #' @param reh is a \code{remify} object, the same used for the 'remstimate' object.
@@ -2181,7 +2182,7 @@ diagnostics.remstimate <- function(object,reh,stats,...) {
 
 
 # plot.remstimate
-#' @title plot.remstimate
+#' @title Plot diagnostics of a \code{remstimate} object
 #' @rdname plot.remstimate
 #' @description A function that returns a plot of diagnostics given a 'remstimate' object and depending on the 'approach' attribute.
 #' @param x is a \code{remstimate} object.
@@ -2315,18 +2316,6 @@ plot.remstimate <- function(x,
                 which_effects <- sort(which_effects)
             }
         }
-        # checking effects from 'remstimate' with effects from 'remstimate' 'diagnostics'
-        effects_diagnostics_to_check <- colnames(diagnostics$residuals$smoothing_weights)
-        if(!is.null(attr(x,"where_is_baseline")) & ("baseline" %in% tolower(effects))){
-            effects_to_check <- effects_to_check[-attr(x,"where_is_baseline")]
-        }
-        if(length(effects_to_check)>0){ # model
-            compare_remstimate_with_diagnostics <- prod(unlist(sapply(1:length(effects_to_check),function(y) effects_to_check[y] %in% effects_diagnostics_to_check)))
-            if(!compare_remstimate_with_diagnostics){
-                par(op)
-                stop("one or more effects not found inside the object 'diagnostics'.")
-            }
-        }
         # (1) waiting times vs. theoretical distribution
         if(which[1L]){
             if(!attr(reh,"ordinal")){
@@ -2351,9 +2340,20 @@ plot.remstimate <- function(x,
 
         # (2) standardized Schoenfeld's residuals
         if(which[2L] & !is.null(diagnostics$residuals)){
-            # the object diagnostics doesn't have residuals on the intercept, therefore we process the effects once again
-            effects_diagnostics <- effects
+            # checking effects from 'remstimate' with effects from 'remstimate' 'diagnostics'
             available_effects <- colnames(diagnostics$residuals$smoothing_weights)
+            if(!is.null(attr(x,"where_is_baseline")) & ("baseline" %in% tolower(effects))){
+                effects_to_check <- effects_to_check[-which(effects_to_check == "baseline")] 
+            }
+            if(length(effects_to_check)>0){ # model
+                compare_remstimate_with_diagnostics <- prod(unlist(sapply(1:length(effects_to_check),function(y) effects_to_check[y] %in% available_effects)))
+                if(!compare_remstimate_with_diagnostics){
+                    par(op)
+                    stop("one or more effects not found inside the object 'diagnostics'.")
+                }
+            }
+            # the object diagnostics doesn't have residuals on the intercept, therefore we process the effects once again
+            effects_diagnostics <- effects_to_check
             which_effects_diagnostics <- unlist(sapply(1:length(effects_diagnostics), function(y) which(available_effects == effects_diagnostics[y])))
             effects_diagnostics <- effects_diagnostics[order(which_effects_diagnostics)]
             which_effects_diagnostics <- sort(which_effects_diagnostics)
@@ -2481,20 +2481,6 @@ plot.remstimate <- function(x,
                         which_effects <- sort(which_effects)
                     }
                 }
-                # checking effects from 'remstimate' with effects from 'remstimate' 'diagnostics'
-                effects_diagnostics_to_check <- colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights)
-                if(senderRate[i]){
-                    if(!is.null(attr(x,"where_is_baseline")) & ("baseline" %in% tolower(effects))){
-                        effects_to_check <- effects_to_check[-attr(x,"where_is_baseline")]
-                    }
-                }
-                if(length(effects_to_check)>0){
-                    compare_remstimate_with_diagnostics <- prod(unlist(sapply(1:length(effects_to_check),function(y) effects_to_check[y] %in% effects_diagnostics_to_check)))
-                    if(!compare_remstimate_with_diagnostics){
-                        par(op)
-                        stop("one or more effects not found inside the object 'diagnostics'.")
-                    }
-                }
                 # (1) waiting times vs. theoretical distribution
                 if(which[1L]){
                     if(!attr(reh,"ordinal") & i==1){
@@ -2521,9 +2507,22 @@ plot.remstimate <- function(x,
 
                 # (2) standardized Schoenfeld's residuals
                 if(which[2L] & !is.null(diagnostics[[which_model[i]]]$residuals)){
-                    # the object diagnostics doesn't have residuals on the intercept, therefore we process the effects once again
-                    effects_diagnostics <- effects
                     available_effects <- colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights)
+                    # checking effects from 'remstimate' with effects from 'remstimate' 'diagnostics'
+                    if(senderRate[i]){
+                        if(!is.null(attr(x,"where_is_baseline")) & ("baseline" %in% tolower(effects))){
+                            effects_to_check <- effects_to_check[-which(effects_to_check == "baseline")]
+                        }
+                    }
+                    if(length(effects_to_check)>0){
+                        compare_remstimate_with_diagnostics <- prod(unlist(sapply(1:length(effects_to_check),function(y) effects_to_check[y] %in% available_effects)))
+                        if(!compare_remstimate_with_diagnostics){
+                            par(op)
+                            stop("one or more effects not found inside the object 'diagnostics'.")
+                        }
+                    }
+                    # the object diagnostics doesn't have residuals on the intercept, therefore we process the effects once again
+                    effects_diagnostics <- effects_to_check
                     which_effects_diagnostics <- unlist(sapply(1:length(effects_diagnostics), function(y) which(available_effects == effects_diagnostics[y])))
                     effects_diagnostics <- effects_diagnostics[order(which_effects_diagnostics)]
                     which_effects_diagnostics <- sort(which_effects_diagnostics)

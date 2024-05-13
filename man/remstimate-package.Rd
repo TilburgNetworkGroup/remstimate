@@ -17,7 +17,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Giuseppe Arena \email{g.arena@tilburguniversity.edu}
+\strong{Maintainer}: Giuseppe Arena \email{g.arena@tilburguniversity.edu} (\href{https://orcid.org/0000-0001-5204-3326}{ORCID})
 
 Authors:
 \itemize{
