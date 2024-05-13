@@ -1,10 +1,12 @@
 url: ~
 template:
-  bootstrap: 5
-  bootswatch: flatly
   bslib:
+    version: 5
+    boothswatch: yeti
     base_font: {google: "Open Sans"}
     heading_font: {google: "Open Sans"}
+    bs-theme: light
+
 
 navbar:
   title: "remstimate"
