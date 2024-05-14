@@ -29,7 +29,7 @@ Other contributors:
 \itemize{
   \item Marlyne Meijerink-Bosman \email{m.l.meijerink@tilburguniversity.edu} [contributor]
   \item Diana Karimova \email{d.karimova@tilburguniversity.edu} [contributor]
-  \item Mahdi Shafiee Kamalabad \email{m.shafiee@tilburguniversity.edu} [contributor]
+  \item Mahdi Shafiee Kamalabad \email{m.shafieekamalabad@uu.nl} [contributor]
   \item Roger Leenders \email{r.t.a.j.leenders@tilburguniversity.edu} [contributor]
   \item Joris Mulder \email{j.mulder3@tilburguniversity.edu} [contributor]
 }
