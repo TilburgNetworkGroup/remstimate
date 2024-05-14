@@ -1,4 +1,9 @@
 
+
+# remstimate 2.3.10
+
+* minor fix on switch function for boolean type (remstimate.cpp).
+
 # remstimate 2.3.9
 
 * minor fix on titles of Schoenfeld's residuals plots;

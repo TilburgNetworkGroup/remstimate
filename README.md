@@ -9,6 +9,7 @@
 <!-- badges: start -->
 [![github-repo-status](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![R-package-version](https://img.shields.io/github/r-package/v/TilburgNetworkGroup/remstimate)](https://www.github.com/TilburgNetworkGroup/remstimate)
+[![CRAN-release](https://www.r-pkg.org/badges/version/remstimate)](https://cran.r-project.org/package=remstimate)
 [![R-CMD-check](https://github.com/TilburgNetworkGroup/remstimate/actions/workflows/check-standard.yaml/badge.svg)](https://github.com/TilburgNetworkGroup/remstimate/actions/workflows/check-standard.yaml)
 [![codecov](https://codecov.io/gh/TilburgNetworkGroup/remstimate/graph/badge.svg?token=8NZ4T6E4N9)](https://codecov.io/gh/TilburgNetworkGroup/remstimate)
 [![grand-total-downloads](http://cranlogs.r-pkg.org/badges/grand-total/remstimate)](https://cran.r-project.org/package=remstimate)

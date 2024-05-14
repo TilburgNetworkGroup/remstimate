@@ -1,8 +1,8 @@
 Type: Package
 Package: remstimate
 Title: Optimization Frameworks for Tie-Oriented and Actor-Oriented Relational Event Models
-Version: 2.3.9
-Date: 2024-05-13
+Version: 2.3.10
+Date: 2024-05-14
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
@@ -28,7 +28,7 @@ Authors@R:
       person(given = "Mahdi",
              family = "Shafiee Kamalabad",
              role = "ctb",
-             email = "m.shafiee@tilburguniversity.edu"),
+             email = "m.shafieekamalabad@uu.nl"),
       person(given = "Roger",
              family = "Leenders",
              role = "ctb",

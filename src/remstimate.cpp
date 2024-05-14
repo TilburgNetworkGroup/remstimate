@@ -554,24 +554,22 @@ Rcpp::List remDerivatives(const arma::vec &pars,
   std::vector<std::string> models = {"tie","actor"};
   std::vector<std::string>::iterator itr = std::find(models.begin(), models.end(), model);
   auto which_model = std::distance(models.begin(), itr);
-
   switch (which_model)
   {
-    case 0: { out = remDerivativesStandard(pars,stats,dyad,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
-      break;}
-
+    case 0: { 
+      out = remDerivativesStandard(pars,stats,dyad,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
+      break;
+    }
     case 1: { 
-        switch (senderRate){ // both likelihood miss paralellization
-          case 0 : {
-                    out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),ncores,gradient,hessian);
-                    break;
-                    }
-          case 1 : {
-                    out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
-                    break;
-                    }
-        }
+      if(!senderRate){
+        out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),ncores,gradient,hessian);
+        break;
       }
+      else{
+        out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
+        break;
+      }
+    }
   }
   return out;
 }

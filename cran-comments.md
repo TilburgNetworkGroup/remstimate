@@ -1,7 +1,7 @@
-# remstimate 2.3.9
+# remstimate 2.3.10
  
-* Date: 2024-05-13
-* This is the 2.3.9 version of the package. Minor fixes on "learning_rate" parameter for method "GDADAMAX" and on plot.remstimate().
+* Date: 2024-05-14
+* minor fix on switch function for boolean type (remstimate.cpp).
  
 ## Test environments 
 * Local macOS Sonoma 14.0, R version 4.3.1 
