@@ -29,8 +29,9 @@ The `remstimate` package provides a set of functions that perform necessary calc
 
 Install the package in R from CRAN:
 
-```
+```r
 install.packages("remstimate")
+library(remify)
 ```
 <br />
 
@@ -38,13 +39,13 @@ install.packages("remstimate")
 
 List all the vignettes available with `remstimate` using:
 
-```
+```r
 vignette(package = "remstimate") 
 ```
 
 Open the vignette of a specific topic with:
 
-```
+```r
 vignette(topic = "remstimate", package = "remstimate") # or simply vignette("remstimate") 
 ```
 <br />

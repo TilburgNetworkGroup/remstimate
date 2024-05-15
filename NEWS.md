@@ -1,5 +1,9 @@
 
 
+# remstimate 2.3.11
+ 
+* minor fixes on implicit conversions 
+
 # remstimate 2.3.10
 
 * minor fix on switch function for boolean type (remstimate.cpp).

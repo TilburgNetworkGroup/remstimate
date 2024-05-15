@@ -1,7 +1,7 @@
-# remstimate 2.3.10
+# remstimate 2.3.11
  
-* Date: 2024-05-14
-* minor fix on switch function for boolean type (remstimate.cpp).
+* Date: 2024-05-15
+* minor fixes on implicit conversions 
  
 ## Test environments 
 * Local macOS Sonoma 14.0, R version 4.3.1 

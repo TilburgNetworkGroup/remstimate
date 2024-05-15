@@ -54,10 +54,10 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
 
     // initializing two empty objects for the two omit_dyad list objects
     // they will be filled only if omit_dyad has length >0 (i.e. it is not an empy list)
-    arma::vec riskset_time_vec(M); 
+    arma::ivec riskset_time_vec(M); 
     arma::mat riskset_mat;
     if(omit_dyad.size()>0){
-      riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+      riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
       riskset_mat = Rcpp::as<arma::mat>(omit_dyad["riskset"]);
     }
     else{
@@ -85,7 +85,7 @@ Rcpp::List remDerivativesStandard(const arma::vec &pars,
           // dealing with the risk set
           if(riskset_time_m!=(-1)){ // if the 'riskset_time_m' is different from (-1), then a dynamic riskset is observed
             for(d = 0; d < D; d++){
-              if(riskset_mat(riskset_time_m,d)){ // ignoring impossible events that are not in risk set 
+              if(riskset_mat(riskset_time_m,d) == 1.0){ // ignoring impossible events that are not in risk set 
                   double ratewt = exp(log_lambda(d))*interevent_time(m);  // `ratewt` means (rate * waiting time)
                   loglik_m -= ratewt;
                   if(gradient){
@@ -249,11 +249,11 @@ Rcpp::List remDerivativesSenderRates(
   arma::mat grad(U,M,arma::fill::zeros);
 
   // omit_dyad 
-  arma::vec riskset_time_vec(M); 
+  arma::ivec riskset_time_vec(M); 
   arma::mat riskset_mat;
 
   if(omit_dyad.size()>0){
-    riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+    riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
     riskset_mat = Rcpp::as<arma::mat>(omit_dyad["risksetSender"]);
   }
   else{
@@ -291,7 +291,7 @@ Rcpp::List remDerivativesSenderRates(
         loglik_m -= std::log(sum_lambda); // loglik second addend
         if(gradient | hessian){
           for(n = 0; n < N; n++){         //loop throughout all actors
-            if(riskset_mat(riskset_time_m,n) == 1){
+            if(riskset_mat(riskset_time_m,n) == 1.0){
               expected_stat_m += lambda_s(n) * (stats_m.col(n));
               expected_stat_m /= sum_lambda; //exp(params_s * X_i)*X_i / sum_h (exp(params * X_h))
               if(gradient){
@@ -418,10 +418,10 @@ Rcpp::List remDerivativesReceiverChoice(
     arma::mat grad(U,M,arma::fill::zeros);
 
     // omit_dyad 
-    arma::vec riskset_time_vec(M); 
+    arma::ivec riskset_time_vec(M); 
     arma::mat riskset_mat;
     if(omit_dyad.size()>0){
-      riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+      riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
       riskset_mat = Rcpp::as<arma::mat>(omit_dyad["riskset"]);
     }
     else{
@@ -456,7 +456,7 @@ Rcpp::List remDerivativesReceiverChoice(
       if(riskset_time_m!=(-1)){ 
           for(n = 0; n<N; n++){
               arma::uword dyad = remify::getDyadIndex(sender(0),n,0,N,true);
-              if((n!=sender_0_int) && (riskset_mat(riskset_time_m,dyad) == 1)){ // dynamic riskset
+              if((n!=sender_0_int) && (riskset_mat(riskset_time_m,dyad) == 1.0)){ // dynamic riskset
                   //loglik
                   denom += lambda_d(n); // exp(param_d * X_sender_i) 
                   if(hessian){
@@ -884,7 +884,11 @@ arma::field<arma::vec> iterHMC(arma::uword L,
 // @return list of two objects: draws and loglik after burnin and thinning step.
 Rcpp::List burninHMC(const arma::cube& samples, const arma::mat& loglik, arma::uword burnin, arma::uword thin = 1){
 
-  arma::uword rows = round((samples.n_rows - burnin)/thin); //number of rows of output
+  double burnin_double = static_cast<double>(burnin);
+  double thin_double = static_cast<double>(thin);
+  double samples_nrows_double = static_cast<double>(samples.n_rows);
+  double rows_double = round((samples_nrows_double - burnin_double)/thin_double); //number of rows of output 
+  arma::uword rows = static_cast<arma::uword>(rows_double);
   arma::uword nchains = samples.n_slices; // same dimension as loglik.n_cols
   arma::mat out_draws(rows*nchains, samples.n_cols); // output draws, sample.n_cols is equal to the number of parameters
   arma::vec out_loglik(rows*nchains); // output loglik
@@ -1060,10 +1064,10 @@ double getWAIC(arma::vec mu,
   // switch between tie-oriented and actor-oriented modeling
   if(which_model == 0){ // tie-oriented modeling (ordinal and interval likelihood supported)
     // omit dyad
-    arma::vec riskset_time_vec(M); 
+    arma::ivec riskset_time_vec(M); 
     arma::mat riskset_mat;
     if(omit_dyad.size()>0){
-      riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+      riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
       riskset_mat = Rcpp::as<arma::mat>(omit_dyad["riskset"]);
     }
     else{
@@ -1118,11 +1122,11 @@ double getWAIC(arma::vec mu,
   else if(which_model == 1){ // actor-oriented modeling
     if(senderRate){ // if sender rate model
       // omit_dyad 
-      arma::vec riskset_time_vec(M); 
+      arma::ivec riskset_time_vec(M); 
       arma::mat riskset_mat;
 
       if(omit_dyad.size()>0){
-        riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+        riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
         riskset_mat = Rcpp::as<arma::mat>(omit_dyad["risksetSender"]);
       }
       else{
@@ -1176,10 +1180,10 @@ double getWAIC(arma::vec mu,
     }
     else{ // if receiver choice model
       // omit_dyad 
-      arma::vec riskset_time_vec(M); 
+      arma::ivec riskset_time_vec(M); 
       arma::mat riskset_mat;
       if(omit_dyad.size()>0){
-        riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+        riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
         riskset_mat = Rcpp::as<arma::mat>(omit_dyad["riskset"]);
       }
       else{
@@ -1286,12 +1290,12 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
 
   if(model.compare(which_model[0]) == 0){ // model == "tie"
 
-    arma::vec riskset_time_vec(M); 
-    arma::umat riskset_mat;
+    arma::ivec riskset_time_vec(M); 
+    arma::mat riskset_mat;
 
     if(omit_dyad.size()>0){
-      riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
-      riskset_mat = Rcpp::as<arma::umat>(omit_dyad["riskset"]);
+      riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
+      riskset_mat = Rcpp::as<arma::mat>(omit_dyad["riskset"]);
     }
     else{
       riskset_time_vec.fill(-1);
@@ -1346,7 +1350,8 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
       for(u = 0; u < P; u++){
         for(z = 0; z < (u+1); z++){
           if(riskset_time_vec(m)!=(-1)){
-            arma::uvec which_dyads = arma::find(riskset_mat.row(riskset_time_vec(m))); 
+            arma::uword which_time = static_cast<arma::uword>(riskset_time_vec(m)); // riskset_time_vec is an signed integer (element of arma::ivec), needs conversion to uword
+            arma::uvec which_dyads = arma::find(riskset_mat.row(which_time)); 
             vcov(u,z) += sum((stats_m.elem(which_dyads+u*D).t() % stats_m.elem(which_dyads+z*D).t()) * ws(which_dyads));
           }
           else{
@@ -1383,11 +1388,11 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
   }
   else if(model.compare(which_model[1]) == 0){ // model  == "actor"
 
-    arma::vec riskset_time_vec(M); 
+    arma::ivec riskset_time_vec(M); 
     arma::mat riskset_mat;
 
     if(omit_dyad.size()>0){
-      riskset_time_vec = Rcpp::as<arma::vec>(omit_dyad["time"]);
+      riskset_time_vec = Rcpp::as<arma::ivec>(omit_dyad["time"]);
       if(senderRate){
         riskset_mat = Rcpp::as<arma::mat>(omit_dyad["risksetSender"]);
       }
@@ -1502,7 +1507,7 @@ Rcpp::List computeDiagnostics(const arma::vec &pars,
         if(riskset_time_m!=(-1)){
           for(n = 0; n<N; n++){
             int dyad_n = remify::getDyadIndex(actor1_m,n,0,N,true); // in the actor-oriented model, D is the number of actors
-            if(n!=actor1_m_int && riskset_mat(riskset_time_m,dyad_n)==0){
+            if(n!=actor1_m_int && riskset_mat(riskset_time_m,dyad_n)==0.0){
               remove_actors.push_back(n);
             }
           }
