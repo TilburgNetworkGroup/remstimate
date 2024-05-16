@@ -3,7 +3,7 @@ pkgdown: 2.0.9
 pkgdown_sha: ~
 articles:
   remstimate: remstimate.html
-last_built: 2024-05-15T15:03Z
+last_built: 2024-05-16T07:34Z
 urls:
   reference: https://tilburgnetworkgroup.github.io/remstimate/reference
   article: https://tilburgnetworkgroup.github.io/remstimate/articles
