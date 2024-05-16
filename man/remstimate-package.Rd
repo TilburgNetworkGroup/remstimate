@@ -11,7 +11,7 @@ A comprehensive set of tools designed for optimizing likelihood within a tie-ori
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/TilburgNetworkGroup/remstimate}
+  \item \url{https://tilburgnetworkgroup.github.io/remstimate/}
   \item Report bugs at \url{https://github.com/TilburgNetworkGroup/remstimate/issues}
 }
 
@@ -27,7 +27,7 @@ Authors:
 
 Other contributors:
 \itemize{
-  \item Marlyne Meijerink-Bosman \email{m.l.meijerink@tilburguniversity.edu} [contributor]
+  \item Marlyne Meijerink-Bosman [contributor]
   \item Diana Karimova \email{d.karimova@tilburguniversity.edu} [contributor]
   \item Mahdi Shafiee Kamalabad \email{m.shafieekamalabad@uu.nl} [contributor]
   \item Roger Leenders \email{r.t.a.j.leenders@tilburguniversity.edu} [contributor]

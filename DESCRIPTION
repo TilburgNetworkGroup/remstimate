@@ -2,7 +2,7 @@ Type: Package
 Package: remstimate
 Title: Optimization Frameworks for Tie-Oriented and Actor-Oriented Relational Event Models
 Version: 2.3.11
-Date: 2024-05-15
+Date: 2024-05-16
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
@@ -19,8 +19,7 @@ Authors@R:
              email = "f.v.generosovieira@tilburguniversity.edu"),             
       person(given = "Marlyne",
              family = "Meijerink-Bosman",
-             role = "ctb",
-             email = "m.l.meijerink@tilburguniversity.edu"),
+             role = "ctb"),
       person(given = "Diana",
              family = "Karimova",
              role = "ctb",
@@ -40,7 +39,7 @@ Authors@R:
 Maintainer: Giuseppe Arena <g.arena@tilburguniversity.edu>
 Description: A comprehensive set of tools designed for optimizing likelihood within a tie-oriented (Butts, C., 2008, <doi:10.1111/j.1467-9531.2008.00203.x>) or an actor-oriented modelling framework (Stadtfeld, C., & Block, P., 2017, <doi:10.15195/v4.a14>) in relational event networks. The package accommodates both frequentist and Bayesian approaches. The frequentist approaches that the package incorporates are the Maximum Likelihood Optimization (MLE) and the Gradient-based Optimization  (GDADAMAX). The Bayesian methodologies included in the package are the Bayesian Sampling Importance Resampling (BSIR) and the Hamiltonian Monte Carlo (HMC). The flexibility of choosing between frequentist and Bayesian optimization approaches allows researchers to select the estimation approach which aligns the most with their analytical preferences.
 License: MIT + file LICENSE
-URL: https://github.com/TilburgNetworkGroup/remstimate
+URL: https://tilburgnetworkgroup.github.io/remstimate/
 BugReports: https://github.com/TilburgNetworkGroup/remstimate/issues
 Depends: 
     R (>= 4.0.0)

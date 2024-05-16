@@ -1,5 +1,3 @@
-
-
 # remstimate 2.3.11
  
 * minor fixes on implicit conversions 
