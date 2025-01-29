@@ -1,7 +1,7 @@
-# remstimate 2.3.11
+# remstimate 2.3.13
  
-* Date: 2024-05-16
-* minor fixes on implicit conversions 
+* Date: 2025-01-29
+* Fixed GDADAMAX uninitialized variables (valgrind error)
  
 ## Test environments 
 * Local macOS Sonoma 14.0, R version 4.3.1 

@@ -1,33 +1,29 @@
 Type: Package
 Package: remstimate
 Title: Optimization Frameworks for Tie-Oriented and Actor-Oriented Relational Event Models
-Version: 2.3.11
-Date: 2024-05-16
+Version: 2.3.13
+Date: 2025-01-29
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
              role = c("aut", "cre"),
-             email = "g.arena@tilburguniversity.edu",
+             email = "g.arena@uva.nl",
              comment = c(ORCID = "0000-0001-5204-3326")),
       person(given = "Rumana",
              family = "Lakdawala",
-             role = "aut",
-             email = "r.j.lakdawala@tilburguniversity.edu"),
+             role = "aut"),
       person(given = "Fabio",
              family = "Generoso Vieira",
-             role = "aut",
-             email = "f.v.generosovieira@tilburguniversity.edu"),             
+             role = "aut"),             
       person(given = "Marlyne",
              family = "Meijerink-Bosman",
              role = "ctb"),
       person(given = "Diana",
              family = "Karimova",
-             role = "ctb",
-             email = "d.karimova@tilburguniversity.edu"),
+             role = "ctb"),
       person(given = "Mahdi",
              family = "Shafiee Kamalabad",
-             role = "ctb",
-             email = "m.shafieekamalabad@uu.nl"),
+             role = "ctb"),
       person(given = "Roger",
              family = "Leenders",
              role = "ctb",
@@ -36,7 +32,7 @@ Authors@R:
              family = "Mulder",
              role = "ctb",
              email = "j.mulder3@tilburguniversity.edu"))
-Maintainer: Giuseppe Arena <g.arena@tilburguniversity.edu>
+Maintainer: Giuseppe Arena <g.arena@uva.nl>
 Description: A comprehensive set of tools designed for optimizing likelihood within a tie-oriented (Butts, C., 2008, <doi:10.1111/j.1467-9531.2008.00203.x>) or an actor-oriented modelling framework (Stadtfeld, C., & Block, P., 2017, <doi:10.15195/v4.a14>) in relational event networks. The package accommodates both frequentist and Bayesian approaches. The frequentist approaches that the package incorporates are the Maximum Likelihood Optimization (MLE) and the Gradient-based Optimization  (GDADAMAX). The Bayesian methodologies included in the package are the Bayesian Sampling Importance Resampling (BSIR) and the Hamiltonian Monte Carlo (HMC). The flexibility of choosing between frequentist and Bayesian optimization approaches allows researchers to select the estimation approach which aligns the most with their analytical preferences.
 License: MIT + file LICENSE
 URL: https://tilburgnetworkgroup.github.io/remstimate/
@@ -62,4 +58,4 @@ VignetteBuilder:
     knitr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2

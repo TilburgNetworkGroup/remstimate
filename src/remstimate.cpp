@@ -632,7 +632,8 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
                   double epsilon = 0.01){
 
   arma::uword P = pars.n_elem;
-  double loglik,loglik_prev;
+  double loglik = 0.0;
+  double loglik_prev = 0.0;
   int i = 0;
   arma::vec moment(P,arma::fill::zeros);
   arma::vec inf_norm(P,arma::fill::zeros);
@@ -642,6 +643,9 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
   arma::vec grad(P,arma::fill::zeros);
   std::string reason;
   arma::mat iterations_pars(P,epochs,arma::fill::zeros);
+
+  arma::vec moment_prev(P,arma::fill::zeros);
+  arma::vec inf_norm_prev(P,arma::fill::zeros);
 
 
   while(i <= (epochs-1)){
@@ -664,11 +668,11 @@ Rcpp::List GDADAMAX(const arma::vec &pars,
     iterations_loglik(i) = loglik;
 
     // updating moment vector
-    arma::vec moment_prev = moment;
+    moment_prev = moment;
     moment = (beta1*moment_prev) + (1-beta1)*grad;
 
     // updating exponentially weighted infinity norm
-    arma::vec inf_norm_prev = inf_norm;
+    inf_norm_prev = inf_norm;
     arma::vec abs_grad = arma::abs(grad);
     for(arma::uword p=0; p<P; p++){
       arma::vec inf_norm_both = {beta2*inf_norm_prev(p),abs_grad(p)};

@@ -3,7 +3,6 @@
 \docType{package}
 \name{remstimate-package}
 \alias{remstimate-package}
-\alias{_PACKAGE}
 \title{remstimate: Optimization Frameworks for Tie-Oriented and Actor-Oriented Relational Event Models}
 \description{
 A comprehensive set of tools designed for optimizing likelihood within a tie-oriented (Butts, C., 2008, \doi{10.1111/j.1467-9531.2008.00203.x}) or an actor-oriented modelling framework (Stadtfeld, C., & Block, P., 2017, \doi{10.15195/v4.a14}) in relational event networks. The package accommodates both frequentist and Bayesian approaches. The frequentist approaches that the package incorporates are the Maximum Likelihood Optimization (MLE) and the Gradient-based Optimization (GDADAMAX). The Bayesian methodologies included in the package are the Bayesian Sampling Importance Resampling (BSIR) and the Hamiltonian Monte Carlo (HMC). The flexibility of choosing between frequentist and Bayesian optimization approaches allows researchers to select the estimation approach which aligns the most with their analytical preferences.
@@ -17,19 +16,19 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Giuseppe Arena \email{g.arena@tilburguniversity.edu} (\href{https://orcid.org/0000-0001-5204-3326}{ORCID})
+\strong{Maintainer}: Giuseppe Arena \email{g.arena@uva.nl} (\href{https://orcid.org/0000-0001-5204-3326}{ORCID})
 
 Authors:
 \itemize{
-  \item Rumana Lakdawala \email{r.j.lakdawala@tilburguniversity.edu}
-  \item Fabio Generoso Vieira \email{f.v.generosovieira@tilburguniversity.edu}
+  \item Rumana Lakdawala
+  \item Fabio Generoso Vieira
 }
 
 Other contributors:
 \itemize{
   \item Marlyne Meijerink-Bosman [contributor]
-  \item Diana Karimova \email{d.karimova@tilburguniversity.edu} [contributor]
-  \item Mahdi Shafiee Kamalabad \email{m.shafieekamalabad@uu.nl} [contributor]
+  \item Diana Karimova [contributor]
+  \item Mahdi Shafiee Kamalabad [contributor]
   \item Roger Leenders \email{r.t.a.j.leenders@tilburguniversity.edu} [contributor]
   \item Joris Mulder \email{j.mulder3@tilburguniversity.edu} [contributor]
 }
