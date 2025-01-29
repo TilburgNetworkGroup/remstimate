@@ -1,10 +1,9 @@
 pandoc: 3.1.11
-pkgdown: 2.0.9
+pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   remstimate: remstimate.html
-last_built: 2024-05-16T07:34Z
+last_built: 2025-01-29T16:56Z
 urls:
   reference: https://tilburgnetworkgroup.github.io/remstimate/reference
   article: https://tilburgnetworkgroup.github.io/remstimate/articles
-
