@@ -8,7 +8,7 @@
 <title>Modeling relational event networks with remstimate • remstimate</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.9/font.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Modeling relational event networks with remstimate">
@@ -30,7 +30,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../index.html"><span class="fa fa-home fa-lg"></span></a></li>
+<li class="nav-item"><a class="nav-link" href="../index.html" aria-label="Home"><span class="fa fa-home fa-lg"></span></a></li>
 <li class="active nav-item"><a class="nav-link" href="../articles/index.html">Vignettes</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Functions</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">News</a></li>
@@ -47,8 +47,8 @@
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/TilburgNetworkGroup/remverse">remverse</a></li>
       </ul>
 <ul class="navbar-nav">
-<li class="nav-item"><a class="external-link nav-link" href="https://twitter.com/TiUNetworkGroup"><span class="fa fa-twitter"></span></a></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/TilburgNetworkGroup/remstimate"><span class="fa fa-github"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://twitter.com/TiUNetworkGroup" aria-label="Twitter"><span class="fa fa-twitter"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/TilburgNetworkGroup/remstimate" aria-label="Github"><span class="fa fa-github"></span></a></li>
       </ul>
 </div>
 
@@ -290,7 +290,7 @@ unique time points (or events) in the sequence (see
 statistics calculated <em>per unique time point</em> or <em>per observed
 event</em>), number of columns equal to number of dyadic events
 (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>),
-(see <code><a href="https://cran.rstudio.com/web/packages/remify/vignettes/remify.html" class="external-link">vignette(topic="remify",package="remify")</a></code> for more
+(see <code><a href="https://tilburgnetworkgroup.github.io/remify/articles/remify.html" class="external-link">vignette(topic="remify",package="remify")</a></code> for more
 information on how to quantify the number of dyadic events), number of
 slices equal to the number of variables in the linear predictor
 (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>P</mi><annotation encoding="application/x-tex">P</annotation></semantics></math>).</li>
@@ -309,7 +309,7 @@ refers to any event at risk at time
 describes the set of events at risk at each time point (including also
 the occurring event). In this case, the risk set is assumed to be the
 <em>full</em> risk set (see
-<code><a href="https://cran.rstudio.com/web/packages/remify/vignettes/riskset.html" class="external-link">vignette(topic="riskset",package="remify")</a></code> for more
+<code><a href="https://tilburgnetworkgroup.github.io/remify/articles/riskset.html" class="external-link">vignette(topic="riskset",package="remify")</a></code> for more
 information on alternative definitions of the risk set), which means
 that all the possible dyadic events are at risk at any time point;</li>
 <li>
@@ -362,7 +362,7 @@ The parameters are also available as object within the list,
 <span><span class="co">##          -5.00           0.01          -0.10           0.03</span></span></code></pre>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># processing the event sequence with 'remify'</span></span>
-<span><span class="va">tie_reh</span> <span class="op">&lt;-</span> <span class="fu">remify</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/remify/man/remify.html" class="external-link">remify</a></span><span class="op">(</span>edgelist <span class="op">=</span> <span class="va">tie_data</span><span class="op">$</span><span class="va">edgelist</span>, model <span class="op">=</span> <span class="st">"tie"</span><span class="op">)</span></span>
+<span><span class="va">tie_reh</span> <span class="op">&lt;-</span> <span class="fu">remify</span><span class="fu">::</span><span class="fu"><a href="https://tilburgnetworkgroup.github.io/remify/reference/remify.html" class="external-link">remify</a></span><span class="op">(</span>edgelist <span class="op">=</span> <span class="va">tie_data</span><span class="op">$</span><span class="va">edgelist</span>, model <span class="op">=</span> <span class="st">"tie"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># summary of the (processed) relational event network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">tie_reh</span><span class="op">)</span></span></code></pre></div>
@@ -541,7 +541,7 @@ equal to 0.</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># plot</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">tie_mle</span>, reh  <span class="op">=</span> <span class="va">tie_reh</span>, diagnostics <span class="op">=</span> <span class="va">tie_mle_diagnostics</span><span class="op">)</span></span></code></pre></div>
-<p><img src="remstimate_files/figure-html/unnamed-chunk-11-1.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-11-2.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-11-3.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-11-4.png" width="50%"></p>
+<p><img src="remstimate_files/figure-html/unnamed-chunk-11-1.png" alt="tie-oriented plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-11-2.png" alt="tie-oriented plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-11-3.png" alt="tie-oriented plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-11-4.png" alt="tie-oriented plots" width="50%"></p>
 <hr>
 </div>
 <div class="section level5">
@@ -673,7 +673,7 @@ percentile 97.5.</p>
 <span><span class="va">tie_hmc_diagnostics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/diagnostics.html">diagnostics</a></span><span class="op">(</span>object <span class="op">=</span> <span class="va">tie_hmc</span>, reh <span class="op">=</span> <span class="va">tie_reh</span>, stats <span class="op">=</span> <span class="va">tie_stats</span><span class="op">)</span></span>
 <span><span class="co"># plot (histograms and trace plot have highest posterior density intervals dashed lines in blue and posterior estimate in red)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">tie_hmc</span>, reh  <span class="op">=</span> <span class="va">tie_reh</span>, diagnostics <span class="op">=</span> <span class="va">tie_hmc_diagnostics</span><span class="op">)</span></span></code></pre></div>
-<p><img src="remstimate_files/figure-html/unnamed-chunk-17-1.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-2.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-3.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-4.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-5.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-6.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-7.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-8.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-9.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-10.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-11.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-12.png" width="50%"></p>
+<p><img src="remstimate_files/figure-html/unnamed-chunk-17-1.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-2.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-3.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-4.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-5.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-6.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-7.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-8.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-9.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-10.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-11.png" alt="tie-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-17-12.png" alt="tie-oriented HMC plots" width="50%"></p>
 <hr>
 </div>
 </div>
@@ -722,7 +722,7 @@ sender, receiver, and time of the event. Furthermore, consider
 to be the number of actors in the network. For simplicity, we assume
 that all actors in the network can be the sender or the receiver of a
 relational event (i.e. <em>full</em> risk set, see
-<code><a href="https://cran.rstudio.com/web/packages/remify/vignettes/riskset.html" class="external-link">vignette(topic="riskset",package="remify")</a></code> for more
+<code><a href="https://tilburgnetworkgroup.github.io/remify/articles/riskset.html" class="external-link">vignette(topic="riskset",package="remify")</a></code> for more
 information on alternative definitions of the risk set) and we use the
 index
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
@@ -921,7 +921,7 @@ used in the generation of the event sequence are:</p>
 <span><span class="co">##       -0.10        0.03</span></span></code></pre>
 <div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># processing event sequence with 'remify'</span></span>
-<span><span class="va">ao_reh</span> <span class="op">&lt;-</span> <span class="fu">remify</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/remify/man/remify.html" class="external-link">remify</a></span><span class="op">(</span>edgelist <span class="op">=</span> <span class="va">ao_data</span><span class="op">$</span><span class="va">edgelist</span>, model <span class="op">=</span> <span class="st">"actor"</span><span class="op">)</span></span>
+<span><span class="va">ao_reh</span> <span class="op">&lt;-</span> <span class="fu">remify</span><span class="fu">::</span><span class="fu"><a href="https://tilburgnetworkgroup.github.io/remify/reference/remify.html" class="external-link">remify</a></span><span class="op">(</span>edgelist <span class="op">=</span> <span class="va">ao_data</span><span class="op">$</span><span class="va">edgelist</span>, model <span class="op">=</span> <span class="st">"actor"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># summary of the relational event network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">ao_reh</span><span class="op">)</span></span></code></pre></div>
@@ -1139,7 +1139,7 @@ available for a <code>remstimate</code> object.</p>
 <div class="sourceCode" id="cb58"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># plot</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">ao_mle</span>, reh  <span class="op">=</span> <span class="va">ao_reh</span>, diagnostics <span class="op">=</span> <span class="va">ao_mle_diagnostics</span><span class="op">)</span></span></code></pre></div>
-<p><img src="remstimate_files/figure-html/unnamed-chunk-27-1.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-27-2.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-27-3.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-27-4.png" width="50%"></p>
+<p><img src="remstimate_files/figure-html/unnamed-chunk-27-1.png" alt="actor-oriented plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-27-2.png" alt="actor-oriented plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-27-3.png" alt="actor-oriented plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-27-4.png" alt="actor-oriented plots" width="50%"></p>
 <hr>
 </div>
 <div class="section level5">
@@ -1303,7 +1303,7 @@ available for a <code>remstimate</code> object.</p>
 <span><span class="va">ao_hmc_diagnostics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/diagnostics.html">diagnostics</a></span><span class="op">(</span>object <span class="op">=</span> <span class="va">ao_hmc</span>, reh <span class="op">=</span> <span class="va">ao_reh</span>, stats <span class="op">=</span> <span class="va">ao_stats</span><span class="op">)</span></span>
 <span><span class="co"># plot (only for the receiver_model, by setting sender_model = NA)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">ao_hmc</span>, reh  <span class="op">=</span> <span class="va">ao_reh</span>, diagnostics <span class="op">=</span> <span class="va">ao_hmc_diagnostics</span>, sender_model <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span></span></code></pre></div>
-<p><img src="remstimate_files/figure-html/unnamed-chunk-33-1.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-2.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-3.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-4.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-5.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-6.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-7.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-8.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-9.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-10.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-11.png" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-12.png" width="50%"></p>
+<p><img src="remstimate_files/figure-html/unnamed-chunk-33-1.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-2.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-3.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-4.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-5.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-6.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-7.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-8.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-9.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-10.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-11.png" alt="actor-oriented HMC plots" width="50%"><img src="remstimate_files/figure-html/unnamed-chunk-33-12.png" alt="actor-oriented HMC plots" width="50%"></p>
 <hr>
 </div>
 <div class="section level5">
@@ -1340,7 +1340,7 @@ and Time: Dynamic Network Actor Models for Relational Events.”</span>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer>
