@@ -1,6 +1,6 @@
 <br />
 
-<img align="right" width="185" src='man/figures/remstimate-logo.svg'>
+<img align="right" width="185" src='man/figures/remstimate-logo.svg' alt="remstimate logo">
 
 ## **remstimate** 
 

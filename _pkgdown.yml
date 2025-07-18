@@ -12,6 +12,7 @@ navbar:
   title: "remstimate"
   left:
     - icon: fa-home fa-lg
+      aria-label: "Home"
       href: index.html
     - text: "Vignettes"
       href: articles/index.html
@@ -35,13 +36,15 @@ navbar:
       href: https://github.com/TilburgNetworkGroup/remverse
   right:
    - icon: fa-twitter
+     aria-label: "Twitter"
      href: https://twitter.com/TiUNetworkGroup
    - icon: fa-github
+     aria-label: "Github"
      href: https://github.com/TilburgNetworkGroup/remstimate
 
 
 articles:
-  - title: ""
+  - title: "Vignettes"
     desc: >
       This vignette provides a tutorial on how to estimate a tie-oriented and a actor-oriented relational event model using
       the **remstimate** package.
