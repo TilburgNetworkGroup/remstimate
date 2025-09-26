@@ -8,6 +8,7 @@
 /doc
 /Meta
 .DS_Store
+man/.DS_Store
 /analyses
 /doc/
 /Meta/

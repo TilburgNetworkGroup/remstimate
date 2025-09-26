@@ -1,7 +1,7 @@
-# remstimate 2.3.13
+# remstimate 2.3.14
  
-* Date: 2025-01-29
-* Fixed GDADAMAX uninitialized variables (valgrind error)
+* Date: 2025-09-26
+* Updated conversion to scalar in RcppArmadillo
  
 ## Test environments 
 * Local macOS Sonoma 14.0, R version 4.3.1 

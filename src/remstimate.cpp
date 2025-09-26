@@ -971,14 +971,14 @@ Rcpp::List HMC(arma::mat pars_init,
     //[i=0] this step only get the first sample out of the starting value
     arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
     chain_j.col(0) = iter_i_hmc[0]; // saving draws
-    chain_j_loglik(0) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
+    chain_j_loglik(0) = arma::as_scalar(iter_i_hmc[1]); // saving posterior loglikelihood
     //Rcpp::Rcout << "first value of the chain: " << chain_j.col(0) << "\n";
     for(i = 1; i < nsim; i++){ //looping through iterations of the MCMC
       //Rcpp::Rcout <<i <<"\n"; progress bar on chains progress
       //Then the next step will always be based on the previous one
       arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
       chain_j.col(i) = iter_i_hmc[0]; // saving draws
-      chain_j_loglik(i) = arma::conv_to<double>::from(iter_i_hmc[1]); // saving posterior loglikelihood
+      chain_j_loglik(i) = arma::as_scalar(iter_i_hmc[1]); // saving posterior loglikelihood
     }
     array_of_draws.slice(j) = chain_j.t();
     matrix_of_loglik.col(j) = chain_j_loglik;
