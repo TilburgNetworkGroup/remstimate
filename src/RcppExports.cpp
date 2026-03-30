@@ -140,6 +140,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// remDerivativesSampled
+Rcpp::List remDerivativesSampled(const arma::vec& pars, const arma::cube& stats, const Rcpp::List& case_pos, const arma::mat& samp_prob, const arma::vec& interevent_time, bool ordinal, bool gradient, bool hessian, int ncores);
+RcppExport SEXP _remstimate_remDerivativesSampled(SEXP parsSEXP, SEXP statsSEXP, SEXP case_posSEXP, SEXP samp_probSEXP, SEXP interevent_timeSEXP, SEXP ordinalSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP ncoresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type case_pos(case_posSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type samp_prob(samp_probSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type interevent_time(interevent_timeSEXP);
+    Rcpp::traits::input_parameter< bool >::type ordinal(ordinalSEXP);
+    Rcpp::traits::input_parameter< bool >::type gradient(gradientSEXP);
+    Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivativesSampled(pars, stats, case_pos, samp_prob, interevent_time, ordinal, gradient, hessian, ncores));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 14},
@@ -147,6 +166,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_remstimate_HMC", (DL_FUNC) &_remstimate_HMC, 20},
     {"_remstimate_getWAIC", (DL_FUNC) &_remstimate_getWAIC, 15},
     {"_remstimate_computeDiagnostics", (DL_FUNC) &_remstimate_computeDiagnostics, 11},
+    {"_remstimate_remDerivativesSampled", (DL_FUNC) &_remstimate_remDerivativesSampled, 9},
     {NULL, NULL, 0}
 };
 

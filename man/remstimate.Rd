@@ -76,15 +76,15 @@ data(tie_data)
 
 # processing event sequence with remify
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
-  
+
 # specifying linear predictor
-tie_model <- ~ 1 + 
+tie_model <- ~ 1 +
                remstats::indegreeSender()+
                remstats::inertia()+
-               remstats::reciprocity() 
+               remstats::reciprocity()
 
 # calculating statistics
-tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+tie_reh_stats <- remstats::remstats(reh = tie_reh,
                                     tie_effects = tie_model)
 
 # running estimation
@@ -104,14 +104,14 @@ data(ao_data)
 
 # processing event sequence with remify
 ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
-  
+
 # specifying linear predictor (for sender rate and receiver choice model)
 rate_model <- ~ 1 + remstats::indegreeSender()
 choice_model <- ~ remstats::inertia() + remstats::reciprocity()
 
 # calculating statistics
-ao_reh_stats <- remstats::remstats(reh = ao_reh, 
-                                   sender_effects = rate_model, 
+ao_reh_stats <- remstats::remstats(reh = ao_reh,
+                                   sender_effects = rate_model,
                                    receiver_effects = choice_model)
 
 # running estimation

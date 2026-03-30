@@ -1,3 +1,7 @@
+# remstimate 2.3.14.9000
+
+* remstimate2 added. Only support MLE and HMC.
+
 # remstimate 2.3.11
  
 * minor fixes on implicit conversions 

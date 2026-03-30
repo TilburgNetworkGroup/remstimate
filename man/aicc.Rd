@@ -36,15 +36,15 @@ data(tie_data)
 
 # processing event sequence with remify
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
-  
+
 # specifying linear predictor
-tie_model <- ~ 1 + 
+tie_model <- ~ 1 +
                remstats::indegreeSender()+
                remstats::inertia()+
-               remstats::reciprocity() 
+               remstats::reciprocity()
 
 # calculating statistics
-tie_reh_stats <- remstats::remstats(reh = tie_reh, 
+tie_reh_stats <- remstats::remstats(reh = tie_reh,
                                     tie_effects = tie_model)
 
 # running estimation
@@ -54,6 +54,6 @@ tie_mle <- remstimate::remstimate(reh = tie_reh,
                                   ncores = 1)
 
 # AICC
-aicc(tie_mle) 
+aicc(tie_mle)
 
 }

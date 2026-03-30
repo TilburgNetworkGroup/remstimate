@@ -21,3 +21,7 @@ computeDiagnostics <- function(pars, stats, actor1, actor2, dyad, omit_dyad, mod
     .Call(`_remstimate_computeDiagnostics`, pars, stats, actor1, actor2, dyad, omit_dyad, model, N, senderRate, ncores, baseline)
 }
 
+remDerivativesSampled <- function(pars, stats, case_pos, samp_prob, interevent_time, ordinal = FALSE, gradient = TRUE, hessian = TRUE, ncores = 1L) {
+    .Call(`_remstimate_remDerivativesSampled`, pars, stats, case_pos, samp_prob, interevent_time, ordinal, gradient, hessian, ncores)
+}
+
