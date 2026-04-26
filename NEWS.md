@@ -1,3 +1,7 @@
+# remstimate 3.0.0
+
+* Version for remverse.
+
 # remstimate 2.3.14.9000
 
 * remstimate2 added. Only support MLE and HMC. Compatible with remify2 and tomstats2.
