@@ -22,6 +22,7 @@ Authors:
 \itemize{
   \item Rumana Lakdawala
   \item Fabio Generoso Vieira
+  \item Joris Mulder \email{j.mulder3@tilburguniversity.edu}
 }
 
 Other contributors:
@@ -30,7 +31,6 @@ Other contributors:
   \item Diana Karimova [contributor]
   \item Mahdi Shafiee Kamalabad [contributor]
   \item Roger Leenders \email{r.t.a.j.leenders@tilburguniversity.edu} [contributor]
-  \item Joris Mulder \email{j.mulder3@tilburguniversity.edu} [contributor]
 }
 
 }

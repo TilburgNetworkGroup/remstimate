@@ -1,8 +1,8 @@
 Type: Package
 Package: remstimate
 Title: Optimization Frameworks for Tie-Oriented and Actor-Oriented Relational Event Models
-Version: 2.3.14
-Date: 2025-09-26
+Version: 3.0.0
+Date: 2026-04-26
 Authors@R: 
     c(person(given = "Giuseppe",
              family = "Arena",
@@ -14,7 +14,11 @@ Authors@R:
              role = "aut"),
       person(given = "Fabio",
              family = "Generoso Vieira",
-             role = "aut"),             
+             role = "aut"),
+      person(given = "Joris",
+             family = "Mulder",
+             role = "aut",
+             email = "j.mulder3@tilburguniversity.edu"),
       person(given = "Marlyne",
              family = "Meijerink-Bosman",
              role = "ctb"),
@@ -27,11 +31,7 @@ Authors@R:
       person(given = "Roger",
              family = "Leenders",
              role = "ctb",
-             email = "r.t.a.j.leenders@tilburguniversity.edu"),
-      person(given = "Joris",
-             family = "Mulder",
-             role = "ctb",
-             email = "j.mulder3@tilburguniversity.edu"))
+             email = "r.t.a.j.leenders@tilburguniversity.edu"))
 Maintainer: Giuseppe Arena <g.arena@uva.nl>
 Description: A comprehensive set of tools designed for optimizing likelihood within a tie-oriented (Butts, C., 2008, <doi:10.1111/j.1467-9531.2008.00203.x>) or an actor-oriented modelling framework (Stadtfeld, C., & Block, P., 2017, <doi:10.15195/v4.a14>) in relational event networks. The package accommodates both frequentist and Bayesian approaches. The frequentist approaches that the package incorporates are the Maximum Likelihood Optimization (MLE) and the Gradient-based Optimization  (GDADAMAX). The Bayesian methodologies included in the package are the Bayesian Sampling Importance Resampling (BSIR) and the Hamiltonian Monte Carlo (HMC). The flexibility of choosing between frequentist and Bayesian optimization approaches allows researchers to select the estimation approach which aligns the most with their analytical preferences.
 License: MIT + file LICENSE
@@ -40,16 +40,16 @@ BugReports: https://github.com/TilburgNetworkGroup/remstimate/issues
 Depends: 
     R (>= 4.0.0)
 Imports: 
-    methods,
     Rcpp,
-    remify (>= 3.2.4),
+    remify (>= 4.0.0),
+    remstats (>= 4.0.0),
     trust,
-    remstats (>= 3.2.1),
     mvnfast
 Suggests: 
     knitr,
     rmarkdown,
-    tinytest
+    tinytest,
+    survival
 LinkingTo:
     Rcpp,
     RcppArmadillo,
@@ -58,4 +58,4 @@ VignetteBuilder:
     knitr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3

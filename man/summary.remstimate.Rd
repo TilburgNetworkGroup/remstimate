@@ -21,7 +21,7 @@ A function that returns the summary of a \code{remstimate} object.
 
 # ------------------------------------ #
 #       method 'summary' for the       #
-#       tie-oriented model: "BSIR"     #
+#         tie-oriented model.         #
 # ------------------------------------ #
 
 # loading data
@@ -43,7 +43,7 @@ tie_reh_stats <- remstats::remstats(reh = tie_reh,
 # running estimation
 tie_mle <- remstimate::remstimate(reh = tie_reh,
                                   stats = tie_reh_stats,
-                                  method = "BSIR",
+                                  method = "MLE",
                                   nsim = 100,
                                   ncores = 1)
 
@@ -52,7 +52,7 @@ summary(tie_mle)
 
 # ------------------------------------ #
 #      method 'summary' for the        #
-#      actor-oriented model: "BSIR"    #
+#      actor-oriented model: "MLE"     #
 # ------------------------------------ #
 
 # loading data
@@ -73,7 +73,7 @@ ao_reh_stats <- remstats::remstats(reh = ao_reh,
 # running estimation
 ao_mle <- remstimate::remstimate(reh = ao_reh,
                                  stats = ao_reh_stats,
-                                 method = "BSIR",
+                                 method = "MLE",
                                  nsim = 100,
                                  ncores = 1)
 

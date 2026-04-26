@@ -21,38 +21,6 @@ A function that prints out the estimates returned by a 'remstimate' object.
 
 # ------------------------------------ #
 #       method 'print' for the         #
-#       tie-oriented model: "BSIR"     #
-# ------------------------------------ #
-
-# loading data
-data(tie_data)
-
-# processing event sequence with remify
-tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
-
-# specifying linear predictor
-tie_model <- ~ 1 +
-               remstats::indegreeSender()+
-               remstats::inertia()+
-               remstats::reciprocity()
-
-# calculating statistics
-tie_reh_stats <- remstats::remstats(reh = tie_reh,
-                                    tie_effects = tie_model)
-
-# running estimation
-tie_mle <- remstimate::remstimate(reh = tie_reh,
-                                  stats = tie_reh_stats,
-                                  method = "BSIR",
-                                  nsim = 100,
-                                  ncores = 1)
-
-# print
-tie_mle
-
-# ------------------------------------ #
-#      method 'print' for the          #
-#      actor-oriented model: "BSIR"    #
 # ------------------------------------ #
 
 # loading data
@@ -73,7 +41,7 @@ ao_reh_stats <- remstats::remstats(reh = ao_reh,
 # running estimation
 ao_mle <- remstimate::remstimate(reh = ao_reh,
                                  stats = ao_reh_stats,
-                                 method = "BSIR",
+                                 method = "MLE",
                                  nsim = 100,
                                  ncores = 1)
 

@@ -1,6 +1,6 @@
-# Tests for remstimate2(): MLE and HMC with full and sampled tomstats
+# Tests for remstimate(): MLE and HMC with full and sampled tomstats
 # Key tests:
-#   1. Full stats (tomstats): remstimate2 MLE matches remstimate MLE
+#   1. Full stats (tomstats): remstimate MLE matches remstimate MLE
 #   2. Sampled full (samp_num = D): estimates match full MLE exactly
 #   3. Sampled partial: correct sign, reasonable magnitude, SE >= full SE
 #   4. Output structure checks
@@ -14,13 +14,13 @@ data(info,    package = "remstats")
 colnames(history)[colnames(history) == "setting"] <- "type"
 history_sub <- history[1:40, ]
 
-reh <- remify::remify2(edgelist = history_sub, model = "tie", riskset = "active")
+reh <- remify::remify(edgelist = history_sub, model = "tie", riskset = "active")
 
 effects <- ~ inertia(consider_type = FALSE) +
                indegreeSender(consider_type = FALSE) +
                outdegreeSender(consider_type = FALSE)
 
-ts_full <- remstats::tomstats2(effects, reh = reh,
+ts_full <- remstats::tomstats(effects, reh = reh,
                                 attr_actors = info,
                                 memory = "decay", memory_value = 1000,
                                 start = 2, stop = 30,
@@ -29,9 +29,9 @@ ts_full <- remstats::tomstats2(effects, reh = reh,
 D <- nrow(attr(ts_full, "riskset"))  # number of dyads in active riskset
 
 # ---------------------------------------------------------------------------
-# SECTION 1: Full stats — remstimate2 MLE matches remstimate MLE
+# SECTION 1: Full stats — remstimate MLE matches remstimate MLE
 # ---------------------------------------------------------------------------
-est_full2 <- remstimate2(reh = reh, stats = ts_full, method = "MLE", ncores = 1L)
+est_full2 <- remstimate(reh = reh, stats = ts_full, method = "MLE", ncores = 1L)
 
 expect_inherits(est_full2, "remstimate", info = "full: inherits remstimate")
 expect_identical(attr(est_full2, "approach"), "Frequentist",
@@ -65,7 +65,7 @@ expect_true(isTRUE(est_full2$converged), info = "full: converged")
 # ---------------------------------------------------------------------------
 # SECTION 2: Sampled full (samp_num = D) — should match full MLE exactly
 # ---------------------------------------------------------------------------
-ts_samp_full <- remstats::tomstats2(effects, reh = reh,
+ts_samp_full <- remstats::tomstats(effects, reh = reh,
                                      attr_actors = info,
                                      memory = "decay", memory_value = 1000,
                                      start = 2, stop = 30,
@@ -73,7 +73,7 @@ ts_samp_full <- remstats::tomstats2(effects, reh = reh,
                                      samp_num = D,
                                      seed = 1L)
 
-est_samp_full <- remstimate2(reh = reh, stats = ts_samp_full,
+est_samp_full <- remstimate(reh = reh, stats = ts_samp_full,
                               method = "MLE", ncores = 1L)
 
 expect_inherits(est_samp_full, "remstimate",
@@ -99,7 +99,7 @@ expect_true(is.finite(est_samp_full$loglik),
 # ---------------------------------------------------------------------------
 # SECTION 3: Sampled partial — sign consistency and SE inflation
 # ---------------------------------------------------------------------------
-ts_samp <- remstats::tomstats2(effects, reh = reh,
+ts_samp <- remstats::tomstats(effects, reh = reh,
                                 attr_actors = info,
                                 memory = "decay", memory_value = 1000,
                                 start = 2, stop = 30,
@@ -107,7 +107,7 @@ ts_samp <- remstats::tomstats2(effects, reh = reh,
                                 samp_num = 5L,
                                 seed = 42L)
 
-est_samp <- remstimate2(reh = reh, stats = ts_samp, method = "MLE", ncores = 1L)
+est_samp <- remstimate(reh = reh, stats = ts_samp, method = "MLE", ncores = 1L)
 
 expect_inherits(est_samp, "remstimate",
   info = "samp_partial: inherits remstimate")
@@ -152,13 +152,13 @@ expect_equal(est_samp$samp_num, 5L,
 # ---------------------------------------------------------------------------
 # SECTION 5: Two different seeds give different but similar estimates
 # ---------------------------------------------------------------------------
-ts_samp2 <- remstats::tomstats2(effects, reh = reh,
+ts_samp2 <- remstats::tomstats(effects, reh = reh,
                                  attr_actors = info,
                                  memory = "decay", memory_value = 1000,
                                  start = 2, stop = 30,
                                  sampling = TRUE, samp_num = 5L, seed = 99L)
 
-est_samp2 <- remstimate2(reh = reh, stats = ts_samp2, method = "MLE", ncores = 1L)
+est_samp2 <- remstimate(reh = reh, stats = ts_samp2, method = "MLE", ncores = 1L)
 
 # Different seeds -> different estimates
 expect_false(identical(est_samp$coefficients, est_samp2$coefficients),
@@ -174,13 +174,13 @@ expect_equal(sign(est_samp2$coefficients), sign(est_full2$coefficients),
 effects_typed <- ~ inertia(consider_type = "separate") +
                     outdegreeSender(consider_type = FALSE)
 
-ts_typed_full <- remstats::tomstats2(effects_typed, reh = reh,
+ts_typed_full <- remstats::tomstats(effects_typed, reh = reh,
                                       attr_actors = info,
                                       memory = "decay", memory_value = 1000,
                                       start = 2, stop = 30,
                                       sampling = FALSE)
 
-est_typed_full <- remstimate2(reh = reh, stats = ts_typed_full,
+est_typed_full <- remstimate(reh = reh, stats = ts_typed_full,
                                method = "MLE", ncores = 1L)
 
 expect_inherits(est_typed_full, "remstimate",
@@ -192,7 +192,7 @@ expect_true("inertia.work" %in% names(est_typed_full$coefficients),
 
 # Sampled typed
 D_typed <- nrow(attr(ts_typed_full, "riskset"))
-ts_typed_samp <- remstats::tomstats2(effects_typed, reh = reh,
+ts_typed_samp <- remstats::tomstats(effects_typed, reh = reh,
                                       attr_actors = info,
                                       memory = "decay", memory_value = 1000,
                                       start = 2, stop = 30,
@@ -200,7 +200,7 @@ ts_typed_samp <- remstats::tomstats2(effects_typed, reh = reh,
                                       samp_num = min(5L, D_typed),
                                       seed = 7L)
 
-est_typed_samp <- remstimate2(reh = reh, stats = ts_typed_samp,
+est_typed_samp <- remstimate(reh = reh, stats = ts_typed_samp,
                                method = "MLE", ncores = 1L)
 expect_inherits(est_typed_samp, "remstimate",
   info = "typed samp: inherits remstimate")
@@ -211,7 +211,7 @@ expect_equal(names(est_typed_samp$coefficients),
 # ---------------------------------------------------------------------------
 # SECTION 7: HMC runs without error, posterior mean near MLE
 # ---------------------------------------------------------------------------
-est_hmc <- remstimate2(reh = reh, stats = ts_full,
+est_hmc <- remstimate(reh = reh, stats = ts_full,
                         method = "HMC", ncores = 1L,
                         nsim = 200L, burnin = 100L, thin = 5L,
                         L = 20L, epsilon = 0.002, seed = 1L)
@@ -235,12 +235,12 @@ expect_equal(ncol(est_hmc$draws), 4L, info = "HMC: draws has P columns")
 # SECTION 8: Error handling
 # ---------------------------------------------------------------------------
 expect_error(
-  remstimate2(reh = list(), stats = ts_full),
+  remstimate(reh = list(), stats = ts_full),
   info = "error: non-remify reh"
 )
 
 expect_error(
-  remstimate2(reh = reh, stats = array(1, dim = c(3,3,3))),
+  remstimate(reh = reh, stats = array(1, dim = c(3,3,3))),
   info = "error: non-remstats stats"
 )
 
