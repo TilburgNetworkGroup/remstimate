@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // remDerivatives
-Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool gradient, bool hessian, bool senderRate, Rcpp::Nullable<int> N);
-RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP senderRateSEXP, SEXP NSEXP) {
+Rcpp::List remDerivatives(const arma::vec& pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool gradient, bool hessian, bool senderRate, Rcpp::Nullable<int> N, Rcpp::Nullable<Rcpp::IntegerVector> sender_riskset, Rcpp::Nullable<Rcpp::List> receiver_riskset);
+RcppExport SEXP _remstimate_remDerivatives(SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP gradientSEXP, SEXP hessianSEXP, SEXP senderRateSEXP, SEXP NSEXP, SEXP sender_risksetSEXP, SEXP receiver_risksetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -31,7 +31,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type hessian(hessianSEXP);
     Rcpp::traits::input_parameter< bool >::type senderRate(senderRateSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<int> >::type N(NSEXP);
-    rcpp_result_gen = Rcpp::wrap(remDerivatives(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, gradient, hessian, senderRate, N));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type sender_riskset(sender_risksetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::List> >::type receiver_riskset(receiver_risksetSEXP);
+    rcpp_result_gen = Rcpp::wrap(remDerivatives(pars, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, gradient, hessian, senderRate, N, sender_riskset, receiver_riskset));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -65,8 +67,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // HMC
-Rcpp::List HMC(arma::mat pars_init, arma::uword nsim, arma::uword nchains, arma::uword burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool senderRate, Rcpp::Nullable<int> N, arma::uword thin, arma::uword L, double epsilon);
-RcppExport SEXP _remstimate_HMC(SEXP pars_initSEXP, SEXP nsimSEXP, SEXP nchainsSEXP, SEXP burninSEXP, SEXP meanPriorSEXP, SEXP sigmaPriorSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP senderRateSEXP, SEXP NSEXP, SEXP thinSEXP, SEXP LSEXP, SEXP epsilonSEXP) {
+Rcpp::List HMC(arma::mat pars_init, arma::uword nsim, arma::uword nchains, arma::uword burnin, const arma::vec& meanPrior, const arma::mat& sigmaPrior, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const Rcpp::List& omit_dyad, const arma::vec& interevent_time, std::string model, bool ordinal, int ncores, bool senderRate, Rcpp::Nullable<int> N, arma::uword thin, arma::uword L, double epsilon, Rcpp::Nullable<Rcpp::IntegerVector> sender_riskset, Rcpp::Nullable<Rcpp::List> receiver_riskset);
+RcppExport SEXP _remstimate_HMC(SEXP pars_initSEXP, SEXP nsimSEXP, SEXP nchainsSEXP, SEXP burninSEXP, SEXP meanPriorSEXP, SEXP sigmaPriorSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP omit_dyadSEXP, SEXP interevent_timeSEXP, SEXP modelSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP senderRateSEXP, SEXP NSEXP, SEXP thinSEXP, SEXP LSEXP, SEXP epsilonSEXP, SEXP sender_risksetSEXP, SEXP receiver_risksetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -90,13 +92,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::uword >::type thin(thinSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type L(LSEXP);
     Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
-    rcpp_result_gen = Rcpp::wrap(HMC(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, thin, L, epsilon));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type sender_riskset(sender_risksetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::List> >::type receiver_riskset(receiver_risksetSEXP);
+    rcpp_result_gen = Rcpp::wrap(HMC(pars_init, nsim, nchains, burnin, meanPrior, sigmaPrior, stats, actor1, actor2, dyad, omit_dyad, interevent_time, model, ordinal, ncores, senderRate, N, thin, L, epsilon, sender_riskset, receiver_riskset));
     return rcpp_result_gen;
 END_RCPP
 }
 // getWAIC
-double getWAIC(arma::vec mu, arma::mat vcov, arma::mat pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const arma::vec& interevent_time, const Rcpp::List& omit_dyad, std::string model, std::string approach, bool ordinal, int ncores, bool senderRate, int nsim);
-RcppExport SEXP _remstimate_getWAIC(SEXP muSEXP, SEXP vcovSEXP, SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP interevent_timeSEXP, SEXP omit_dyadSEXP, SEXP modelSEXP, SEXP approachSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP senderRateSEXP, SEXP nsimSEXP) {
+double getWAIC(arma::vec mu, arma::mat vcov, arma::mat pars, const arma::cube& stats, const arma::field<arma::uvec>& actor1, const arma::field<arma::uvec>& actor2, const arma::field<arma::uvec>& dyad, const arma::vec& interevent_time, const Rcpp::List& omit_dyad, std::string model, std::string approach, bool ordinal, int ncores, bool senderRate, int nsim, Rcpp::Nullable<Rcpp::IntegerVector> sender_riskset, Rcpp::Nullable<Rcpp::List> receiver_riskset);
+RcppExport SEXP _remstimate_getWAIC(SEXP muSEXP, SEXP vcovSEXP, SEXP parsSEXP, SEXP statsSEXP, SEXP actor1SEXP, SEXP actor2SEXP, SEXP dyadSEXP, SEXP interevent_timeSEXP, SEXP omit_dyadSEXP, SEXP modelSEXP, SEXP approachSEXP, SEXP ordinalSEXP, SEXP ncoresSEXP, SEXP senderRateSEXP, SEXP nsimSEXP, SEXP sender_risksetSEXP, SEXP receiver_risksetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -115,7 +119,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
     Rcpp::traits::input_parameter< bool >::type senderRate(senderRateSEXP);
     Rcpp::traits::input_parameter< int >::type nsim(nsimSEXP);
-    rcpp_result_gen = Rcpp::wrap(getWAIC(mu, vcov, pars, stats, actor1, actor2, dyad, interevent_time, omit_dyad, model, approach, ordinal, ncores, senderRate, nsim));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type sender_riskset(sender_risksetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::List> >::type receiver_riskset(receiver_risksetSEXP);
+    rcpp_result_gen = Rcpp::wrap(getWAIC(mu, vcov, pars, stats, actor1, actor2, dyad, interevent_time, omit_dyad, model, approach, ordinal, ncores, senderRate, nsim, sender_riskset, receiver_riskset));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -161,10 +167,10 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 14},
+    {"_remstimate_remDerivatives", (DL_FUNC) &_remstimate_remDerivatives, 16},
     {"_remstimate_GDADAMAX", (DL_FUNC) &_remstimate_GDADAMAX, 19},
-    {"_remstimate_HMC", (DL_FUNC) &_remstimate_HMC, 20},
-    {"_remstimate_getWAIC", (DL_FUNC) &_remstimate_getWAIC, 15},
+    {"_remstimate_HMC", (DL_FUNC) &_remstimate_HMC, 22},
+    {"_remstimate_getWAIC", (DL_FUNC) &_remstimate_getWAIC, 17},
     {"_remstimate_computeDiagnostics", (DL_FUNC) &_remstimate_computeDiagnostics, 11},
     {"_remstimate_remDerivativesSampled", (DL_FUNC) &_remstimate_remDerivativesSampled, 9},
     {NULL, NULL, 0}

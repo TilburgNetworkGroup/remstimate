@@ -312,8 +312,12 @@ remstimate <- function(reh,
     #   intereventTime <- rep(1.0, M_sub)
     # }
 
+    sender_rs   <- if (!is.null(reh$sender_riskset))   as.integer(reh$sender_riskset) - 1L   else integer(0)
+    receiver_rs <- if (!is.null(reh$receiver_riskset)) lapply(reh$receiver_riskset, function(x) as.integer(x) - 1L) else list()
+
+    # ── omit_dyad not used because vectorized baniary version could be huge for large N
     omit_dyad_sender   <- reh$omit_dyad %||% list()
-    omit_dyad_receiver <- list()  # extend later if omit_dyad support needed
+    omit_dyad_receiver <- list()
 
     which_stats  <- c("sender_stats",   "receiver_stats")
     which_model  <- c("sender_model",   "receiver_model")
@@ -361,7 +365,9 @@ remstimate <- function(reh,
           ordinal         = ordinal,
           ncores          = ncores,
           senderRate      = sender_rate[i],
-          N               = N
+          N               = N,
+          sender_riskset   = if (i == 1) sender_rs else integer(0),
+          receiver_riskset = if (i == 2) receiver_rs else list()
         )
 
         res <- list()
@@ -425,7 +431,9 @@ remstimate <- function(reh,
             nsim            = nsimWAIC,
             ordinal         = ordinal,
             ncores          = ncores,
-            senderRate      = sender_rate[i]
+            senderRate      = sender_rate[i],
+            sender_riskset   = if (i == 1) sender_rs else integer(0),
+            receiver_riskset = if (i == 2) receiver_rs else list()
           )
         }
 
@@ -461,7 +469,9 @@ remstimate <- function(reh,
           ordinal         = ordinal,
           ncores          = ncores,
           senderRate      = sender_rate[i],
-          N               = N
+          N               = N,
+          sender_riskset = if(i==1) sender_rs else integer(0),
+          receiver_riskset = if(i==2) receiver_rs else list()
         )
 
         res <- list()

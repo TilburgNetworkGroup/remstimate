@@ -233,6 +233,7 @@ Rcpp::List remDerivativesSenderRates(
         const arma::cube &stats,
         const arma::field<arma::uvec> &actor1,
         const Rcpp::List &omit_dyad,
+        const arma::uvec &sender_riskset,
         const arma::vec &interevent_time,
         bool ordinal = false,
         int ncores = 1,
@@ -285,7 +286,52 @@ Rcpp::List remDerivativesSenderRates(
     }
 
     // changes in the riskset at m-th event
-    if(riskset_time_m!=(-1)){
+    // three branches: (1) index-based riskset (active/manual), (2) omit_dyad, (3) full
+    bool use_index_riskset_s = (sender_riskset.n_elem > 0);
+    if(use_index_riskset_s){
+      double sum_lambda = 0.0;
+      for(arma::uword ri = 0; ri < sender_riskset.n_elem; ri++){
+        sum_lambda += lambda_s(sender_riskset(ri));
+      }
+      if(ordinal){
+        loglik_m -= std::log(sum_lambda);
+        if(gradient | hessian){
+          for(arma::uword ri = 0; ri < sender_riskset.n_elem; ri++){
+            n = (int)sender_riskset(ri);
+            expected_stat_m += lambda_s(n) * stats_m.col(n);
+          }
+          expected_stat_m /= sum_lambda;
+          if(gradient){
+            grad_m -= expected_stat_m;
+          }
+          if(hessian){
+            for(arma::uword ri = 0; ri < sender_riskset.n_elem; ri++){
+              n = (int)sender_riskset(ri);
+              fisher_m -= (lambda_s(n) / sum_lambda) * (stats_m.col(n) * stats_m.col(n).t());
+            }
+            fisher_m += (expected_stat_m * expected_stat_m.t());
+          }
+        }
+      }
+      else{
+        loglik_m -= sum_lambda * interevent_time(m);
+        if(gradient){
+          arma::vec wt_stats(U, arma::fill::zeros);
+          for(arma::uword ri = 0; ri < sender_riskset.n_elem; ri++){
+            n = (int)sender_riskset(ri);
+            wt_stats += lambda_s(n) * stats_m.col(n);
+          }
+          grad_m -= interevent_time(m) * wt_stats;
+        }
+        if(hessian){
+          for(arma::uword ri = 0; ri < sender_riskset.n_elem; ri++){
+            n = (int)sender_riskset(ri);
+            fisher_m += lambda_s(n) * (stats_m.col(n) * stats_m.col(n).t());
+          }
+        }
+      }
+    }
+    else if(riskset_time_m!=(-1)){
       double sum_lambda = sum(riskset_mat.row(riskset_time_m).t() % lambda_s);
       if(ordinal){
         loglik_m -= std::log(sum_lambda); // loglik second addend
@@ -410,6 +456,7 @@ Rcpp::List remDerivativesReceiverChoice(
         const arma::field<arma::uvec> &actor1,
         const arma::field<arma::uvec> &actor2,
         const Rcpp::List &omit_dyad,
+        const arma::field<arma::uvec> &receiver_riskset,
         const arma::vec &interevent_time,
         int N,
         int ncores = 1,
@@ -462,10 +509,25 @@ Rcpp::List remDerivativesReceiverChoice(
       double denom = 0.0;
 
       // changes in the riskset at m-th event
-      if(riskset_time_m!=(-1)){
+      // three branches: (1) index-based riskset (active/manual), (2) omit_dyad, (3) full
+      bool use_index_riskset_r = (receiver_riskset.n_elem > 0);
+      if(use_index_riskset_r){
+          const arma::uvec &rs = receiver_riskset(sender(0));
+          for(arma::uword ri = 0; ri < rs.n_elem; ri++){
+              n = (int)rs(ri);
+              denom += lambda_d(n);
+              if(hessian){
+                  fisher_m -= lambda_d(n)*(stats_m.col(n) * stats_m.col(n).t());
+              }
+              if(gradient | hessian){
+                  expected_stat_m += lambda_d(n) * stats_m.col(n);
+              }
+          }
+      }
+      else if(riskset_time_m!=(-1)){
           for(n = 0; n<N; n++){
-              arma::uword dyad = remify::getDyadIndex(sender(0),n,0,N,true);
-              if((n!=sender_0_int) && (riskset_mat(riskset_time_m,dyad) == 1.0)){ // dynamic riskset
+              arma::uword dyad_idx = sender(0) * (N-1) + n - (n > sender(0) ? 1 : 0);
+              if((n!=sender_0_int) && (riskset_mat(riskset_time_m,dyad_idx) == 1.0)){ // dynamic riskset
                   //loglik
                   denom += lambda_d(n); // exp(param_d * X_sender_i)
                   if(hessian){
@@ -544,6 +606,46 @@ Rcpp::List remDerivativesReceiverChoice(
 //
 // @return list of values: loglik, gradient, hessian.
 //
+Rcpp::List remDerivativesImpl(const arma::vec &pars,
+                                  const arma::cube &stats,
+                                  const arma::field<arma::uvec> &actor1,
+                                  const arma::field<arma::uvec> &actor2,
+                                  const arma::field<arma::uvec> &dyad,
+                                  const Rcpp::List &omit_dyad,
+                                  const arma::vec &interevent_time,
+                                  std::string model,
+                                  bool ordinal = false,
+                                  int ncores = 1,
+                                  bool gradient = true,
+                                  bool hessian = true,
+                                  bool senderRate = true,
+                                  Rcpp::Nullable<int> N = R_NilValue,
+                                  const arma::uvec &sender_riskset = arma::uvec(),
+                                  const arma::field<arma::uvec> &receiver_riskset = arma::field<arma::uvec>()){
+  Rcpp::List out;
+  std::vector<std::string> models = {"tie","actor"};
+  std::vector<std::string>::iterator itr = std::find(models.begin(), models.end(), model);
+  auto which_model = std::distance(models.begin(), itr);
+  switch (which_model)
+  {
+    case 0: {
+      out = remDerivativesStandard(pars,stats,dyad,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
+      break;
+    }
+    case 1: {
+      if(!senderRate){
+        out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,receiver_riskset,interevent_time,Rcpp::as<int>(N),ncores,gradient,hessian);
+        break;
+      }
+      else{
+        out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,sender_riskset,interevent_time,ordinal,ncores,gradient,hessian);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 // [[Rcpp::export]]
 Rcpp::List remDerivatives(const arma::vec &pars,
                                   const arma::cube &stats,
@@ -558,29 +660,24 @@ Rcpp::List remDerivatives(const arma::vec &pars,
                                   bool gradient = true,
                                   bool hessian = true,
                                   bool senderRate = true,
-                                  Rcpp::Nullable<int> N = R_NilValue){
-  Rcpp::List out;
-  std::vector<std::string> models = {"tie","actor"};
-  std::vector<std::string>::iterator itr = std::find(models.begin(), models.end(), model);
-  auto which_model = std::distance(models.begin(), itr);
-  switch (which_model)
-  {
-    case 0: {
-      out = remDerivativesStandard(pars,stats,dyad,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
-      break;
-    }
-    case 1: {
-      if(!senderRate){
-        out = remDerivativesReceiverChoice(pars,stats,actor1,actor2,omit_dyad,interevent_time,Rcpp::as<int>(N),ncores,gradient,hessian);
-        break;
-      }
-      else{
-        out = remDerivativesSenderRates(pars,stats,actor1,omit_dyad,interevent_time,ordinal,ncores,gradient,hessian);
-        break;
-      }
+                                  Rcpp::Nullable<int> N = R_NilValue,
+                                  Rcpp::Nullable<Rcpp::IntegerVector> sender_riskset = R_NilValue,
+                                  Rcpp::Nullable<Rcpp::List> receiver_riskset = R_NilValue){
+  arma::uvec sender_riskset_arma;
+  arma::field<arma::uvec> receiver_riskset_arma;
+  if (sender_riskset.isNotNull()) {
+    sender_riskset_arma = Rcpp::as<arma::uvec>(Rcpp::IntegerVector(sender_riskset));
+  }
+  if (receiver_riskset.isNotNull()) {
+    Rcpp::List rr(receiver_riskset);
+    receiver_riskset_arma.set_size(rr.size());
+    for (arma::uword ii = 0; ii < (arma::uword)rr.size(); ii++) {
+      receiver_riskset_arma(ii) = Rcpp::as<arma::uvec>(rr[ii]);
     }
   }
-  return out;
+  return remDerivativesImpl(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,
+                            model,ordinal,ncores,gradient,hessian,senderRate,N,
+                            sender_riskset_arma,receiver_riskset_arma);
 }
 
 // /////////////////////////////////////////////////////////////////////////////////
@@ -755,9 +852,11 @@ double logPostHMC(const arma::vec &meanPrior,
                   bool ordinal = false,
                   int ncores = 1,
                   bool senderRate = true,
-                  Rcpp::Nullable<int> N = R_NilValue){
+                  Rcpp::Nullable<int> N = R_NilValue,
+                  const arma::uvec &sender_riskset = arma::uvec(),
+                  const arma::field<arma::uvec> &receiver_riskset = arma::field<arma::uvec>()){
 
-  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N);
+  Rcpp::List derv = remDerivativesImpl(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,false,false,senderRate,N,sender_riskset,receiver_riskset);
   double derv_0 = Rcpp::as<double>(derv[0]);
   double prior =  arma::accu(0.5 * (pars.t() - meanPrior.t()) * inv(sigmaPrior) * (pars - meanPrior));
   return (prior + derv_0);
@@ -798,8 +897,10 @@ arma::vec logPostGradientHMC(const arma::vec &meanPrior,
                               bool ordinal = false,
                               int ncores = 1,
                               bool senderRate = true,
-                              Rcpp::Nullable<int> N = R_NilValue){
-  Rcpp::List derv = remDerivatives(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N);
+                              Rcpp::Nullable<int> N = R_NilValue,
+                              const arma::uvec &sender_riskset = arma::uvec(),
+                              const arma::field<arma::uvec> &receiver_riskset = arma::field<arma::uvec>()){
+  Rcpp::List derv = remDerivativesImpl(pars,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,true,false,senderRate,N,sender_riskset,receiver_riskset);
   arma::vec gprior = inv(sigmaPrior)*(pars - meanPrior); // the sign is already changed here
   arma::vec glp = Rcpp::as<arma::vec>(derv[1]);
   return (glp + gprior);
@@ -843,7 +944,9 @@ arma::field<arma::vec> iterHMC(arma::uword L,
                   bool ordinal = false,
                   int ncores = 1,
                   bool senderRate = true,
-                  Rcpp::Nullable<int> N = R_NilValue){
+                  Rcpp::Nullable<int> N = R_NilValue,
+                  const arma::uvec &sender_riskset = arma::uvec(),
+                  const arma::field<arma::uvec> &receiver_riskset = arma::field<arma::uvec>()){
 
   arma::uword P = pars.size(); //number of parameters
   arma::field<arma::vec> out(2); // output object
@@ -858,17 +961,17 @@ arma::field<arma::vec> iterHMC(arma::uword L,
   arma::vec betaP = pars; // new proposed beta (starting value is current beta)
 
   //leapfrog algorithm, updates via Hamiltonian equations
-  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N));
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,sender_riskset,receiver_riskset));
   for(arma::uword i = 1; i <= L; i++){
     betaP += (epsilon * rP);
-    if(i != L) rP -= (epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N));
+    if(i != L) rP -= (epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,sender_riskset,receiver_riskset));
   }
-  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N));
+  rP -= (0.5 * epsilon * logPostGradientHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,sender_riskset,receiver_riskset));
   rP *= (-1);
 
   //computes final quantities for the acceptance rate
-  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
-  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
+  double U = logPostHMC(meanPrior,sigmaPrior,betaC,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,sender_riskset,receiver_riskset);
+  double propU = logPostHMC(meanPrior,sigmaPrior,betaP,stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,sender_riskset,receiver_riskset);
   double K = 0.5 * arma::accu(arma::pow(rC,2));
   double propK = 0.5 * arma::accu(arma::pow(rP,2));
 
@@ -967,7 +1070,21 @@ Rcpp::List HMC(arma::mat pars_init,
                 Rcpp::Nullable<int> N = R_NilValue,
                 arma::uword thin = 1,
                 arma::uword L = 100,
-                double epsilon = 0.01){
+                double epsilon = 0.01,
+                Rcpp::Nullable<Rcpp::IntegerVector> sender_riskset = R_NilValue,
+                Rcpp::Nullable<Rcpp::List> receiver_riskset = R_NilValue){
+  arma::uvec sender_riskset_arma;
+  arma::field<arma::uvec> receiver_riskset_arma;
+  if (sender_riskset.isNotNull()) {
+    sender_riskset_arma = Rcpp::as<arma::uvec>(Rcpp::IntegerVector(sender_riskset));
+  }
+  if (receiver_riskset.isNotNull()) {
+    Rcpp::List rr(receiver_riskset);
+    receiver_riskset_arma.set_size(rr.size());
+    for (arma::uword ii = 0; ii < (arma::uword)rr.size(); ii++) {
+      receiver_riskset_arma(ii) = Rcpp::as<arma::uvec>(rr[ii]);
+    }
+  }
   arma::cube array_of_draws(nsim, pars_init.n_rows, nchains); // array of draws from the posterior distribution (chains are by slice)
   arma::mat matrix_of_loglik(nsim,nchains); // matrix of posterior loglikelihood values across chains
   arma::uword j,i;
@@ -978,14 +1095,14 @@ Rcpp::List HMC(arma::mat pars_init,
     arma::mat chain_j(pars_init.n_rows,nsim,arma::fill::zeros);
     arma::vec chain_j_loglik(nsim,arma::fill::zeros);
     //[i=0] this step only get the first sample out of the starting value
-    arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
+    arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,pars_init.col(j),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,sender_riskset_arma,receiver_riskset_arma);
     chain_j.col(0) = iter_i_hmc[0]; // saving draws
     chain_j_loglik(0) = arma::as_scalar(iter_i_hmc[1]); // saving posterior loglikelihood
     //Rcpp::Rcout << "first value of the chain: " << chain_j.col(0) << "\n";
     for(i = 1; i < nsim; i++){ //looping through iterations of the MCMC
       //Rcpp::Rcout <<i <<"\n"; progress bar on chains progress
       //Then the next step will always be based on the previous one
-      arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N);
+      arma::field<arma::vec> iter_i_hmc = iterHMC(L,epsilon,meanPrior,sigmaPrior,chain_j.col(i-1),stats,actor1,actor2,dyad,omit_dyad,interevent_time,model,ordinal,ncores,senderRate,N,sender_riskset_arma,receiver_riskset_arma);
       chain_j.col(i) = iter_i_hmc[0]; // saving draws
       chain_j_loglik(i) = arma::as_scalar(iter_i_hmc[1]); // saving posterior loglikelihood
     }
@@ -1049,7 +1166,21 @@ double getWAIC(arma::vec mu,
                 bool ordinal = false,
                 int ncores = 1,
                 bool senderRate = true,
-                int nsim = 500){
+                int nsim = 500,
+                Rcpp::Nullable<Rcpp::IntegerVector> sender_riskset = R_NilValue,
+                Rcpp::Nullable<Rcpp::List> receiver_riskset = R_NilValue){
+  arma::uvec sender_riskset_arma;
+  arma::field<arma::uvec> receiver_riskset_arma;
+  if (sender_riskset.isNotNull()) {
+    sender_riskset_arma = Rcpp::as<arma::uvec>(Rcpp::IntegerVector(sender_riskset));
+  }
+  if (receiver_riskset.isNotNull()) {
+    Rcpp::List rr(receiver_riskset);
+    receiver_riskset_arma.set_size(rr.size());
+    for (arma::uword ii = 0; ii < (arma::uword)rr.size(); ii++) {
+      receiver_riskset_arma(ii) = Rcpp::as<arma::uvec>(rr[ii]);
+    }
+  }
 
   // select model
   std::vector<std::string> models = {"tie","actor"};
@@ -1151,6 +1282,7 @@ double getWAIC(arma::vec mu,
       omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
       #pragma omp parallel for if(ncores>1) private(m,j) shared(M,riskset_time_vec,riskset_mat,stats,actor1,pars,ordinal,out)
       #endif
+      bool use_index_riskset_sw = (sender_riskset_arma.n_elem > 0);
       for(m = 0; m < M; m++)
         {
           int riskset_time_m = riskset_time_vec(m);
@@ -1163,26 +1295,28 @@ double getWAIC(arma::vec mu,
               double lpd_m_j = 0.0;
               // (1)  lpd computation
               arma::vec log_lambda = stats_m.t() * pars.col(j);
+              arma::vec lambda = arma::exp(log_lambda);
               lpd_m_j += arma::accu(log_lambda(sender));
               // dealing with the risk set
-              if(riskset_time_m!=(-1)){ // if the 'riskset_time_m' is different from (-1), then a dynamic riskset is observed
-                arma::uvec events_at_risk = arma::find(riskset_mat.row(riskset_time_m));
-                arma::vec sum_lambda_at_risk = riskset_mat.row(riskset_time_m) * arma::exp(log_lambda);
-                if(ordinal){
-                  lpd_m_j -= log(sum_lambda_at_risk(0));
-                }
-                else{
-                  lpd_m_j -= sum_lambda_at_risk(0)*interevent_time(m);
+              // three branches: (1) index-based riskset, (2) omit_dyad, (3) full
+              double sum_lambda_at_risk = 0.0;
+              if(use_index_riskset_sw){
+                for(arma::uword ri = 0; ri < sender_riskset_arma.n_elem; ri++){
+                  sum_lambda_at_risk += lambda(sender_riskset_arma(ri));
                 }
               }
-              else{ // loop over all dyad (because for all the time points the riskset is fixed)
-                double sum_lambda_at_risk = arma::accu(arma::exp(log_lambda));
-                if(ordinal){
-                  lpd_m_j -= log(sum_lambda_at_risk);
-                }
-                else{
-                  lpd_m_j -= sum_lambda_at_risk*interevent_time(m);
-                }
+              else if(riskset_time_m!=(-1)){
+                arma::vec sum_vec = riskset_mat.row(riskset_time_m) * lambda;
+                sum_lambda_at_risk = sum_vec(0);
+              }
+              else{
+                sum_lambda_at_risk = arma::accu(lambda);
+              }
+              if(ordinal){
+                lpd_m_j -= log(sum_lambda_at_risk);
+              }
+              else{
+                lpd_m_j -= sum_lambda_at_risk * interevent_time(m);
               }
               out_vec_loc_log[j] = lpd_m_j;
               out_vec_loc_p[j] = exp(lpd_m_j);
@@ -1203,11 +1337,12 @@ double getWAIC(arma::vec mu,
         riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
       }
       arma::uword N = stats.n_rows;
+      bool use_index_riskset_rw = (receiver_riskset_arma.n_elem > 0);
 
       #ifdef _OPENMP
       omp_set_dynamic(0);         // disabling dynamic teams
       omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
-      #pragma omp parallel for if(ncores>1) private(m,j) shared(M,N,riskset_time_vec,riskset_mat,stats,actor1,actor2,pars,out)
+      #pragma omp parallel for if(ncores>1) private(m,j) shared(M,N,use_index_riskset_rw,riskset_time_vec,riskset_mat,receiver_riskset,stats,actor1,actor2,pars,out)
       #endif
       for(m = 0; m < M; m++)
         {
@@ -1217,20 +1352,41 @@ double getWAIC(arma::vec mu,
           arma::mat stats_m = stats.slice(m).t(); // dimensions : [U*N] we want to access dyads by column
           arma::uvec sender = actor1(m)-1;
           arma::uvec receiver = actor2(m)-1;
+          int sender_0_int = (int)sender(0);
           double p_m = 0.0;
           for(j = 0; j < pars.n_cols; j++){
             double lpd_m_j = 0.0;
             // (1)  lpd computation
             arma::vec log_lambda = stats_m.t() * pars.col(j);
+            arma::vec lambda = arma::exp(log_lambda);
             lpd_m_j += log_lambda(receiver(0));
             // dealing with the risk set
-            arma::vec lambda_at_risk = arma::exp(log_lambda);
-            if(riskset_time_m!=(-1)){ // if the 'riskset_time_m' is different from (-1), then a dynamic riskset is observed
-              arma::vec riskset_sel = riskset_mat(riskset_time_m,arma::span(sender(0)*N,sender(0)*N+N-1)).t();
-              lambda_at_risk %= riskset_sel; // if actors are not at risk to be receiver then there will be zeros in the vector (and this won't affect the sum)
+            // three branches: (1) index-based riskset, (2) omit_dyad (dyad-indexed), (3) full
+            double denom_r = 0.0;
+            if(use_index_riskset_rw){
+              const arma::uvec &rs = receiver_riskset_arma(sender(0));
+              for(arma::uword ri = 0; ri < rs.n_elem; ri++){
+                denom_r += lambda(rs(ri));
+              }
             }
-            lambda_at_risk(sender(0)) = 0.0;
-            lpd_m_j -= log(arma::accu(lambda_at_risk));
+            else if(riskset_time_m!=(-1)){
+              for(arma::uword nn = 0; nn < N; nn++){
+                if((int)nn != sender_0_int){
+                  arma::uword dyad_idx = sender(0) * (N-1) + nn - (nn > sender(0) ? 1 : 0);
+                  if(riskset_mat(riskset_time_m, dyad_idx) == 1.0){
+                    denom_r += lambda(nn);
+                  }
+                }
+              }
+            }
+            else{
+              for(arma::uword nn = 0; nn < N; nn++){
+                if((int)nn != sender_0_int){
+                  denom_r += lambda(nn);
+                }
+              }
+            }
+            lpd_m_j -= log(denom_r);
             out_vec_loc_log[j] = lpd_m_j;
             out_vec_loc_p[j] = exp(lpd_m_j);
           }
