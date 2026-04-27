@@ -291,7 +291,7 @@ remstimate <- function(reh,
     # start_stop_receiver <- as.integer(unlist(subset_attr$receiver))
 
     actor1_ids <- reh$ids$actor1[start_stop[1]:start_stop[2]]
-    actor2_ids <- unlist(reh$ids$actor2[start_stop[1]:start_stop[2]])
+    actor2_ids <- reh$ids$actor2[start_stop[1]:start_stop[2]]
 
     M_sub_sender <- length(actor1_ids)
     M_sub_receiver <- length(actor2_ids)
@@ -343,8 +343,8 @@ remstimate <- function(reh,
       } else {
         intereventTime  <- intereventTime_receiver
         M_sub           <- M_sub_receiver
-        actor1_field    <- lapply(unlist(actor1_ids), as.integer)
-        actor2_field    <- lapply(actor2_ids, as.integer)
+        actor1_field    <- lapply(actor1_ids, function(x) as.integer(unlist(x)))
+        actor2_field    <- lapply(actor2_ids, function(x) as.integer(unlist(x)))
       }
 
       omit_dyad_i <- if (sender_rate[i]) omit_dyad_sender else omit_dyad_receiver

@@ -167,7 +167,7 @@ n_events       <- nrow(el)                  # 10
 
 expect_equal(dim(st_sr$sender_stats)[1],   n_unique_times-1, # minus 1 for new default start=2
              info = "actor/tied: sender stats rows == unique times")
-expect_equal(dim(st_sr$receiver_stats)[1], n_events - 1,
+expect_equal(dim(st_sr$receiver_stats)[1], n_unique_times - 1,
              info = "actor/tied: receiver stats rows == n events")
 expect_true(fit_sr$receiver_model$converged,
              info = "actor/tied: receiver model converges despite ties")
