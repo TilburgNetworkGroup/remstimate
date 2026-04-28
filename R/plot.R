@@ -63,6 +63,7 @@
 #'   model).
 #' @param ... further graphical arguments (currently unused).
 #' @return \code{x} invisibly.
+#' @method plot diagnostics
 #' @export
 plot.diagnostics <- function(x,
                              object           = NULL,
@@ -407,6 +408,7 @@ plot.diagnostics <- function(x,
 #' @param receiver_effects character vector of receiver-model effects (actor model).
 #' @param ... pass \code{stats} here when \code{diagnostics = NULL}.
 #' @return \code{x} invisibly.
+#' @method plot remstimate
 #' @export
 plot.remstimate <- function(x,
                             reh,

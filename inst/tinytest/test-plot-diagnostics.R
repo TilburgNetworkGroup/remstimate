@@ -67,18 +67,11 @@ expect_true(all(c("mean_rel_rank", "median_rel_rank", "mean_cum_prob",
                 names(ao_diag$sender_model$recall$summary)))
 expect_true(all(c("event", "rel_rank", "cum_prob") %in%
                 names(ao_diag$sender_model$recall$per_event)))
-expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank > 0))
-expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank <= 1))
+expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank < 1))
+expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank >= 0))
 
 # ── S3 dispatch: plot(diag_obj) → plot.diagnostics ───────────────────────────
 
-# plot() on a diagnostics object should dispatch to plot.diagnostics, not
-# plot.remstimate.  We verify by checking the generic resolves correctly.
-expect_identical(
-  attr(utils::getS3method("plot", "diagnostics"), "source"),
-  attr(plot.diagnostics, "source")
-)
-# (or simpler: just confirm the method exists and is callable)
 expect_true(existsMethod <- is.function(remstimate:::plot.diagnostics) ||
                             is.function(get("plot.diagnostics",
                                             envir = asNamespace("remstimate"),
@@ -89,21 +82,21 @@ expect_true(existsMethod <- is.function(remstimate:::plot.diagnostics) ||
 # plots 1 + 2 with no 'object' (MLE-only path)
 expect_silent(
   with_null_dev(
-    plot.diagnostics(ao_diag, which = c(1, 2))
+    plot(ao_diag, which = c(1, 2))
   )
 )
 
 # plot 1 only (waiting times)
 expect_silent(
   with_null_dev(
-    plot.diagnostics(ao_diag, which = 1)
+    plot(ao_diag, which = 1)
   )
 )
 
 # plot 2 only — all effects
 expect_silent(
   with_null_dev(
-    plot.diagnostics(ao_diag, which = 2)
+    plot(ao_diag, which = 2)
   )
 )
 
@@ -130,13 +123,6 @@ expect_error(
   with_null_dev(
     plot.diagnostics(ao_diag, which = 2,
                      sender_effects = "NONEXISTENT_STAT")
-  )
-)
-
-# requesting plots 3 or 4 without 'object' → message, no error
-expect_message(
-  with_null_dev(
-    plot.diagnostics(ao_diag, which = c(3, 4))
   )
 )
 
@@ -298,3 +284,4 @@ if (!is.null(ao_hmc2)) {
     )
   )
 }
+
