@@ -41,8 +41,8 @@ Depends:
     R (>= 4.0.0)
 Imports: 
     Rcpp,
-    remify (>= 4.0.0),
-    remstats (>= 4.0.0),
+    remify,
+    remstats,
     trust,
     mvnfast
 Suggests: 
