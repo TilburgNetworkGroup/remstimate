@@ -70,12 +70,7 @@ expect_true(all(c("event", "rel_rank", "cum_prob") %in%
 expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank < 1))
 expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank >= 0))
 
-# ── S3 dispatch: plot(diag_obj) → plot.diagnostics ───────────────────────────
-
-expect_true(existsMethod <- is.function(remstimate:::plot.diagnostics) ||
-                            is.function(get("plot.diagnostics",
-                                            envir = asNamespace("remstimate"),
-                                            inherits = FALSE)))
+# ── S3 dispatch: plot(diag_obj) ───────────────────────────────────────────────
 
 # ── plot.diagnostics: actor model ─────────────────────────────────────────────
 
@@ -103,7 +98,7 @@ expect_silent(
 # plot 2: specific sender and receiver effects
 expect_silent(
   with_null_dev(
-    plot.diagnostics(ao_diag, which = 2,
+    plot(ao_diag, which = 2,
                      sender_effects   = "indegreeSender",
                      receiver_effects = "inertia")
   )
@@ -112,7 +107,7 @@ expect_silent(
 # plot 2: skip sender entirely (NA), plot one receiver effect
 expect_silent(
   with_null_dev(
-    plot.diagnostics(ao_diag, which = 2,
+    plot(ao_diag, which = 2,
                      sender_effects   = NA,
                      receiver_effects = "reciprocity")
   )
@@ -121,7 +116,7 @@ expect_silent(
 # plot 2: wrong effect name → error
 expect_error(
   with_null_dev(
-    plot.diagnostics(ao_diag, which = 2,
+    plot(ao_diag, which = 2,
                      sender_effects = "NONEXISTENT_STAT")
   )
 )
@@ -129,13 +124,13 @@ expect_error(
 # with 'object' (MLE — plots 3/4 silently skipped because method != "HMC")
 expect_silent(
   with_null_dev(
-    plot.diagnostics(ao_diag, object = ao_mle, which = c(1, 2, 3, 4))
+    plot(ao_diag, object = ao_mle, which = c(1, 2, 3, 4))
   )
 )
 
 # return value is x invisibly
 ret <- with_null_dev(
-  plot.diagnostics(ao_diag, which = 1)
+  plot(ao_diag, which = 1)
 )
 expect_identical(ret, ao_diag)
 
@@ -143,32 +138,32 @@ expect_identical(ret, ao_diag)
 
 expect_silent(
   with_null_dev(
-    plot.diagnostics(tie_diag, which = c(1, 2))
+    plot(tie_diag, which = c(1, 2))
   )
 )
 
 expect_silent(
   with_null_dev(
-    plot.diagnostics(tie_diag, which = 2, effects = "inertia")
+    plot(tie_diag, which = 2, effects = "inertia")
   )
 )
 
 expect_silent(
   with_null_dev(
-    plot.diagnostics(tie_diag, which = 2, effects = c("inertia", "reciprocity"))
+    plot(tie_diag, which = 2, effects = c("inertia", "reciprocity"))
   )
 )
 
 expect_error(
   with_null_dev(
-    plot.diagnostics(tie_diag, which = 2, effects = "NONEXISTENT")
+    plot(tie_diag, which = 2, effects = "NONEXISTENT")
   )
 )
 
 # with 'object' supplied for MLE (plots 3/4 skipped silently)
 expect_silent(
   with_null_dev(
-    plot.diagnostics(tie_diag, object = tie_mle, which = c(1, 2, 3, 4))
+    plot(tie_diag, object = tie_mle, which = c(1, 2, 3, 4))
   )
 )
 
@@ -235,21 +230,21 @@ if (!is.null(ao_hmc)) {
   # plot 3: posterior histograms
   expect_silent(
     with_null_dev(
-      plot.diagnostics(ao_hmc_diag, object = ao_hmc, which = 3)
+      plot(ao_hmc_diag, object = ao_hmc, which = 3)
     )
   )
 
   # plot 4: trace plots (single chain)
   expect_silent(
     with_null_dev(
-      plot.diagnostics(ao_hmc_diag, object = ao_hmc, which = 4)
+      plot(ao_hmc_diag, object = ao_hmc, which = 4)
     )
   )
 
   # specific effects
   expect_silent(
     with_null_dev(
-      plot.diagnostics(ao_hmc_diag, object = ao_hmc, which = c(3, 4),
+      plot(ao_hmc_diag, object = ao_hmc, which = c(3, 4),
                        sender_effects = "indegreeSender")
     )
   )
@@ -279,7 +274,7 @@ if (!is.null(ao_hmc2)) {
   ao_hmc2_diag <- diagnostics(object = ao_hmc2, reh = ao_reh, stats = ao_stats)
   expect_silent(
     with_null_dev(
-      plot.diagnostics(ao_hmc2_diag, object = ao_hmc2, which = 4,
+      plot(ao_hmc2_diag, object = ao_hmc2, which = 4,
                        sender_effects = "indegreeSender")
     )
   )

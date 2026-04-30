@@ -1,4 +1,4 @@
-# ── recall helper ─────────────────────────────────────────────────────────────
+# -- recall helper -------------------------------------------------------------
 .recall_block <- function(pars, baseline, stats_3d, obs_ids,
                            valid_ids = NULL, top_pct = 0.05) {
   M    <- dim(stats_3d)[3L]
@@ -112,7 +112,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
 
   model_formula <- variables_names <- where_is_baseline <- NULL
 
-  # ── tie-oriented ─────────────────────────────────────────────────────────────
+  # -- tie-oriented -------------------------------------------------------------
   if (model == "tie") {
     if (all(inherits(stats, c("remstats","tomstats"), TRUE))) {
       if (!is.null(dimnames(stats)[[3]])) variables_names <- dimnames(stats)[[3]]
@@ -144,7 +144,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
       stop("the number of time points (or number of events) doesn't match the (row) dimension of the 'remstats' object")
   }
 
-  # ── actor-oriented ───────────────────────────────────────────────────────────
+  # -- actor-oriented -----------------------------------------------------------
   if (model == "actor") {
     model_formula <- list()
     if (all(inherits(stats, c("remstats","aomstats"), TRUE))) {
@@ -213,7 +213,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
 
   if (ordinal) reh$intereventTime <- c(1)
 
-  # ── tie model diagnostics ────────────────────────────────────────────────────
+  # -- tie model diagnostics ----------------------------------------------------
   if (attr(object,"model") == "tie") {
     length_comparison <- length(object$coefficients) == dim(stats)[2]
     name_comparison <- length_comparison &&
@@ -258,7 +258,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
       top_pct  = top_pct
     )
 
-  # ── actor model diagnostics ──────────────────────────────────────────────────
+  # -- actor model diagnostics --------------------------------------------------
   } else if (attr(object,"model") == "actor") {
     compare_input_sender <- compare_input_receiver <- FALSE
     if (!is.null(stats[["sender_stats"]])) {
@@ -351,7 +351,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
   return(diagnostics)
 }
 
-# ── print.diagnostics ─────────────────────────────────────────────────────────
+# -- print.diagnostics ---------------------------------------------------------
 
 #' @method print diagnostics
 #' @export
@@ -362,7 +362,7 @@ print.diagnostics <- function(x, ...) {
   N     <- reh$N
 
   cat("Diagnostics for a Relational Event Model\n")
-  cat(strrep("─", 42), "\n", sep = "")
+  cat(strrep("-", 42), "\n", sep = "")
   cat(sprintf("%-12s: %s\n", "Model",  model))
   cat(sprintf("%-12s: %d\n", "Actors", N))
   cat(sprintf("%-12s: %d\n", "Events", M))
@@ -390,7 +390,7 @@ print.diagnostics <- function(x, ...) {
   invisible(x)
 }
 
-# ── summary.diagnostics ───────────────────────────────────────────────────────
+# -- summary.diagnostics -------------------------------------------------------
 
 #' @method summary diagnostics
 #' @export
@@ -445,7 +445,7 @@ summary.diagnostics <- function(object, ...) {
   }
 
   cat("Diagnostics for a Relational Event Model\n")
-  cat(strrep("─", 42), "\n", sep = "")
+  cat(strrep("-", 42), "\n", sep = "")
   cat(sprintf("%-12s: %s\n", "Model",  model))
   cat(sprintf("%-12s: %d\n", "Actors", reh$N))
   cat(sprintf("%-12s: %d\n", "Events", reh$M))
