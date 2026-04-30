@@ -41,8 +41,8 @@ Depends:
     R (>= 4.0.0)
 Imports: 
     Rcpp,
-    remify,
-    remstats,
+    remify (>= 4.0.0),
+    remstats (>= 4.0.0),
     trust,
     mvnfast
 Suggests: 
@@ -53,7 +53,7 @@ Suggests:
 LinkingTo:
     Rcpp,
     RcppArmadillo,
-    remify
+    remify (>= 4.0.0)
 VignetteBuilder:
     knitr
 Encoding: UTF-8
