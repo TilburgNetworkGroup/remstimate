@@ -1,10 +1,13 @@
-# remstimate 2.3.14
- 
-* Date: 2025-09-26
-* Updated conversion to scalar in RcppArmadillo
+# remstimate 3.0.0
+ Date: 2026-04-30
+
+## Coordinated submission
+
+This is a coordinated submission together with remstats (4.0.0) and remstimate (4.0.0).
+These packages must be processed in order: remify first, then remstats, then remstimate.
  
 ## Test environments 
-* Local macOS Sonoma 14.0, R version 4.3.1 
+* Local macOS Tahoe 26.2, R version 4.5.3 
 * Local Windows 10, R version 4.3.1 
 * rhub check: Fedora Linux, R-devel, clang, gfortran
 * rhub check: Ubuntu Linux 20.04.1 LTS, R-release, GCC

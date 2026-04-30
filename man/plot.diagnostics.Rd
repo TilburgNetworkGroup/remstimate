@@ -7,30 +7,35 @@
 \method{plot}{diagnostics}(
   x,
   object = NULL,
-  which = c(1:5),
+  which = c(1:3),
   effects = NULL,
   sender_effects = NULL,
   receiver_effects = NULL,
+  n_per_page = 4L,
   ...
 )
 }
 \arguments{
-\item{x}{a \code{diagnostics} object of class
-\code{c("diagnostics","remstimate")}, as returned by \code{diagnostics()}.}
+\item{x}{a \code{diagnostics} object returned by \code{diagnostics()}.}
 
-\item{object}{optional \code{remstimate} fit object. Required for plots 3
-(posterior histograms) and 4 (trace plots); ignored for plots 1 and 2.}
+\item{object}{optional \code{remstimate} fit. Required for plots 4--5
+(HMC posterior diagnostics); ignored otherwise.}
 
-\item{which}{integer vector selecting which plots to produce (default
-\code{1:4}).}
+\item{which}{integer vector of plots to produce. Default \code{1:3} covers
+waiting times, Schoenfeld residuals, and recall. Add \code{4} or \code{5}
+for HMC posterior density and trace plots.}
 
-\item{effects}{character vector of effect names to include in plots (tie
-model). \code{NULL} uses all effects.}
+\item{effects}{character vector of effect names to include (tie model).
+\code{NULL} uses all available effects.}
 
-\item{sender_effects}{character vector of sender-model effects (actor model).}
+\item{sender_effects}{character vector of sender-model effects (actor model).
+Pass \code{NA} to skip the sender model entirely.}
 
 \item{receiver_effects}{character vector of receiver-model effects (actor
-model).}
+model). Pass \code{NA} to skip the receiver model entirely.}
+
+\item{n_per_page}{integer; maximum panels per page for multi-effect plots
+(Schoenfeld, posterior density, trace). Default \code{4L} (2x2 grid).}
 
 \item{...}{further graphical arguments (currently unused).}
 }
@@ -39,8 +44,9 @@ model).}
 }
 \description{
 Produces diagnostic plots from an object returned by
-  \code{diagnostics()}. Plots 1 and 2 (waiting times, Schoenfeld residuals)
-  are computed from the diagnostics object alone. Plots 3 and 4 (posterior
-  histograms and trace plots, HMC only) additionally require the original
-  \code{remstimate} fit object via the \code{object} argument.
+  \code{diagnostics()}. Plot 1 (waiting-time Q-Q) and plot 2 (Schoenfeld
+  residuals) are computed from the diagnostics object alone. Plot 3 (recall
+  scatter) is also derived from the diagnostics object. Plots 4 and 5
+  (posterior density and trace plots) are HMC-only and additionally require
+  the original \code{remstimate} fit via \code{object}.
 }

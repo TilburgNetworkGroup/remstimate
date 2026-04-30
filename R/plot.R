@@ -29,7 +29,7 @@
        col  = grDevices::rgb(0, 0, 0, 0.35))
   abline(h = rs$median_rel_rank, lty = 2, col = 1, lwd = 1.5)   # no-skill reference
   abline(h = 1 - top,   lty = 1, col = 4, lwd = 2)   # top_pct threshold
-  legend(0.48 * max(pe$event), 0.3,
+  legend(0.5 * max(pe$event), 0.3,
          legend = c("Rank", "Median rank", "Top % threshold"),
          lty    = c(NA,  2,   1),
          pch    = c(16,  NA,  NA),
@@ -46,35 +46,39 @@
 
 #' @title Plot diagnostics of a \code{remstimate} object
 #' @description Produces diagnostic plots from an object returned by
-#'   \code{diagnostics()}. Plots 1 and 2 (waiting times, Schoenfeld residuals)
-#'   are computed from the diagnostics object alone. Plots 3 and 4 (posterior
-#'   histograms and trace plots, HMC only) additionally require the original
-#'   \code{remstimate} fit object via the \code{object} argument.
-#' @param x a \code{diagnostics} object of class
-#'   \code{c("diagnostics","remstimate")}, as returned by \code{diagnostics()}.
-#' @param object optional \code{remstimate} fit object. Required for plots 3
-#'   (posterior histograms) and 4 (trace plots); ignored for plots 1 and 2.
-#' @param which integer vector selecting which plots to produce (default
-#'   \code{1:4}).
-#' @param effects character vector of effect names to include in plots (tie
-#'   model). \code{NULL} uses all effects.
+#'   \code{diagnostics()}. Plot 1 (waiting-time Q-Q) and plot 2 (Schoenfeld
+#'   residuals) are computed from the diagnostics object alone. Plot 3 (recall
+#'   scatter) is also derived from the diagnostics object. Plots 4 and 5
+#'   (posterior density and trace plots) are HMC-only and additionally require
+#'   the original \code{remstimate} fit via \code{object}.
+#' @param x a \code{diagnostics} object returned by \code{diagnostics()}.
+#' @param object optional \code{remstimate} fit. Required for plots 4--5
+#'   (HMC posterior diagnostics); ignored otherwise.
+#' @param which integer vector of plots to produce. Default \code{1:3} covers
+#'   waiting times, Schoenfeld residuals, and recall. Add \code{4} or \code{5}
+#'   for HMC posterior density and trace plots.
+#' @param effects character vector of effect names to include (tie model).
+#'   \code{NULL} uses all available effects.
 #' @param sender_effects character vector of sender-model effects (actor model).
+#'   Pass \code{NA} to skip the sender model entirely.
 #' @param receiver_effects character vector of receiver-model effects (actor
-#'   model).
+#'   model). Pass \code{NA} to skip the receiver model entirely.
+#' @param n_per_page integer; maximum panels per page for multi-effect plots
+#'   (Schoenfeld, posterior density, trace). Default \code{4L} (2x2 grid).
 #' @param ... further graphical arguments (currently unused).
 #' @return \code{x} invisibly.
 #' @method plot diagnostics
 #' @export
 plot.diagnostics <- function(x,
                              object           = NULL,
-                             which            = c(1:5),
+                             which            = c(1:3),
                              effects          = NULL,
                              sender_effects   = NULL,
                              receiver_effects = NULL,
+                             n_per_page       = 4L,
                              ...) {
-  reh   <- x$.reh.processed
-  model <- attr(reh, "model")
-
+  reh      <- x$.reh.processed
+  model    <- attr(reh, "model")
   selected <- which
   which    <- rep(FALSE, 5)
   which[selected] <- TRUE
@@ -83,23 +87,43 @@ plot.diagnostics <- function(x,
     stop("'object' must be a 'remstimate' object")
 
   op <- par(no.readonly = TRUE)
-  on.exit(expr = par(op))
+  on.exit(par(op), add = TRUE)
+
+  # helper: mfrow dimensions for n panels (max 2 columns)
+  .mfrow_for <- function(n) {
+    nc <- min(n, 2L)
+    c(ceiling(n / nc), nc)
+  }
+
+  # helper: smooth posterior density panel (one effect)
+  .panel_posterior <- function(draws_vec, coef_val, effect_name, sub_title = NULL) {
+    dens <- density(draws_vec)
+    plot(dens, main = "", xlab = "Posterior draw", ylab = "Density")
+    polygon(c(dens$x[1L], dens$x, dens$x[length(dens$x)]),
+            c(0, dens$y, 0),
+            col = grDevices::adjustcolor("lavender", alpha.f = 0.8), border = NA)
+    lines(dens, lwd = 2)
+    abline(v = coef_val, col = 2, lwd = 2.5, lty = 2)
+    ci <- .hdi(draws_vec)
+    if (!all(is.na(ci))) abline(v = ci, col = 4, lwd = 2.5, lty = 2)
+    mtext(effect_name, side = 3, line = if (is.null(sub_title)) 1 else 2, cex = 1.2)
+    if (!is.null(sub_title)) mtext(sub_title, side = 3, line = 1, cex = 0.9)
+  }
 
   # ── tie-oriented ─────────────────────────────────────────────────────────────
   if (model == "tie") {
     has_resid  <- !is.null(x$residuals)
     avail_diag <- if (has_resid) colnames(x$residuals$smoothing_weights) else character(0)
 
-    # effect selection
     if (is.null(effects)) {
-      avail_fit <- if (!is.null(object)) names(object$coefficients) else avail_diag
+      avail_fit     <- if (!is.null(object)) names(object$coefficients) else avail_diag
       effects       <- avail_fit
       which_effects <- seq_along(effects)
     } else {
-      effects   <- as.character(effects)
-      avail_fit <- if (!is.null(object)) names(object$coefficients) else avail_diag
+      effects       <- as.character(effects)
+      avail_fit     <- if (!is.null(object)) names(object$coefficients) else avail_diag
       which_effects <- unlist(sapply(effects, function(e) which(avail_fit == e)))
-      if (length(which_effects) == 0) { par(op); stop("effects not found") }
+      if (length(which_effects) == 0L) stop("effects not found")
       effects       <- effects[order(which_effects)]
       which_effects <- sort(which_effects)
     }
@@ -121,7 +145,6 @@ plot.diagnostics <- function(x,
       curve(dexp, from = 0, to = as.numeric(quantile(observed, 0.99)),
             add = TRUE, col = 1, lty = 2, lwd = 1.5)
       mtext("Density plot of waiting times", side = 3, line = 2, cex = 1.5)
-      par(op)
     }
 
     # (2) standardized Schoenfeld's residuals
@@ -129,15 +152,15 @@ plot.diagnostics <- function(x,
       if (!is.null(object) && !is.null(attr(object, "where_is_baseline")) &&
           "baseline" %in% tolower(effects_to_check))
         effects_to_check <- effects_to_check[tolower(effects_to_check) != "baseline"]
-      if (length(effects_to_check) > 0 && !all(effects_to_check %in% avail_diag)) {
-        par(op)
+      if (length(effects_to_check) > 0L && !all(effects_to_check %in% avail_diag))
         stop("one or more effects not found inside the object 'diagnostics'.")
-      }
+
       effects_diag <- effects_to_check
       wh_diag      <- match(effects_diag, avail_diag)
       effects_diag <- effects_diag[order(wh_diag)]
       wh_diag      <- sort(wh_diag)
       P            <- length(effects_diag)
+
       n_rep <- rep(1L, dim(x$residuals$standardized_residuals)[1])
       if (reh$stats.method == "pt")
         n_rep <- sapply(seq_len(dim(x$residuals$standardized_residuals)[1]),
@@ -146,80 +169,88 @@ plot.diagnostics <- function(x,
         rep(cumsum(reh$intereventTime), n_rep)
       else
         rep(seq_len(reh$M), n_rep)
-      for (p in seq_len(P)) {
-        y_p   <- unlist(lapply(seq_len(dim(x$residuals$standardized_residuals)[1]),
-                               function(v) x$residuals$standardized_residuals[[v]][, wh_diag[p]]))
-        qrt_p  <- quantile(y_p, c(0.25, 0.75))
-        ylim_p <- c(qrt_p[1] - diff(qrt_p) * 1.5, qrt_p[2] + diff(qrt_p) * 1.5)
-        w_p    <- rep(x$residuals$smoothing_weights[, wh_diag[p]], n_rep)
-        w_p[w_p < 0 | w_p > 1e4] <- 0
-        if (all(w_p <= 0)) w_p <- rep(1 / length(w_p), length(w_p))
-        par(mfrow = c(1, 1))
-        plot(t_p, y_p,
-             xlab = "Time", ylab = "Scaled Schoenfeld's residuals",
-             ylim = ylim_p,
-             col  = grDevices::rgb(128, 128, 128, 200, maxColorValue = 255))
-        tryCatch(
-          lines(smooth.spline(x = t_p, y = y_p, w = w_p, cv = FALSE), lwd = 3.5, col = 2),
-          error = function(e) NULL
-        )
-        abline(h = 0, col = "black", lwd = 3, lty = 2)
-        mtext(effects_diag[p], side = 3, line = 1, cex = 1.5)
-        par(op)
-      }
-    }
 
-    # (3) posterior histograms (HMC)
-    if (which[3L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
-      for (p in seq_along(effects)) {
-        title_p <- bquote("Posterior distribution of " ~ beta[.(effects[p])])
-        par(mfrow = c(1, 1))
-        hist(object$draws[, which_effects[p]], freq = FALSE,
-             col = "lavender", main = title_p, xlab = "Posterior draw")
-        abline(v = object$coefficients[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
-        ci <- .hdi(object$draws[, which_effects[p]])
-        if (!all(is.na(ci))) abline(v = ci, col = 4, lwd = 3.5, lty = 2)
-        par(op)
-      }
-    }
-
-    # (4) trace plots (HMC)
-    if (which[4L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
-      nchains <- attr(object, "nchains")
-      for (p in seq_along(effects)) {
-        title_p <- bquote("Trace plot of " ~ beta[.(effects[p])])
-        draws_p <- object$draws[, which_effects[p]]
-        par(mfrow = c(1, 1))
-        if (nchains == 1L) {
-          plot(draws_p, type = "l", main = title_p,
-               ylab = "Posterior draw", xlab = "Iteration", lwd = 1.8)
-          abline(h = object$coefficients[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
-          ci <- .hdi(draws_p)
-          if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 3.5, lty = 2)
-        } else {
-          n_per  <- length(draws_p) / nchains
-          starts <- seq(1, length(draws_p), by = n_per)
-          bounds <- cbind(starts, starts + n_per - 1)
-          colors <- hcl.colors(nchains, palette = "BuPu")
-          plot(draws_p[bounds[1, 1]:bounds[1, 2]], type = "l", main = title_p,
-               ylab = "Posterior draw", xlab = "Iterations\n(per chain)",
-               col = colors[1], lwd = 1.8, ylim = range(draws_p))
-          for (ch in 2:nchains)
-            lines(draws_p[bounds[ch, 1]:bounds[ch, 2]], col = colors[ch], lwd = 1.8)
-          abline(h = object$coefficients[which_effects[p]], col = 2, lwd = 3.5, lty = 2)
-          ci <- .hdi(draws_p)
-          if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 3.5, lty = 2)
+      pages <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
+      for (pg in pages) {
+        par(mfrow = .mfrow_for(length(pg)))
+        for (p in pg) {
+          y_p    <- unlist(lapply(seq_len(dim(x$residuals$standardized_residuals)[1]),
+                                  function(v) x$residuals$standardized_residuals[[v]][, wh_diag[p]]))
+          qrt_p  <- quantile(y_p, c(0.25, 0.75))
+          ylim_p <- c(qrt_p[1L] - diff(qrt_p) * 1.5, qrt_p[2L] + diff(qrt_p) * 1.5)
+          w_p    <- rep(x$residuals$smoothing_weights[, wh_diag[p]], n_rep)
+          w_p[w_p < 0 | w_p > 1e4] <- 0
+          if (all(w_p <= 0)) w_p <- rep(1 / length(w_p), length(w_p))
+          plot(t_p, y_p,
+               xlab = "Time", ylab = "Scaled Schoenfeld's residuals",
+               ylim = ylim_p,
+               col  = grDevices::rgb(128, 128, 128, 200, maxColorValue = 255))
+          tryCatch(
+            lines(smooth.spline(x = t_p, y = y_p, w = w_p, cv = FALSE), lwd = 3.5, col = 2),
+            error = function(e) NULL
+          )
+          abline(h = 0, col = "black", lwd = 3, lty = 2)
+          mtext(effects_diag[p], side = 3, line = 1, cex = 1.2)
         }
-        par(op)
       }
     }
 
-    # (5) recall: histogram of relative ranks
-    if (which[5L] && !is.null(x$recall)) {
+    # (3) recall: scatter of relative ranks
+    if (which[3L] && !is.null(x$recall)) {
+       par(mfrow = c(1,1))
       .plot_recall(x$recall, label = "Tie model")
     }
 
-  # ── actor-oriented ───────────────────────────────────────────────────────────
+    # (4) posterior density (HMC)
+    if (which[4L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+      P     <- length(effects)
+      pages <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
+      for (pg in pages) {
+        par(mfrow = .mfrow_for(length(pg)))
+        for (p in pg)
+          .panel_posterior(
+            draws_vec   = object$draws[, which_effects[p]],
+            coef_val    = object$coefficients[which_effects[p]],
+            effect_name = effects[p]
+          )
+      }
+    }
+
+    # (5) trace plots (HMC)
+    if (which[5L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+      nchains <- attr(object, "nchains")
+      P       <- length(effects)
+      pages   <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
+      for (pg in pages) {
+        par(mfrow = .mfrow_for(length(pg)))
+        for (p in pg) {
+          draws_p <- object$draws[, which_effects[p]]
+          if (nchains == 1L) {
+            plot(draws_p, type = "l", main = "",
+                 ylab = "Posterior draw", xlab = "Iteration", lwd = 1.8)
+            abline(h = object$coefficients[which_effects[p]], col = 2, lwd = 2.5, lty = 2)
+            ci <- .hdi(draws_p)
+            if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 2.5, lty = 2)
+          } else {
+            n_draws_chain <- length(draws_p) / nchains
+            starts        <- seq(1L, length(draws_p), by = n_draws_chain)
+            bounds        <- cbind(starts, starts + n_draws_chain - 1L)
+            colors        <- grDevices::hcl.colors(nchains, palette = "BuPu")
+            plot(draws_p[bounds[1, 1]:bounds[1, 2]], type = "l", main = "",
+                 ylab = "Posterior draw", xlab = "Iterations (per chain)",
+                 col = colors[1L], lwd = 1.8, ylim = range(draws_p))
+            for (ch in seq(2L, nchains))
+              lines(draws_p[bounds[ch, 1]:bounds[ch, 2]], col = colors[ch], lwd = 1.8)
+            abline(h = object$coefficients[which_effects[p]], col = 2, lwd = 2.5, lty = 2)
+            ci <- .hdi(draws_p)
+            if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 2.5, lty = 2)
+          }
+          mtext(effects[p], side = 3, line = 1, cex = 1.2)
+        }
+      }
+    }
+
+    # ── actor-oriented ───────────────────────────────────────────────────────────
   } else if (model == "actor") {
     effects_ls  <- list(sender_model = sender_effects, receiver_model = receiver_effects)
     which_model <- c("sender_model", "receiver_model")
@@ -233,24 +264,21 @@ plot.diagnostics <- function(x,
       has_resid_i  <- !is.null(sub$residuals)
       avail_diag_i <- if (has_resid_i) colnames(sub$residuals$smoothing_weights) else character(0)
 
-      # effect selection for this sub-model
       eff_spec <- effects_ls[[which_model[i]]]
       if (is.null(eff_spec)) {
         avail_fit_i   <- if (!is.null(object)) names(object[[which_model[i]]]$coefficients)
-                         else avail_diag_i
+        else avail_diag_i
         effects       <- avail_fit_i
         which_effects <- seq_along(effects)
       } else if (length(eff_spec) == 1L && is.na(eff_spec)) {
         next
       } else {
-        effects     <- as.character(eff_spec)
-        avail_fit_i <- if (!is.null(object)) names(object[[which_model[i]]]$coefficients)
-                       else avail_diag_i
+        effects       <- as.character(eff_spec)
+        avail_fit_i   <- if (!is.null(object)) names(object[[which_model[i]]]$coefficients)
+        else avail_diag_i
         which_effects <- unlist(sapply(effects, function(e) which(avail_fit_i == e)))
-        if (length(which_effects) == 0) {
-          par(op)
+        if (length(which_effects) == 0L)
           stop("effects not found in '", which_model[i], "'")
-        }
         effects       <- effects[order(which_effects)]
         which_effects <- sort(which_effects)
       }
@@ -264,8 +292,8 @@ plot.diagnostics <- function(x,
         par(mfrow = c(1, 2))
         plot(theoretical, observed,
              xlab = "Theoretical Quantiles", ylab = "Observed Quantiles", cex = 0.8)
-        mtext("Q-Q waiting times",  side = 3, line = 2, cex = 1.5)
-        mtext(title_model[i],       side = 3, line = 1, cex = 1)
+        mtext("Q-Q waiting times", side = 3, line = 2, cex = 1.5)
+        mtext(title_model[i],      side = 3, line = 1, cex = 1)
         abline(a = 0, b = 1, lty = 2, lwd = 1.5)
         hist(observed, freq = FALSE,
              xlab = "Waiting times", ylab = "Density",
@@ -274,7 +302,6 @@ plot.diagnostics <- function(x,
               add = TRUE, col = 1, lty = 2, lwd = 1.5)
         mtext("Density plot of waiting times", side = 3, line = 2, cex = 1.5)
         mtext(title_model[i],                 side = 3, line = 1, cex = 1)
-        par(op)
       }
 
       # (2) standardized Schoenfeld's residuals
@@ -283,15 +310,15 @@ plot.diagnostics <- function(x,
             !is.null(attr(object, "where_is_baseline")) &&
             "baseline" %in% tolower(effects_to_check))
           effects_to_check <- effects_to_check[tolower(effects_to_check) != "baseline"]
-        if (length(effects_to_check) > 0 && !all(effects_to_check %in% avail_diag_i)) {
-          par(op)
+        if (length(effects_to_check) > 0L && !all(effects_to_check %in% avail_diag_i))
           stop("one or more effects not found in diagnostics for '", which_model[i], "'.")
-        }
+
         effects_diag <- effects_to_check
         wh_diag      <- match(effects_diag, avail_diag_i)
         effects_diag <- effects_diag[order(wh_diag)]
         wh_diag      <- sort(wh_diag)
         P            <- length(effects_diag)
+
         n_rep_i <- rep(1L, dim(sub$residuals$standardized_residuals)[1])
         if (i == 1L && reh$stats.method == "pt")
           n_rep_i <- sapply(seq_len(dim(sub$residuals$standardized_residuals)[1]),
@@ -304,90 +331,94 @@ plot.diagnostics <- function(x,
         } else {
           cumsum(n_rep_i)
         }
-        for (p in seq_len(P)) {
-          y_p   <- unlist(lapply(seq_len(dim(sub$residuals$standardized_residuals)[1]),
-                                 function(v) sub$residuals$standardized_residuals[[v]][, wh_diag[p]]))
-          qrt_p  <- quantile(y_p, c(0.25, 0.75))
-          ylim_p <- c(qrt_p[1] - diff(qrt_p) * 1.5, qrt_p[2] + diff(qrt_p) * 1.5)
-          w_p    <- rep(sub$residuals$smoothing_weights[, wh_diag[p]], n_rep_i)
-          w_p[w_p < 0 | w_p > 1e4] <- 0
-          if (all(w_p <= 0)) w_p <- rep(1 / length(w_p), length(w_p))
-          par(mfrow = c(1, 1))
-          plot(t_p_i, y_p,
-               xlab = "Time", ylab = "Scaled Schoenfeld's residuals",
-               ylim = ylim_p,
-               col  = grDevices::rgb(128, 128, 128, 200, maxColorValue = 255))
-          tryCatch(
-            lines(smooth.spline(x = t_p_i, y = y_p, w = w_p, cv = FALSE), lwd = 3.5, col = 2),
-            error = function(e) NULL
-          )
-          abline(h = 0, col = "black", lwd = 3, lty = 2)
-          mtext(effects_diag[p], side = 3, line = 2, cex = 1.5)
-          mtext(title_model[i],  side = 3, line = 1, cex = 1)
-          par(op)
-        }
-      }
 
-      # (3) posterior histograms (HMC)
-      if (which[3L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
-        for (p in seq_along(effects)) {
-          title_p <- bquote("Posterior distribution of " ~ beta[.(effects[p])])
-          par(mfrow = c(1, 1))
-          hist(object[[which_model[i]]]$draws[, which_effects[p]], freq = FALSE,
-               col = "lavender", main = "", xlab = "Posterior draw")
-          abline(v = object[[which_model[i]]]$coefficients[which_effects[p]],
-                 col = 2, lwd = 3.5, lty = 2)
-          ci <- .hdi(object[[which_model[i]]]$draws[, which_effects[p]])
-          if (!all(is.na(ci))) abline(v = ci, col = 4, lwd = 3.5, lty = 2)
-          mtext(title_p,        side = 3, line = 2, cex = 1.5)
-          mtext(title_model[i], side = 3, line = 1, cex = 1)
-          par(op)
-        }
-      }
-
-      # (4) trace plots (HMC)
-      if (which[4L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
-        nchains <- attr(object, "nchains")
-        for (p in seq_along(effects)) {
-          title_p <- bquote("Trace plot of " ~ beta[.(effects[p])])
-          draws_p <- object[[which_model[i]]]$draws[, which_effects[p]]
-          par(mfrow = c(1, 1))
-          if (nchains == 1L) {
-            plot(draws_p, type = "l", main = "",
-                 ylab = "Posterior draw", xlab = "Iteration", lwd = 1.8)
-            abline(h = object[[which_model[i]]]$coefficients[which_effects[p]],
-                   col = 2, lwd = 3.5, lty = 2)
-            ci <- .hdi(draws_p)
-            if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 3.5, lty = 2)
-            mtext(title_p,        side = 3, line = 2, cex = 1.5)
-            mtext(title_model[i], side = 3, line = 1, cex = 1)
-          } else {
-            n_per  <- length(draws_p) / nchains
-            starts <- seq(1, length(draws_p), by = n_per)
-            bounds <- cbind(starts, starts + n_per - 1)
-            colors <- hcl.colors(nchains, palette = "BuPu")
-            plot(draws_p[bounds[1, 1]:bounds[1, 2]], type = "l", main = "",
-                 ylab = "Posterior draw", xlab = "Iterations (per chain)",
-                 col = colors[1], lwd = 1.8, ylim = range(draws_p))
-            for (ch in 2:nchains)
-              lines(draws_p[bounds[ch, 1]:bounds[ch, 2]], col = colors[ch], lwd = 1.8)
-            abline(h = object[[which_model[i]]]$coefficients[which_effects[p]],
-                   col = 2, lwd = 3.5, lty = 2)
-            ci <- .hdi(draws_p)
-            if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 3.5, lty = 2)
-            mtext(title_p,        side = 3, line = 2, cex = 1.5)
-            mtext(title_model[i], side = 3, line = 1, cex = 1)
+        pages <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
+        for (pg in pages) {
+          par(mfrow = .mfrow_for(length(pg)))
+          for (p in pg) {
+            y_p    <- unlist(lapply(seq_len(dim(sub$residuals$standardized_residuals)[1]),
+                                    function(v) sub$residuals$standardized_residuals[[v]][, wh_diag[p]]))
+            qrt_p  <- quantile(y_p, c(0.25, 0.75))
+            ylim_p <- c(qrt_p[1L] - diff(qrt_p) * 1.5, qrt_p[2L] + diff(qrt_p) * 1.5)
+            w_p    <- rep(sub$residuals$smoothing_weights[, wh_diag[p]], n_rep_i)
+            w_p[w_p < 0 | w_p > 1e4] <- 0
+            if (all(w_p <= 0)) w_p <- rep(1 / length(w_p), length(w_p))
+            plot(t_p_i, y_p,
+                 xlab = "Time", ylab = "Scaled Schoenfeld's residuals",
+                 ylim = ylim_p,
+                 col  = grDevices::rgb(128, 128, 128, 200, maxColorValue = 255))
+            tryCatch(
+              lines(smooth.spline(x = t_p_i, y = y_p, w = w_p, cv = FALSE), lwd = 3.5, col = 2),
+              error = function(e) NULL
+            )
+            abline(h = 0, col = "black", lwd = 3, lty = 2)
+            mtext(effects_diag[p], side = 3, line = 2, cex = 1.2)
+            mtext(title_model[i],  side = 3, line = 1, cex = 0.9)
           }
-          par(op)
         }
       }
 
-      # (5) recall: histogram of relative ranks
-      if (which[5L] && !is.null(sub$recall)) {
+      # (3) recall
+      if (which[3L] && !is.null(sub$recall)) {
+        par(mfrow = c(1,1))
         .plot_recall(sub$recall, label = title_model[i])
+      }
+
+      # (4) posterior density (HMC)
+      if (which[4L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+        P     <- length(effects)
+        pages <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
+        for (pg in pages) {
+          par(mfrow = .mfrow_for(length(pg)))
+          for (p in pg)
+            .panel_posterior(
+              draws_vec   = object[[which_model[i]]]$draws[, which_effects[p]],
+              coef_val    = object[[which_model[i]]]$coefficients[which_effects[p]],
+              effect_name = effects[p],
+              sub_title   = title_model[i]
+            )
+        }
+      }
+
+      # (5) trace plots (HMC)
+      if (which[5L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+        nchains <- attr(object, "nchains")
+        P       <- length(effects)
+        pages   <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
+        for (pg in pages) {
+          par(mfrow = .mfrow_for(length(pg)))
+          for (p in pg) {
+            draws_p <- object[[which_model[i]]]$draws[, which_effects[p]]
+            if (nchains == 1L) {
+              plot(draws_p, type = "l", main = "",
+                   ylab = "Posterior draw", xlab = "Iteration", lwd = 1.8)
+              abline(h = object[[which_model[i]]]$coefficients[which_effects[p]],
+                     col = 2, lwd = 2.5, lty = 2)
+              ci <- .hdi(draws_p)
+              if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 2.5, lty = 2)
+            } else {
+              n_draws_chain <- length(draws_p) / nchains
+              starts        <- seq(1L, length(draws_p), by = n_draws_chain)
+              bounds        <- cbind(starts, starts + n_draws_chain - 1L)
+              colors        <- grDevices::hcl.colors(nchains, palette = "BuPu")
+              plot(draws_p[bounds[1, 1]:bounds[1, 2]], type = "l", main = "",
+                   ylab = "Posterior draw", xlab = "Iterations (per chain)",
+                   col = colors[1L], lwd = 1.8, ylim = range(draws_p))
+              for (ch in seq(2L, nchains))
+                lines(draws_p[bounds[ch, 1]:bounds[ch, 2]], col = colors[ch], lwd = 1.8)
+              abline(h = object[[which_model[i]]]$coefficients[which_effects[p]],
+                     col = 2, lwd = 2.5, lty = 2)
+              ci <- .hdi(draws_p)
+              if (!all(is.na(ci))) abline(h = ci, col = 4, lwd = 2.5, lty = 2)
+            }
+            mtext(effects[p],     side = 3, line = 2, cex = 1.2)
+            mtext(title_model[i], side = 3, line = 1, cex = 0.9)
+          }
+        }
       }
     }
   }
+
   invisible(x)
 }
 
