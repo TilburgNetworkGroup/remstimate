@@ -1264,12 +1264,12 @@ double getWAIC(arma::vec mu,
         riskset_time_vec.fill(-1); // to simplify the ifelse in the loop below
       }
 
+      bool use_index_riskset_sw = (sender_riskset_arma.n_elem > 0);
       #ifdef _OPENMP
       omp_set_dynamic(0);         // disabling dynamic teams
       omp_set_num_threads(ncores); // number of threads for all consecutive parallel regions
       #pragma omp parallel for if(ncores>1) private(m,j) shared(M,riskset_time_vec,riskset_mat,stats,actor1,pars,ordinal,out)
       #endif
-      bool use_index_riskset_sw = (sender_riskset_arma.n_elem > 0);
       for(m = 0; m < M; m++)
         {
           int riskset_time_m = riskset_time_vec(m);
