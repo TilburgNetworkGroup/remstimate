@@ -6,7 +6,7 @@ Change of functionality of remstimate() and diagnostics()
 
 ## Coordinated submission
 This is a coordinated submission together with remify (4.0.0) and 
-remstats (4.0.0). These packages are interdependent and should be 
+remstats (4.0.0). These packages are interdependent and need to be 
 processed in order: remify first, then remstats, then remstimate.
  
 ## Test environments 
