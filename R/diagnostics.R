@@ -458,3 +458,196 @@ summary.diagnostics <- function(object, ...) {
   }
   invisible(object)
 }
+
+
+
+
+# diagnostics voor GLMM, GLMNET en MIXREM backends
+
+# GLMM / GLMNET: gooi de subklasse weg en roep diagnostics.remstimate aan;
+# alle benodigde attributen (statistics, where_is_baseline, ncores) zijn
+# al gezet door .remstimate_wrap()
+
+#' @export
+#' @method diagnostics remstimate_glmm
+diagnostics.remstimate_glmm <- function(object, reh, stats, top_pct = 0.05, ...) {
+  class(object) <- "remstimate"
+  diag_obj <- diagnostics(object, reh, stats, top_pct = top_pct, ...)
+  diag_obj$.engine <- attr(object, "engine") %||% "lme4"
+  diag_obj
+}
+
+#' @export
+#' @method diagnostics remstimate_glmnet
+diagnostics.remstimate_glmnet <- function(object, reh, stats, top_pct = 0.05, ...) {
+  class(object) <- "remstimate"
+  diag_obj <- diagnostics(object, reh, stats, top_pct = top_pct, ...)
+  diag_obj$.alpha      <- object$alpha
+  diag_obj$.lambda_sel <- object$lambda_sel
+  diag_obj
+}
+
+#' @export
+#' @method diagnostics remstimate_mixrem
+diagnostics.remstimate_mixrem <- function(object, reh, stats, top_pct = 0.05, ...) {
+  if (attr(object, "model") == "tie")
+    .mixrem_diag_tie(object, reh, stats, top_pct)
+  else
+    list(
+      sender_model   = .mixrem_diag_actor(object, reh, stats, "sender_model",   top_pct),
+      receiver_model = .mixrem_diag_actor(object, reh, stats, "receiver_model", top_pct)
+    )
+}
+
+.mixrem_diag_tie <- function(object, reh, stats, top_pct) {
+
+  reh         <- denormalize_reh(reh)
+  subset_idx  <- as.numeric(unlist(attr(stats, "subset") %||% list(1, reh$M)))
+  stats_perm  <- aperm(stats, c(2, 3, 1))
+
+  dyad_ids     <- attr(reh, "dyadIDactive") %||% attr(reh, "dyadID")
+  dyad_ids     <- dyad_ids[subset_idx[1]:subset_idx[2]]
+  waargenomen  <- if (is.list(dyad_ids)) dyad_ids else as.list(dyad_ids)
+
+  stat_names        <- dimnames(stats)[[3]]
+  waar_is_baseline  <- .remstimate_find_baseline(stat_names)
+  selectie          <- if (is.null(waar_is_baseline)) seq_along(stat_names) else
+    seq_along(stat_names)[-waar_is_baseline]
+
+  stats_sub <- if (length(selectie) == 1L)
+    array(stats_perm[, selectie, ], dim = c(dim(stats_perm)[1], 1, dim(stats_perm)[3]))
+  else
+    stats_perm[, selectie, , drop = FALSE]
+
+  k <- ncol(object$coefficients)
+
+  per_component <- setNames(lapply(seq_len(k), function(j) {
+    basis_j <- if (is.null(waar_is_baseline)) 0 else object$coefficients[waar_is_baseline, j]
+    .recall_block(
+      pars     = as.vector(object$coefficients[selectie, j]),
+      baseline = basis_j,
+      stats_3d = stats_sub,
+      obs_ids  = waargenomen,
+      top_pct  = top_pct
+    )
+  }), paste0("Component.", seq_len(k)))
+
+  # gecombineerde recall via posterior component assignments
+  gecombineerd <- tryCatch({
+    clusters <- flexmix::clusters(object$backend_fit)
+    M    <- dim(stats_sub)[3L]
+    rijen <- vector("list", M)
+    for (m in seq_len(M)) {
+      d <- waargenomen[[m]]
+      if (!length(d)) next
+      j     <- clusters[d[1L]]
+      basis_j <- if (is.null(waar_is_baseline)) 0 else object$coefficients[waar_is_baseline, j]
+      pars_j  <- as.vector(object$coefficients[selectie, j])
+      geldig  <- seq_len(dim(stats_sub)[1L])
+      S       <- matrix(stats_sub[geldig, , m], nrow = length(geldig))
+      kansen  <- exp(as.numeric(basis_j + S %*% pars_j))
+      kansen  <- kansen / sum(kansen)
+      volgorde <- order(kansen, decreasing = TRUE)
+      pos     <- match(d, geldig);       pos  <- pos[!is.na(pos)]
+      rnks    <- match(pos, volgorde);   rnks <- rnks[!is.na(rnks)]
+      if (!length(rnks)) next
+      rijen[[m]] <- data.frame(
+        event     = m,
+        rel_rank  = 1 - rnks / length(geldig),
+        cum_prob  = cumsum(kansen[volgorde])[rnks],
+        component = j
+      )
+    }
+    pe <- do.call(rbind, rijen)
+    list(per_event = pe,
+         summary   = data.frame(
+           mean_rel_rank   = mean(pe$rel_rank),
+           median_rel_rank = median(pe$rel_rank),
+           mean_cum_prob   = mean(pe$cum_prob),
+           top_pct         = top_pct,
+           top_pct_prop    = mean(pe$rel_rank >= 1 - top_pct)
+         ))
+  }, error = function(e) NULL)
+
+  out <- list(per_component = per_component, combined = gecombineerd,
+              k = k, prior_probs = object$prior_probs)
+  out$.reh.processed <- reh
+  class(out) <- c("diagnostics_mixrem", "diagnostics", "remstimate")
+  out
+}
+
+.mixrem_diag_actor <- function(object, reh, stats, deel, top_pct) {
+  sub_obj <- object[[deel]]
+  if (is.null(sub_obj)) return(NULL)
+
+  reh        <- denormalize_reh(reh)
+  subset_idx <- as.numeric(unlist(attr(stats, "subset") %||% list(1, reh$M)))
+  is_sender  <- (deel == "sender_model")
+
+  stats_arr  <- if (is_sender) aperm(stats$sender_stats, c(2, 3, 1)) else
+    aperm(stats$receiver_stats, c(2, 3, 1))
+  stat_names <- if (is_sender) dimnames(stats$sender_stats)[[3]] else
+    dimnames(stats$receiver_stats)[[3]]
+
+  waar_is_baseline <- if (is_sender) .remstimate_find_baseline(stat_names) else NULL
+  selectie         <- if (is.null(waar_is_baseline)) seq_along(stat_names) else
+    seq_along(stat_names)[-waar_is_baseline]
+  stats_sub <- if (length(selectie) == 1L)
+    array(stats_arr[, selectie, ], dim = c(dim(stats_arr)[1], 1, dim(stats_arr)[3]))
+  else stats_arr[, selectie, , drop = FALSE]
+
+  bereik <- subset_idx[1]:subset_idx[2]
+  if (is_sender) {
+    waargenomen <- lapply(as.list(attr(reh, "actor1ID")[bereik]), as.integer)
+    geldig_ids  <- if (!is.null(reh$sender_riskset))
+      rep(list(reh$sender_riskset), length(bereik)) else NULL
+  } else {
+    waargenomen <- lapply(attr(reh, "actor2ID")[bereik], function(x) as.integer(unlist(x)))
+    geldig_ids  <- if (!is.null(reh$receiver_riskset))
+      lapply(as.list(attr(reh, "actor1ID")[bereik]),
+             function(s) reh$receiver_riskset[[as.integer(s[1])]])
+    else NULL
+  }
+
+  k <- ncol(sub_obj$coefficients)
+  per_component <- setNames(lapply(seq_len(k), function(j) {
+    basis_j <- if (is.null(waar_is_baseline) || !is_sender) 0 else
+      sub_obj$coefficients[waar_is_baseline, j]
+    .recall_block(
+      pars      = as.vector(sub_obj$coefficients[selectie, j]),
+      baseline  = basis_j,
+      stats_3d  = stats_sub,
+      obs_ids   = waargenomen,
+      valid_ids = geldig_ids,
+      top_pct   = top_pct
+    )
+  }), paste0("Component.", seq_len(k)))
+
+  list(per_component = per_component, k = k)
+}
+
+#' @export
+print.diagnostics_mixrem <- function(x, ...) {
+  reh <- x$.reh.processed
+  cat("Diagnostics — Mixture REM (k =", x$k, ")\n")
+  cat(sprintf("Actors: %d  Events: %d\n", reh$N, reh$M))
+  cat("\nMixing proportions:\n")
+  pp <- setNames(round(x$prior_probs, 4), paste0("Component.", seq_along(x$prior_probs)))
+  print(pp)
+  cat("\nRecall per component:\n")
+  for (nm in names(x$per_component)) {
+    rs <- x$per_component[[nm]]$summary
+    cat(sprintf("  %-14s  mean rank = %.3f  |  top 5%% = %.1f%%\n",
+                nm, rs$mean_rel_rank, rs$top_pct_prop * 100))
+  }
+  if (!is.null(x$combined)) {
+    rs <- x$combined$summary
+    cat(sprintf("  %-14s  mean rank = %.3f  |  top 5%% = %.1f%%\n",
+                "Combined", rs$mean_rel_rank, rs$top_pct_prop * 100))
+  }
+  invisible(x)
+}
+
+
+
+

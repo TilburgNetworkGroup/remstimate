@@ -468,3 +468,139 @@ plot.remstimate <- function(x,
                    receiver_effects = receiver_effects)
   invisible(x)
 }
+
+
+
+# plot methoden voor GLMM, GLMNET en MIXREM
+# plots 1-5: to plot.remstimate (via diagnostics)
+# plot 6:    backend (ranef Q-Q / regularization / mixture recall, etc)
+
+#' @export
+#' @method plot remstimate_glmm
+plot.remstimate_glmm <- function(x, reh, diagnostics = NULL,
+                                 which = 1:3, effects = NULL,
+                                 sender_effects = NULL, receiver_effects = NULL,
+                                 ...) {
+  basis_which <- which[which <= 5L]
+  if (length(basis_which)) {
+    x_basis <- x; class(x_basis) <- "remstimate"
+    plot.remstimate(x_basis, reh, diagnostics = diagnostics,
+                    which = basis_which, effects = effects,
+                    sender_effects = sender_effects,
+                    receiver_effects = receiver_effects, ...)
+  }
+
+  if (6L %in% which) {
+    engine <- attr(x, "engine")
+    fits   <- if (inherits(x$backend_fit, "merMod") ||
+                  inherits(x$backend_fit, "glmmTMB"))
+      list(tie = x$backend_fit)
+    else Filter(Negate(is.null), x$backend_fit)
+
+    op <- par(mfrow = c(1L, length(fits)), no.readonly = TRUE)
+    on.exit(par(op), add = TRUE)
+
+    for (nm in names(fits)) {
+      re <- tryCatch(
+        if (engine == "lme4")    lme4::ranef(fits[[nm]])
+        else glmmTMB::ranef(fits[[nm]])$cond,
+        error = function(e) NULL
+      )
+      if (is.null(re)) next
+      for (groep in names(re)) {
+        waarden <- unlist(re[[groep]])
+        qqnorm(waarden, main = "", pch = 16, cex = 0.8)
+        qqline(waarden, col = 2, lwd = 2)
+        mtext(paste("Random effects —", groep), side = 3, line = 1, cex = 1.1)
+        if (nm != "tie") mtext(nm, side = 3, line = 0, cex = 0.85)
+      }
+    }
+  }
+  invisible(x)
+}
+
+#' @export
+#' @method plot remstimate_glmnet
+plot.remstimate_glmnet <- function(x, reh, diagnostics = NULL,
+                                   which = 1:3, effects = NULL,
+                                   sender_effects = NULL, receiver_effects = NULL,
+                                   ...) {
+  basis_which <- which[which <= 5L]
+  if (length(basis_which)) {
+    x_basis <- x; class(x_basis) <- "remstimate"
+    plot.remstimate(x_basis, reh, diagnostics = diagnostics,
+                    which = basis_which, effects = effects,
+                    sender_effects = sender_effects,
+                    receiver_effects = receiver_effects, ...)
+  }
+
+  if (6L %in% which) {
+    methode_lbl <- if (x$alpha == 1) "Lasso" else if (x$alpha == 0) "Ridge" else
+      sprintf("Elastic net (alpha=%g)", x$alpha)
+
+    cv_fits <- if (inherits(x$backend_fit, "cv.glmnet")) list(tie = x$backend_fit)
+    else Filter(Negate(is.null), x$backend_fit)
+
+    op <- par(mfrow = c(1L, length(cv_fits)), no.readonly = TRUE)
+    on.exit(par(op), add = TRUE)
+
+    for (nm in names(cv_fits)) {
+      plot(cv_fits[[nm]])
+      title(main = paste(methode_lbl, if (nm == "tie") "" else paste("-", nm)), line = 3)
+      abline(v = log(x$lambda_sel %||% cv_fits[[nm]]$lambda.1se),
+             col = "darkorange", lwd = 2, lty = 2)
+    }
+  }
+  invisible(x)
+}
+
+#' @export
+#' @method plot remstimate_mixrem
+plot.remstimate_mixrem <- function(x, reh, diagnostics = NULL, which = 3L, ...) {
+  if (is.null(diagnostics)) {
+    extra <- list(...)
+    if (!"stats" %in% names(extra)) stop("'stats' must be provided when diagnostics = NULL")
+    diagnostics <- diagnostics(object = x, reh = reh, stats = extra$stats)
+  }
+  if (!inherits(diagnostics, "diagnostics_mixrem"))
+    stop("'diagnostics' must be a diagnostics_mixrem object")
+
+  if (3L %in% which) {
+    if (attr(x, "model") == "tie") {
+      .mixrem_plot_recall(diagnostics, "Tie model")
+    } else {
+      for (deel in c("sender_model", "receiver_model")) {
+        sub <- diagnostics[[deel]]
+        if (is.null(sub)) next
+        lbl <- if (deel == "sender_model") "Rate model (sender)" else "Choice model (receiver)"
+        .mixrem_plot_recall(sub, lbl)
+      }
+    }
+  }
+  invisible(x)
+}
+
+.mixrem_plot_recall <- function(diag, titel) {
+  pc       <- diag$per_component
+  k        <- length(pc)
+  heeft_combined <- !is.null(diag$combined)
+  n_panelen <- k + if (heeft_combined) 1L else 0L
+  nc        <- min(n_panelen, 3L)
+  op        <- par(mfrow = c(ceiling(n_panelen / nc), nc), no.readonly = TRUE)
+  on.exit(par(op), add = TRUE)
+
+  kansen <- diag$prior_probs %||% rep(1/k, k)
+  for (j in seq_len(k))
+    .plot_recall(pc[[j]], label = sprintf("%s | Component %d (π=%.2f)", titel, j, kansen[j]))
+  if (heeft_combined)
+    .plot_recall(diag$combined, label = paste(titel, "| Combined"))
+}
+
+#' @export
+#' @method plot remstimate_mixrem_list
+plot.remstimate_mixrem_list <- function(x, ...) {
+  cat("BIC per k:\n"); print(bic_table(x))
+  cat("Use plot(x[[\"k2\"]], ...) to plot a specific fit.\n")
+  invisible(x)
+}
+

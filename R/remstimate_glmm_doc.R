@@ -1,0 +1,82 @@
+#' Fit a mixed-effects REM via lme4 or glmmTMB
+#'
+#' Extends \code{remstimate()} with \code{method = "GLMM"} to add random
+#' effects (sender frailty, receiver frailty, dyadic frailty) on top of the
+#' standard REM fixed effects.  Internally stacks the statistics array with
+#' \code{stack_stats()}, builds the fixed-effects formula from the statistic
+#' names, appends the user-supplied random structure, and calls
+#' \code{lme4::glmer()} or \code{glmmTMB::glmmTMB()}.
+#'
+#' For interval timing a Poisson model with \code{log_interevent} offset is
+#' used.  For ordinal timing a binomial GLMM with event fixed effects is
+#' fitted as an approximation to conditional logistic regression.
+#'
+#' @param reh     A \code{remify} object.
+#' @param stats   A \code{tomstats} or \code{aomstats} object.
+#' @param method  Must be \code{"GLMM"}.
+#' @param random  One-sided formula specifying the random structure, e.g.
+#'   \code{~ (1 | actor1)} or \code{~ (1 | actor1) + (1 | actor2)}.
+#'   Grouping variables must be columns in the stacked data frame returned by
+#'   \code{stack_stats()}; the most useful ones are \code{actor1}
+#'   (sender), \code{actor2} (receiver), and \code{dyad} (dyad index).
+#' @param engine  \code{"lme4"} (default) or \code{"glmmTMB"}.
+#' @param verbose Print the formula before fitting. Default \code{FALSE}.
+#' @param ...     Passed to \code{glmer()} / \code{glmmTMB()}.
+#'
+#' @return A \code{remstimate_glmm} object (also inherits \code{remstimate})
+#'   with slots:
+#'   \describe{
+#'     \item{\code{coefficients}}{Named vector of fixed effects (tie model) or
+#'       list with \code{sender_model} and \code{receiver_model} (actor model).}
+#'     \item{\code{backend_fit}}{The raw \code{glmer} / \code{glmmTMB} fit.
+#'       Pass to \code{lme4::ranef()}, \code{lme4::VarCorr()}, etc.}
+#'     \item{\code{loglik}}{Log-likelihood at convergence.}
+#'   }
+#'
+#' @seealso \code{\link{remstimate}}, \code{\link[lme4]{glmer}},
+#'   \code{\link[glmmTMB]{glmmTMB}}
+#'
+#' @examples
+#' \donttest{
+#' library(remstimate)
+#' data(history, package = "remstats")
+#' data(info,    package = "remstats")
+#' colnames(history)[colnames(history) == "setting"] <- "type"
+#'
+#' reh <- remify::remify(edgelist = history[1:100, ], model = "tie",
+#'                        riskset = "active")
+#' effects <- ~ inertia(consider_type = FALSE) +
+#'               indegreeSender(consider_type = FALSE) +
+#'               outdegreeSender(consider_type = FALSE)
+#' stats <- remstats::tomstats(effects, reh = reh, attr_actors = info,
+#'                              memory = "decay", memory_value = 1000)
+#'
+#' # sender frailty
+#' fit_s <- remstimate(reh, stats, method = "GLMM",
+#'                     random = ~ (1 | actor1))
+#' fit_s
+#'
+#' # sender + receiver frailty
+#' fit_sr <- remstimate(reh, stats, method = "GLMM",
+#'                      random = ~ (1 | actor1) + (1 | actor2))
+#' fit_sr
+#'
+#' # inspect random effects
+#' lme4::ranef(fit_sr$backend_fit)
+#' lme4::VarCorr(fit_sr$backend_fit)
+#'
+#' # diagnostics and recall
+#' diag_sr <- diagnostics(fit_sr, reh, stats)
+#' diag_sr
+#' plot(diag_sr)
+#'
+#' # plot 6: random-effects Q-Q
+#' plot(fit_sr, reh, stats = stats, which = 6)
+#'
+#' # glmmTMB engine (faster for large data, supports more complex structures)
+#' fit_tmb <- remstimate(reh, stats, method = "GLMM",
+#'                       random = ~ (1 | actor1), engine = "glmmTMB")
+#' }
+#'
+#' @name remstimate_glmm
+NULL

@@ -9,14 +9,14 @@ ao_data$edgelist$time <- floor(ao_data$edgelist$time)
 ao_data$edgelist$time[seq(5, 95, by = 5)] <-
   ao_data$edgelist$time[seq(5, 95, by = 5) - 1]
 
-rate_model   <- ~ 1 + remstats::indegreeSender()
-choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+rate_model   <- ~ 1 + indegreeSender()
+choice_model <- ~ inertia() + reciprocity()
 
-ao_reh   <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
-ao_stats <- remstats::remstats(reh              = ao_reh,
+ao_reh   <- remify(edgelist = ao_data$edgelist, model = "actor")
+ao_stats <- remstats(reh              = ao_reh,
                                 sender_effects   = rate_model,
                                 receiver_effects = choice_model)
-ao_mle   <- remstimate::remstimate(reh    = ao_reh,
+ao_mle   <- remstimate(reh    = ao_reh,
                                     stats  = ao_stats,
                                     ncores = 1L,
                                     method = "MLE",
@@ -24,10 +24,10 @@ ao_mle   <- remstimate::remstimate(reh    = ao_reh,
 
 # Tie-oriented data
 data(tie_data)
-tie_model <- ~ 1 + remstats::inertia() + remstats::reciprocity()
-tie_reh   <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
-tie_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
-tie_mle   <- remstimate::remstimate(reh    = tie_reh,
+tie_model <- ~ 1 + inertia() + reciprocity()
+tie_reh   <- remify(edgelist = tie_data$edgelist, model = "tie")
+tie_stats <- remstats(reh = tie_reh, tie_effects = tie_model)
+tie_mle   <- remstimate(reh    = tie_reh,
                                      stats  = tie_stats,
                                      ncores = 1L,
                                      method = "MLE",
@@ -213,7 +213,7 @@ expect_error(
 # Wrapped in tryCatch so a slow CI environment can skip gracefully.
 
 ao_hmc <- tryCatch(
-  remstimate::remstimate(reh     = ao_reh,
+  remstimate(reh     = ao_reh,
                           stats   = ao_stats,
                           ncores  = 1L,
                           method  = "HMC",
@@ -259,7 +259,7 @@ if (!is.null(ao_hmc)) {
 
 # multi-chain HMC: trace plot branches to multi-chain path
 ao_hmc2 <- tryCatch(
-  remstimate::remstimate(reh     = ao_reh,
+  remstimate(reh     = ao_reh,
                           stats   = ao_stats,
                           ncores  = 1L,
                           method  = "HMC",

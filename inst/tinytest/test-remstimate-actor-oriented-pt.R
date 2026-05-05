@@ -8,23 +8,23 @@ set_seed <- 23929
 # processing data with simultaneous events (two events observed at the same time point)
 ao_data$edgelist$time <- floor(ao_data$edgelist$time)
 ao_data$edgelist$time[seq(5,95,by=5)] <- ao_data$edgelist$time[seq(5,95,by=5)-1]
-ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
+ao_reh <- remify(edgelist = ao_data$edgelist, model = "actor")
 
 # specifying linear predictor (for rate and choice model)
-rate_model <- ~ 1 + remstats::indegreeSender()
-choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+rate_model <- ~ 1 + indegreeSender()
+choice_model <- ~ inertia() + reciprocity()
 
 # calculating statistics
-ao_reh_stats <- remstats::remstats(reh = ao_reh,
+ao_reh_stats <- remstats(reh = ao_reh,
                                     sender_effects = rate_model,
                                     receiver_effects = choice_model)
 
 # (1) method = "MLE"
-expect_silent(remstimate::remstimate(reh = ao_reh,
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "MLE"))
-ao_mle <- remstimate::remstimate(reh = ao_reh,
+ao_mle <- remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "MLE")
@@ -59,8 +59,8 @@ expect_error(WAIC(ao_mle))
 # fixed=TRUE)
 
 # test diagnostics with only baseline
-# ao_stats_baseline <- remstats::remstats(reh = ao_reh, sender_effects = ~1 , method = "pt")
-# ao_mle_only_baseline <- remstimate::remstimate(reh = ao_reh,
+# ao_stats_baseline <- remstats(reh = ao_reh, sender_effects = ~1 , method = "pt")
+# ao_mle_only_baseline <- remstimate(reh = ao_reh,
 #                         stats = ao_stats_baseline,
 #                         ncores = 1L,
 #                         method = "MLE")
@@ -71,23 +71,23 @@ expect_error(WAIC(ao_mle))
 # tests on "WAIC" for "MLE"
 
 # WAIC = TRUE
-expect_silent(remstimate::remstimate(reh = ao_reh,
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         WAIC = TRUE))
 # nsimWAIC is not a numeric scalar
-expect_warning(remstimate::remstimate(reh = ao_reh,
+expect_warning(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         WAIC = TRUE,
                         nsimWAIC = "text"))
 # nsimWAIC is supplied
-expect_silent(remstimate::remstimate(reh = ao_reh,
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         WAIC = TRUE,
                         nsimWAIC = 100))
-ao_mle_with_waic <- remstimate::remstimate(reh = ao_reh,
+ao_mle_with_waic <- remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         WAIC = TRUE,
@@ -99,21 +99,21 @@ expect_silent(WAIC(ao_mle_with_waic))
 # WAIC for ordinal likelihod + testing omit_dyad routine for ordinal likelihood and tie-oriented model
 # omit_dyad <- list()
 # omit_dyad[[1]] <- list(time = c(330,585), dyad = data.frame(actor1=c(NA,"4"),actor2=c("4",NA),type=c(NA,NA))) # excluding actor 4 from the risk set between (observed) time points 330 and 585
-ao_reh_ordinal <- remify::remify(edgelist = ao_data$edgelist, model = "actor", ordinal = TRUE)
-ao_reh_stats_ordinal <- remstats::remstats(reh = ao_reh_ordinal, sender_effects = rate_model, receiver_effects = choice_model)
-expect_silent(remstimate::remstimate(reh = ao_reh_ordinal,
+ao_reh_ordinal <- remify(edgelist = ao_data$edgelist, model = "actor", ordinal = TRUE)
+ao_reh_stats_ordinal <- remstats(reh = ao_reh_ordinal, sender_effects = rate_model, receiver_effects = choice_model)
+expect_silent(remstimate(reh = ao_reh_ordinal,
                         stats = ao_reh_stats_ordinal,
                         ncores = 1L,
                         WAIC = TRUE,
                         nsimWAIC = 100))
 #testing only ordinal likelihood for actor-oriented model
-ao_mle_ordinal_omit_dyad <- remstimate::remstimate(reh = ao_reh_ordinal,
+ao_mle_ordinal_omit_dyad <- remstimate(reh = ao_reh_ordinal,
                         stats = ao_reh_stats_ordinal,
                         ncores = 1L)
 # WAIC for interval likelihood with omit_dyad
-ao_reh_omit <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
-ao_reh_stats_omit <- remstats::remstats(reh = ao_reh_omit, sender_effects = rate_model, receiver_effects = choice_model)
-expect_silent(remstimate::remstimate(reh = ao_reh_omit,
+ao_reh_omit <- remify(edgelist = ao_data$edgelist, model = "actor")
+ao_reh_stats_omit <- remstats(reh = ao_reh_omit, sender_effects = rate_model, receiver_effects = choice_model)
+expect_silent(remstimate(reh = ao_reh_omit,
                         stats = ao_reh_stats_omit,
                         ncores = 1L,
                         WAIC = TRUE,
@@ -121,7 +121,7 @@ expect_silent(remstimate::remstimate(reh = ao_reh_omit,
 expect_silent(diagnostics(object = ao_mle_ordinal_omit_dyad,reh = ao_reh_ordinal,stats = ao_reh_stats_ordinal))
 
 # (4) method  = "HMC"
-expect_silent(remstimate::remstimate(reh = ao_reh,
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "HMC",
@@ -129,7 +129,7 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         nsim = 100L,
                         burnin = 5L,
                         seed = set_seed))
-ao_hmc <- remstimate::remstimate(reh = ao_reh,
+ao_hmc <- remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "HMC",
@@ -138,7 +138,7 @@ ao_hmc <- remstimate::remstimate(reh = ao_reh,
                         burnin = 5L,
                         L = 50,
                         seed = set_seed)
-ao_hmc_two_chains <- remstimate::remstimate(reh = ao_reh,
+ao_hmc_two_chains <- remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "HMC",
@@ -175,7 +175,7 @@ fixed = TRUE)
 expect_error(WAIC(ao_hmc))
 
 # tests on "WAIC" for "HMC"
-expect_silent(remstimate::remstimate(reh = ao_reh,
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "HMC",
@@ -187,9 +187,9 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
                         nsimWAIC = 10))
 
 # ordinal likelihood (actor-oriented modeling)
-ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor", ordinal = TRUE)
-ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
-expect_silent(remstimate::remstimate(reh = ao_reh,
+ao_reh <- remify(edgelist = ao_data$edgelist, model = "actor", ordinal = TRUE)
+ao_reh_stats <- remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "MLE"))
@@ -198,28 +198,28 @@ expect_silent(remstimate::remstimate(reh = ao_reh,
 # Risk set "active"
 
 # testing estimation methods with active riskset
-ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor", riskset = "active")
+ao_reh <- remify(edgelist = ao_data$edgelist, model = "actor", riskset = "active")
 
 # calculating statistics
-ao_reh_stats <- remstats::remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
+ao_reh_stats <- remstats(reh = ao_reh, sender_effects = rate_model, receiver_effects = choice_model)
 attr(ao_reh_stats,"formula") <- NULL
 
 # (1) method = "MLE"
-rate_model_two_effects <- ~ 1 + remstats::indegreeSender() + remstats::outdegreeSender()
-ao_reh_stats_2 <- remstats::remstats(reh = ao_reh, sender_effects = rate_model_two_effects, receiver_effects = choice_model)
-expect_silent(remstimate::remstimate(reh = ao_reh,
+rate_model_two_effects <- ~ 1 + indegreeSender() + outdegreeSender()
+ao_reh_stats_2 <- remstats(reh = ao_reh, sender_effects = rate_model_two_effects, receiver_effects = choice_model)
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats_2,
                         ncores = 1L,
                         method = "MLE"))
 
-ao_mle <- remstimate::remstimate(reh = ao_reh,
+ao_mle <- remstimate(reh = ao_reh,
                         stats = ao_reh_stats_2,
                         ncores = 1L,
                         method = "MLE")
 expect_silent(diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats_2))
 
 # (4) method  = "HMC"
-expect_silent(remstimate::remstimate(reh = ao_reh,
+expect_silent(remstimate(reh = ao_reh,
                         stats = ao_reh_stats,
                         ncores = 1L,
                         method = "HMC",

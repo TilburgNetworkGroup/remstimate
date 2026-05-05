@@ -7,28 +7,28 @@ data(ao_data)
 set_seed <- 23929
 
 # specifying linear predictors
-rate_model   <- ~ 1 + remstats::indegreeSender()
-choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+rate_model   <- ~ 1 + indegreeSender()
+choice_model <- ~ inertia() + reciprocity()
 
 # ── active riskset ────────────────────────────────────────────────────────────
 
-ao_reh_active <- remify::remify(edgelist = ao_data$edgelist,
+ao_reh_active <- remify(edgelist = ao_data$edgelist,
                                  model   = "actor",
                                  riskset = "active")
 
-ao_stats_active <- remstats::remstats(reh              = ao_reh_active,
+ao_stats_active <- remstats(reh              = ao_reh_active,
                                        sender_effects   = rate_model,
                                        receiver_effects = choice_model)
 
 # MLE
 expect_silent(
-  remstimate::remstimate(reh    = ao_reh_active,
+  remstimate(reh    = ao_reh_active,
                           stats  = ao_stats_active,
                           ncores = 1L,
                           method = "MLE")
 )
 
-ao_mle_active <- remstimate::remstimate(reh    = ao_reh_active,
+ao_mle_active <- remstimate(reh    = ao_reh_active,
                                          stats  = ao_stats_active,
                                          ncores = 1L,
                                          method = "MLE",
@@ -52,7 +52,7 @@ expect_silent(WAIC(ao_mle_active))
 
 # HMC
 expect_silent(
-  remstimate::remstimate(reh     = ao_reh_active,
+  remstimate(reh     = ao_reh_active,
                           stats   = ao_stats_active,
                           ncores  = 1L,
                           method  = "HMC",
@@ -62,7 +62,7 @@ expect_silent(
                           seed    = set_seed)
 )
 
-ao_hmc_active <- remstimate::remstimate(reh     = ao_reh_active,
+ao_hmc_active <- remstimate(reh     = ao_reh_active,
                                          stats   = ao_stats_active,
                                          ncores  = 1L,
                                          method  = "HMC",
@@ -83,24 +83,24 @@ manual_rs <- unique(as.data.frame(rbind(
   as.matrix(el[, c("actor2", "actor1")])
 )))
 
-ao_reh_manual <- remify::remify(edgelist       = ao_data$edgelist,
+ao_reh_manual <- remify(edgelist       = ao_data$edgelist,
                                  model          = "actor",
                                  riskset        = "manual",
                                  manual.riskset = manual_rs)
 
-ao_stats_manual <- remstats::remstats(reh              = ao_reh_manual,
+ao_stats_manual <- remstats(reh              = ao_reh_manual,
                                        sender_effects   = rate_model,
                                        receiver_effects = choice_model)
 
 # MLE
 expect_silent(
-  remstimate::remstimate(reh    = ao_reh_manual,
+  remstimate(reh    = ao_reh_manual,
                           stats  = ao_stats_manual,
                           ncores = 1L,
                           method = "MLE")
 )
 
-ao_mle_manual <- remstimate::remstimate(reh    = ao_reh_manual,
+ao_mle_manual <- remstimate(reh    = ao_reh_manual,
                                          stats  = ao_stats_manual,
                                          ncores = 1L,
                                          method = "MLE",
@@ -114,23 +114,23 @@ expect_silent(WAIC(ao_mle_manual))
 
 # ── active_saturated riskset ──────────────────────────────────────────────────
 
-ao_reh_sat <- remify::remify(edgelist = ao_data$edgelist,
+ao_reh_sat <- remify(edgelist = ao_data$edgelist,
                               model   = "actor",
                               riskset = "active_saturated")
 
-ao_stats_sat <- remstats::remstats(reh              = ao_reh_sat,
+ao_stats_sat <- remstats(reh              = ao_reh_sat,
                                     sender_effects   = rate_model,
                                     receiver_effects = choice_model)
 
 # MLE
 expect_silent(
-  remstimate::remstimate(reh    = ao_reh_sat,
+  remstimate(reh    = ao_reh_sat,
                           stats  = ao_stats_sat,
                           ncores = 1L,
                           method = "MLE")
 )
 
-ao_mle_sat <- remstimate::remstimate(reh    = ao_reh_sat,
+ao_mle_sat <- remstimate(reh    = ao_reh_sat,
                                       stats  = ao_stats_sat,
                                       ncores = 1L,
                                       method = "MLE",

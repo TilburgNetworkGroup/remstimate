@@ -2,12 +2,12 @@
 % Please edit documentation in R/remstimate2.R
 \name{remstimate}
 \alias{remstimate}
-\title{remstimate - MLE and HMC estimation for tie-oriented REM}
+\title{remstimate}
 \usage{
 remstimate(
   reh,
   stats,
-  method = c("MLE", "HMC"),
+  method = c("MLE", "HMC", "GLMM", "GLMNET", "MIXREM"),
   ncores = 1L,
   nsim = 500L,
   nchains = 1L,
@@ -20,116 +20,142 @@ remstimate(
   seed = NULL,
   WAIC = FALSE,
   nsimWAIC = 100L,
+  random = NULL,
+  engine = c("lme4", "glmmTMB"),
+  alpha = 1,
+  nfolds = 10L,
+  lambda_select = c("1se", "min"),
+  k = 2L,
+  concomitant = NULL,
+  nrep = 3L,
   ...
 )
 }
 \arguments{
-\item{reh}{a \code{remify} object.}
+\item{reh}{A \code{remify} object.}
 
-\item{stats}{a \code{tomstats} or \code{tomstats_sampled} object (output of
-\code{remstats::tomstats()} or \code{remstats::tomstats(sampling=TRUE)}).}
+\item{stats}{A \code{tomstats}, \code{tomstats_sampled}, or
+\code{aomstats} object.}
 
-\item{method}{optimization method: \code{"MLE"} (default) or \code{"HMC"}.}
+\item{method}{Estimation method. One of \code{"MLE"} (default),
+\code{"HMC"}, \code{"GLMM"}, \code{"GLMNET"}, or \code{"MIXREM"}.}
 
-\item{ncores}{number of threads for parallelization (default 1).}
+\item{ncores}{[\emph{MLE/HMC}] Number of threads. Default \code{1L}.}
 
-\item{nsim}{[\emph{HMC only}] number of MCMC iterations per chain after burnin. Default 500.}
+\item{nsim}{[\emph{HMC}] MCMC iterations per chain after burnin. Default \code{500L}.}
 
-\item{nchains}{[\emph{HMC only}] number of chains. Default 1.}
+\item{nchains}{[\emph{HMC}] Number of chains. Default \code{1L}.}
 
-\item{burnin}{[\emph{HMC only}] burn-in iterations. Default 500.}
+\item{burnin}{[\emph{HMC}] Burn-in iterations. Default \code{500L}.}
 
-\item{thin}{[\emph{HMC only}] thinning interval. Default 10.}
+\item{thin}{[\emph{HMC}] Thinning interval. Default \code{10L}.}
 
-\item{init}{[\emph{HMC only}] vector of initial parameter values. If NULL,
-MLE estimates are used as starting values.}
+\item{init}{[\emph{HMC}] Initial parameter values; defaults to MLE estimates.}
 
-\item{L}{[\emph{HMC only}] number of leapfrog steps. Default 50.}
+\item{L}{[\emph{HMC}] Leapfrog steps. Default \code{50L}.}
 
-\item{epsilon}{[\emph{HMC only}] leapfrog step size. Default 0.002.}
+\item{epsilon}{[\emph{HMC}] Leapfrog step size. Default \code{0.002}.}
 
-\item{prior}{[\emph{HMC only}] list with elements \code{mean} (prior mean
-vector) and \code{vcov} (prior covariance matrix). If NULL, a standard
-normal prior is used.}
+\item{prior}{[\emph{HMC}] List with \code{mean} and \code{vcov}; defaults
+to standard normal.}
 
-\item{seed}{[\emph{HMC only}] random seed for reproducibility.}
+\item{seed}{[\emph{HMC}] Random seed.}
 
-\item{WAIC}{logical. Compute WAIC? Default FALSE. Only supported for MLE for now.}
+\item{WAIC}{Compute WAIC? Default \code{FALSE}.}
 
-\item{nsimWAIC}{number of draws from the (approximate) posterior distribution
-used for the computation of the WAIC. Ignored if \code{WAIC = FALSE}.
-Default is \code{100L}.}
+\item{nsimWAIC}{Number of posterior draws for WAIC. Default \code{100L}.}
 
-\item{...}{further arguments (currently unused).}
+\item{random}{[\emph{GLMM / MIXREM}] One-sided formula for random
+effects or mixture clustering, e.g. \code{~ (1 | actor1)} or
+\code{~ (1 + inertia | dyad)}.  Grouping variables must be columns in
+the stacked data: \code{actor1} (sender), \code{actor2} (receiver),
+\code{dyad} (dyad index).}
+
+\item{engine}{[\emph{GLMM}] \code{"lme4"} (default) or \code{"glmmTMB"}.}
+
+\item{alpha}{[\emph{GLMNET}] Elastic-net mixing: \code{1} = lasso
+(default), \code{0} = ridge.}
+
+\item{nfolds}{[\emph{GLMNET}] CV folds. Default \code{10L}.}
+
+\item{lambda_select}{[\emph{GLMNET}] Which lambda to use: \code{"1se"}
+(default) or \code{"min"}.}
+
+\item{k}{[\emph{MIXREM}] Number of mixture components (integer or
+vector). Default \code{2L}. When a vector, returns a
+\code{remstimate_mixrem_list}; use \code{\link{bic_table}} to compare.}
+
+\item{concomitant}{[\emph{MIXREM}] Optional one-sided formula for the
+concomitant model, e.g. \code{~ actor1_degree}.}
+
+\item{nrep}{[\emph{MIXREM}] Random restarts for flexmix. Default \code{3L}.}
+
+\item{...}{Further arguments passed to the backend.}
 }
 \value{
-a \code{remstimate} S3 object.
+A \code{remstimate} S3 object. The subclass depends on the method:
+  \code{remstimate} (MLE/HMC), \code{remstimate_glmm},
+  \code{remstimate_glmnet}, or \code{remstimate_mixrem}.
+  All objects have a \code{$coefficients} slot and support
+  \code{summary()}, \code{coef()}, \code{diagnostics()}, and \code{plot()}.
 }
 \description{
-Estimates tie-oriented relational event model parameters using
-Maximum Likelihood Estimation (\code{"MLE"}) or Hamiltonian Monte Carlo
-(\code{"HMC"}). Supports both full statistics (\code{tomstats}) and
-case-control sampled statistics (\code{tomstats_sampled}).
+Estimates relational event model parameters. Supports
+  tie-oriented and actor-oriented models via Maximum Likelihood
+  (\code{"MLE"}), Hamiltonian Monte Carlo (\code{"HMC"}), mixed-effects
+  Poisson regression (\code{"GLMM"}), penalised regression (\code{"GLMNET"}),
+  and finite mixture models (\code{"MIXREM"}).
 }
 \examples{
-
-# ------------------------------------ #
-#       tie-oriented model: "MLE"      #
-# ------------------------------------ #
-
-# loading data
+# ---- MLE, tie-oriented ----
 data(tie_data)
-
-# processing event sequence with remify
 tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+tie_model <- ~ 1 + remstats::indegreeSender() +
+                   remstats::inertia() + remstats::reciprocity()
+tie_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
+fit_mle <- remstimate(reh = tie_reh, stats = tie_stats, method = "MLE")
+summary(fit_mle)
 
-# specifying linear predictor
-tie_model <- ~ 1 +
-               remstats::indegreeSender()+
-               remstats::inertia()+
-               remstats::reciprocity()
-
-# calculating statistics
-tie_reh_stats <- remstats::remstats(reh = tie_reh,
-                                    tie_effects = tie_model)
-
-# running estimation
-tie_mle <- remstimate::remstimate(reh = tie_reh,
-                                  stats = tie_reh_stats,
-                                  method = "MLE",
-                                  ncores = 1)
-# summary
-summary(tie_mle)
-
-# ------------------------------------ #
-#      actor-oriented model: "MLE"     #
-# ------------------------------------ #
-
-# loading data
+# ---- MLE, actor-oriented ----
 data(ao_data)
-
-# processing event sequence with remify
 ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
+ao_stats <- remstats::remstats(reh = ao_reh,
+  sender_effects   = ~ 1 + remstats::indegreeSender(),
+  receiver_effects = ~ remstats::inertia() + remstats::reciprocity())
+fit_ao <- remstimate(reh = ao_reh, stats = ao_stats, method = "MLE")
+summary(fit_ao)
 
-# specifying linear predictor (for sender rate and receiver choice model)
-rate_model <- ~ 1 + remstats::indegreeSender()
-choice_model <- ~ remstats::inertia() + remstats::reciprocity()
+\donttest{
+# ---- GLMM: sender frailty ----
+data(history, package = "remstats")
+data(info,    package = "remstats")
+colnames(history)[colnames(history) == "setting"] <- "type"
+reh <- remify::remify(edgelist = history[1:100, ], model = "tie",
+                       riskset = "active")
+effects <- ~ inertia(consider_type = FALSE) +
+              indegreeSender(consider_type = FALSE)
+stats <- remstats::tomstats(effects, reh = reh, attr_actors = info,
+                             memory = "decay", memory_value = 1000)
 
-# calculating statistics
-ao_reh_stats <- remstats::remstats(reh = ao_reh,
-                                   sender_effects = rate_model,
-                                   receiver_effects = choice_model)
+fit_glmm <- remstimate(reh, stats, method = "GLMM",
+                        random = ~ (1 | actor1) + (1 | actor2))
+fit_glmm
+lme4::ranef(fit_glmm$backend_fit)
 
-# running estimation
-ao_mle <- remstimate::remstimate(reh = ao_reh,
-                                 stats = ao_reh_stats,
-                                 method = "MLE",
-                                 ncores = 1)
-# summary
-summary(ao_mle)
+# ---- GLMNET: lasso ----
+fit_lasso <- remstimate(reh, stats, method = "GLMNET", alpha = 1)
+fit_lasso
+plot(fit_lasso, reh, stats = stats, which = 6)   # regularisation path
 
-# ------------------------------------ #
-#   for more examples check vignettes  #
-# ------------------------------------ #
+# ---- MIXREM: two-component mixture ----
+fit_mix <- remstimate(reh, stats, method = "MIXREM",
+                       random = ~ (1 + inertia | dyad), k = 2)
+fit_mix
+
+# compare k = 2:4 via BIC
+fits <- remstimate(reh, stats, method = "MIXREM",
+                   random = ~ (1 + inertia | dyad), k = 2:4)
+bic_table(fits)
+}
 
 }

@@ -20,14 +20,14 @@ tol <- 1e-4
 # ---------------------------------------------------------------------------
 # SECTION 1: Interval likelihood — remstimate MLE vs Poisson GLM
 # ---------------------------------------------------------------------------
-reh_int <- remify::remify(edgelist = history_sub, model = "tie",
+reh_int <- remify(edgelist = history_sub, model = "tie",
                             riskset = "active")
 
 effects <- ~ inertia(consider_type = FALSE) +
                indegreeSender(consider_type = FALSE) +
                outdegreeSender(consider_type = FALSE)
 
-ts_int <- remstats::tomstats(effects, reh = reh_int,
+ts_int <- tomstats(effects, reh = reh_int,
                                attr_actors = info,
                                memory = "decay", memory_value = 1000,
                                start = 2, stop = 30,
@@ -36,7 +36,7 @@ ts_int <- remstats::tomstats(effects, reh = reh_int,
 est_int <- remstimate(reh = reh_int, stats = ts_int,
                         method = "MLE", ncores = 1L)
 
-stacked_int <- remstats::stack_stats(ts_int, reh_int)
+stacked_int <- stack_stats(ts_int, reh_int)
 df_int <- stacked_int$remstats_stack
 
 # Poisson GLM with log inter-event time offset
@@ -56,14 +56,14 @@ expect_equal(
 # ---------------------------------------------------------------------------
 # SECTION 2: Ordinal likelihood — remstimate MLE vs survival::clogit
 # ---------------------------------------------------------------------------
-reh_ord <- remify::remify(edgelist = history_sub, model = "tie",
+reh_ord <- remify(edgelist = history_sub, model = "tie",
                             riskset = "active", ordinal = TRUE)
 
 effects_no_baseline <- ~ inertia(consider_type = FALSE) +
                            indegreeSender(consider_type = FALSE) +
                            outdegreeSender(consider_type = FALSE)
 
-ts_ord <- remstats::tomstats(effects_no_baseline, reh = reh_ord,
+ts_ord <- tomstats(effects_no_baseline, reh = reh_ord,
                                attr_actors = info,
                                memory = "decay", memory_value = 1000,
                                start = 2, stop = 30,
@@ -72,7 +72,7 @@ ts_ord <- remstats::tomstats(effects_no_baseline, reh = reh_ord,
 est_ord <- remstimate(reh = reh_ord, stats = ts_ord,
                         method = "MLE", ncores = 1L)
 
-stacked_ord <- remstats::stack_stats(ts_ord, reh_ord)
+stacked_ord <- stack_stats(ts_ord, reh_ord)
 df_ord <- stacked_ord$remstats_stack
 
 # Conditional logistic regression stratified by event
@@ -93,10 +93,10 @@ expect_equal(
 # ---------------------------------------------------------------------------
 # SECTION 3: Interval — full riskset
 # ---------------------------------------------------------------------------
-reh_full <- remify::remify(edgelist = history_sub, model = "tie",
+reh_full <- remify(edgelist = history_sub, model = "tie",
                              riskset = "full")
 
-ts_full_rs <- remstats::tomstats(effects, reh = reh_full,
+ts_full_rs <- tomstats(effects, reh = reh_full,
                                    attr_actors = info,
                                    memory = "decay", memory_value = 1000,
                                    start = 2, stop = 30,
@@ -105,7 +105,7 @@ ts_full_rs <- remstats::tomstats(effects, reh = reh_full,
 est_full_rs <- remstimate(reh = reh_full, stats = ts_full_rs,
                             method = "MLE", ncores = 1L)
 
-stacked_full_rs <- remstats::stack_stats(ts_full_rs, reh_full)
+stacked_full_rs <- stack_stats(ts_full_rs, reh_full)
 df_full_rs <- stacked_full_rs$remstats_stack
 
 fit_glm_full <- glm(obs ~ -1 + baseline + inertia + indegreeSender +
@@ -125,7 +125,7 @@ expect_equal(
 effects_typed <- ~ inertia(consider_type = "separate") +
                     outdegreeSender(consider_type = FALSE)
 
-ts_typed <- remstats::tomstats(effects_typed, reh = reh_int,
+ts_typed <- tomstats(effects_typed, reh = reh_int,
                                  attr_actors = info,
                                  memory = "decay", memory_value = 1000,
                                  start = 2, stop = 30,
@@ -134,7 +134,7 @@ ts_typed <- remstats::tomstats(effects_typed, reh = reh_int,
 est_typed <- remstimate(reh = reh_int, stats = ts_typed,
                           method = "MLE", ncores = 1L)
 
-stacked_typed <- remstats::stack_stats(ts_typed, reh_int)
+stacked_typed <- stack_stats(ts_typed, reh_int)
 df_typed <- stacked_typed$remstats_stack
 
 # Build formula dynamically from coefficient names
@@ -153,7 +153,7 @@ expect_equal(
 )
 
 # Also check typed ordinal
-ts_typed_ord <- remstats::tomstats(effects_typed, reh = reh_ord,
+ts_typed_ord <- tomstats(effects_typed, reh = reh_ord,
                                      attr_actors = info,
                                      memory = "decay", memory_value = 1000,
                                      start = 2, stop = 30,
@@ -162,7 +162,7 @@ ts_typed_ord <- remstats::tomstats(effects_typed, reh = reh_ord,
 est_typed_ord <- remstimate(reh = reh_ord, stats = ts_typed_ord,
                               method = "MLE", ncores = 1L)
 
-stacked_typed_ord <- remstats::stack_stats(ts_typed_ord, reh_ord)
+stacked_typed_ord <- stack_stats(ts_typed_ord, reh_ord)
 df_typed_ord <- stacked_typed_ord$remstats_stack
 
 stat_cols_ord <- setdiff(names(est_typed_ord$coefficients), "baseline")
@@ -185,7 +185,7 @@ expect_equal(
 # ---------------------------------------------------------------------------
 samp_num <- 10L
 
-ts_samp_int <- remstats::tomstats(effects, reh = reh_int,
+ts_samp_int <- tomstats(effects, reh = reh_int,
                                     attr_actors = info,
                                     memory = "decay", memory_value = 1000,
                                     start = 2, stop = 30,
@@ -194,7 +194,7 @@ ts_samp_int <- remstats::tomstats(effects, reh = reh_int,
 est_samp_int <- remstimate(reh = reh_int, stats = ts_samp_int,
                              method = "MLE", ncores = 1L)
 
-stacked_samp_int <- remstats::stack_stats(ts_samp_int, reh_int)
+stacked_samp_int <- stack_stats(ts_samp_int, reh_int)
 df_samp_int <- stacked_samp_int$remstats_stack
 
 fit_glm_samp <- glm(obs ~ -1 + baseline + inertia + indegreeSender +
@@ -212,7 +212,7 @@ expect_equal(
 # ---------------------------------------------------------------------------
 # SECTION 6: Sampled stats — remstimate vs weighted clogit (ordinal)
 # ---------------------------------------------------------------------------
-ts_samp_ord <- remstats::tomstats(effects_no_baseline, reh = reh_ord,
+ts_samp_ord <- tomstats(effects_no_baseline, reh = reh_ord,
                                     attr_actors = info,
                                     memory = "decay", memory_value = 1000,
                                     start = 2, stop = 30,
@@ -221,7 +221,7 @@ ts_samp_ord <- remstats::tomstats(effects_no_baseline, reh = reh_ord,
 est_samp_ord <- remstimate(reh = reh_ord, stats = ts_samp_ord,
                              method = "MLE", ncores = 1L)
 
-stacked_samp_ord <- remstats::stack_stats(ts_samp_ord, reh_ord)
+stacked_samp_ord <- stack_stats(ts_samp_ord, reh_ord)
 df_samp_ord <- stacked_samp_ord$remstats_stack
 
 fit_clogit_samp <- survival::clogit(
@@ -244,7 +244,7 @@ expect_equal(
 # ---------------------------------------------------------------------------
 # SECTION 7: AOM — interval, sender + receiver stacks vs Poisson GLM / clogit
 # ---------------------------------------------------------------------------
-reh_actor_test <- remify::remify(
+reh_actor_test <- remify(
   edgelist = history_sub,
   model    = "actor",
   directed = TRUE
@@ -254,7 +254,7 @@ sender_effects   <- ~ indegreeSender()
 receiver_effects <- ~ inertia(consider_type = "ignore") +
   indegreeReceiver(consider_type = "ignore")
 
-ts_aom_int <- remstats::aomstats(
+ts_aom_int <- aomstats(
   reh              = reh_actor_test,
   sender_effects   = sender_effects,
   receiver_effects = receiver_effects,
@@ -271,7 +271,7 @@ est_aom_int <- remstimate(
   ncores = 1L
 )
 
-stacked_aom_int <- remstats::stack_stats(stats = ts_aom_int, reh = reh_actor_test)
+stacked_aom_int <- stack_stats(stats = ts_aom_int, reh = reh_actor_test)
 
 # -- Sender: Poisson GLM with log_interevent offset --------------------------
 df_sender_int <- stacked_aom_int$sender_stack
@@ -308,14 +308,14 @@ expect_equal(
 # ---------------------------------------------------------------------------
 # SECTION 8: AOM — ordinal, sender clogit + receiver clogit
 # ---------------------------------------------------------------------------
-reh_actor_ord <- remify::remify(
+reh_actor_ord <- remify(
   edgelist = history_sub,
   model    = "actor",
   directed = TRUE,
   ordinal  = TRUE
 )
 
-ts_aom_ord <- remstats::aomstats(
+ts_aom_ord <- aomstats(
   reh              = reh_actor_ord,
   sender_effects   = ~ indegreeSender(),
   receiver_effects = ~ inertia(consider_type = "ignore") +
@@ -333,7 +333,7 @@ est_aom_ord <- remstimate(
   ncores = 1L
 )
 
-stacked_aom_ord <- remstats::stack_stats(ts_aom_ord, reh_actor_ord)
+stacked_aom_ord <- stack_stats(ts_aom_ord, reh_actor_ord)
 
 # -- Sender: clogit (ordinal => no log_interevent, no baseline) --------------
 df_sender_ord <- stacked_aom_ord$sender_stack
@@ -369,7 +369,7 @@ expect_equal(
 # ---------------------------------------------------------------------------
 # SECTION 9: AOM — NULL sender or receiver stats
 # ---------------------------------------------------------------------------
-ts_aom_rec_only <- remstats::aomstats(
+ts_aom_rec_only <- aomstats(
   reh              = reh_actor_test,
   receiver_effects = ~ inertia(consider_type = FALSE),
   memory           = "decay",
@@ -378,7 +378,7 @@ ts_aom_rec_only <- remstats::aomstats(
   stop             = 30
 )
 
-stacked_rec_only <- remstats::stack_stats(ts_aom_rec_only, reh_actor_test)
+stacked_rec_only <- stack_stats(ts_aom_rec_only, reh_actor_test)
 
 expect_null(
   stacked_rec_only$sender_stack,
@@ -389,7 +389,7 @@ expect_true(
   info = "AOM: receiver_stack is a data frame when only receiver_effects specified"
 )
 
-ts_aom_send_only <- remstats::aomstats(
+ts_aom_send_only <- aomstats(
   reh            = reh_actor_test,
   sender_effects = ~ indegreeSender(),
   memory         = "decay",
@@ -398,7 +398,7 @@ ts_aom_send_only <- remstats::aomstats(
   stop           = 30
 )
 
-stacked_send_only <- remstats::stack_stats(ts_aom_send_only, reh_actor_test)
+stacked_send_only <- stack_stats(ts_aom_send_only, reh_actor_test)
 
 expect_true(
   is.data.frame(stacked_send_only$sender_stack),

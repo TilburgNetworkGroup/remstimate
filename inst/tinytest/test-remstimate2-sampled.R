@@ -14,13 +14,13 @@ data(info,    package = "remstats")
 colnames(history)[colnames(history) == "setting"] <- "type"
 history_sub <- history[1:40, ]
 
-reh <- remify::remify(edgelist = history_sub, model = "tie", riskset = "active")
+reh <- remify(edgelist = history_sub, model = "tie", riskset = "active")
 
 effects <- ~ inertia(consider_type = FALSE) +
                indegreeSender(consider_type = FALSE) +
                outdegreeSender(consider_type = FALSE)
 
-ts_full <- remstats::tomstats(effects, reh = reh,
+ts_full <- tomstats(effects, reh = reh,
                                 attr_actors = info,
                                 memory = "decay", memory_value = 1000,
                                 start = 2, stop = 30,
@@ -65,7 +65,7 @@ expect_true(isTRUE(est_full2$converged), info = "full: converged")
 # ---------------------------------------------------------------------------
 # SECTION 2: Sampled full (samp_num = D) — should match full MLE exactly
 # ---------------------------------------------------------------------------
-ts_samp_full <- remstats::tomstats(effects, reh = reh,
+ts_samp_full <- tomstats(effects, reh = reh,
                                      attr_actors = info,
                                      memory = "decay", memory_value = 1000,
                                      start = 2, stop = 30,
@@ -99,7 +99,7 @@ expect_true(is.finite(est_samp_full$loglik),
 # ---------------------------------------------------------------------------
 # SECTION 3: Sampled partial — sign consistency and SE inflation
 # ---------------------------------------------------------------------------
-ts_samp <- remstats::tomstats(effects, reh = reh,
+ts_samp <- tomstats(effects, reh = reh,
                                 attr_actors = info,
                                 memory = "decay", memory_value = 1000,
                                 start = 2, stop = 30,
@@ -152,7 +152,7 @@ expect_equal(est_samp$samp_num, 5L,
 # ---------------------------------------------------------------------------
 # SECTION 5: Two different seeds give different but similar estimates
 # ---------------------------------------------------------------------------
-ts_samp2 <- remstats::tomstats(effects, reh = reh,
+ts_samp2 <- tomstats(effects, reh = reh,
                                  attr_actors = info,
                                  memory = "decay", memory_value = 1000,
                                  start = 2, stop = 30,
@@ -174,7 +174,7 @@ expect_equal(sign(est_samp2$coefficients), sign(est_full2$coefficients),
 effects_typed <- ~ inertia(consider_type = "separate") +
                     outdegreeSender(consider_type = FALSE)
 
-ts_typed_full <- remstats::tomstats(effects_typed, reh = reh,
+ts_typed_full <- tomstats(effects_typed, reh = reh,
                                       attr_actors = info,
                                       memory = "decay", memory_value = 1000,
                                       start = 2, stop = 30,
@@ -192,7 +192,7 @@ expect_true("inertia.work" %in% names(est_typed_full$coefficients),
 
 # Sampled typed
 D_typed <- nrow(attr(ts_typed_full, "riskset"))
-ts_typed_samp <- remstats::tomstats(effects_typed, reh = reh,
+ts_typed_samp <- tomstats(effects_typed, reh = reh,
                                       attr_actors = info,
                                       memory = "decay", memory_value = 1000,
                                       start = 2, stop = 30,
