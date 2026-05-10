@@ -16,8 +16,8 @@
 
   if (s$model == "tie") {
 
-    res <- .glmnet_fit_one(s$df, s$stat_names, s$ordinal,
-                            alpha, nfolds, lambda_select, ...)
+    res <- .glmnet_fit_one(df = s$df, stat_names = s$stat_names, ordinal = s$ordinal,
+                           alpha = alpha, nfolds = nfolds, lambda_select = lambda_select, ...)
 
     .remstimate_wrap(
       coefficients = res$coefs,

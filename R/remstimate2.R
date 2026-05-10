@@ -133,6 +133,10 @@ remstimate <- function(reh,
   method <- toupper(match.arg(method))
 
   # ── external backends ───────────────────────────────────────────────────────
+  if (method == "GLM"){
+    # fit Poison models with the glm() and ordinal model with clogit(). Useful for comparison.
+  }
+
   if (method == "GLMM")
     return(.remstimate_glmm(reh, stats, random = random,
                             engine = match.arg(engine), ...))
@@ -146,8 +150,11 @@ remstimate <- function(reh,
     return(.remstimate_mixrem(reh, stats, random = random, k = k,
                               concomitant = concomitant, nrep = nrep, ...))
 
-  # fit basic REM using either method = "MLE" or "HMC"
+  if(inherits(reh, "remify_durem") & inherits(stats, "remstats_durem")){
+    # can we change remstats and reh formats such that it can be read by the implemented functions below???
+  }
 
+  # fit basic REM using either method = "MLE" or "HMC"
   if(!is.numeric(nsimWAIC) || length(nsimWAIC) != 1 || nsimWAIC < 1){
     warning("'nsimWAIC' must be a positive integer. Using default value of 100.")
     nsimWAIC <- 100L

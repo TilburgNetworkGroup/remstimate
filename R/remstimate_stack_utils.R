@@ -3,10 +3,10 @@
 .remstimate_make_stack <- function(reh, stats, add_actors = TRUE) {
 
   model     <- if (inherits(stats, "aomstats")) "actor" else "tie"
-  gestapeld <- remstats::stack_stats(stats, reh, add_actors = add_actors)
+  stacking_stats <- remstats::stack_stats(stats, reh, add_actors = add_actors)
 
   if (model == "tie") {
-    df <- gestapeld$remstats_stack
+    df <- stacking_stats$remstats_stack
     # sampling correction: offset = -log(π_d) per row
     # for uniform case-control sampling this upweights each control by (D-1)/K
     if (inherits(stats, "tomstats_sampled")) {
@@ -15,10 +15,15 @@
     } else {
       df$samp_offset <- rep(0, nrow(df))
     }
-    list(df = df, stat_names = dimnames(stats)[[3]], ordinal = gestapeld$ordinal, model = model)
+    if (inherits(stats, "remstats_durem")) {
+      stat_names <- c(dimnames(stats$start_stats)[[3]],dimnames(stats$end_stats)[[3]])
+    }else{
+      stat_names <- dimnames(stats)[[3]]
+    }
+    list(df = df, stat_names = stat_names, ordinal = stacking_stats$ordinal, model = model)
   } else {
-    df_s <- gestapeld$sender_stack
-    df_r <- gestapeld$receiver_stack
+    df_s <- stacking_stats$sender_stack
+    df_r <- stacking_stats$receiver_stack
     if (!is.null(df_s)) df_s$samp_offset <- rep(0, nrow(df_s))
     if (!is.null(df_r)) df_r$samp_offset <- rep(0, nrow(df_r))
     list(
@@ -27,7 +32,7 @@
         sender_model   = if (!is.null(df_s)) dimnames(stats$sender_stats)[[3]] else character(0),
         receiver_model = if (!is.null(df_r)) dimnames(stats$receiver_stats)[[3]] else character(0)
       ),
-      ordinal = gestapeld$ordinal,
+      ordinal = stacking_stats$ordinal,
       model   = model
     )
   }
