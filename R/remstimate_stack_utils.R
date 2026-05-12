@@ -125,3 +125,91 @@
   hits <- gregexpr("\\|\\s*([A-Za-z_.][A-Za-z_.0-9]*)", rhs, perl = TRUE)
   trimws(sub("^\\|\\s*", "", regmatches(rhs, hits)[[1]]))
 }
+
+
+# ── Shared recall computation ────────────────────────────────────────────────
+# Used by diagnostics methods for GLMM, GLMNET, MIXREM, and (optionally) durem.
+
+# Core: rank observed events within time-point groups
+.recall_block <- function(lp, obs_idx, event_ids, top_pct = 0.05) {
+  events <- unique(event_ids)
+  rows <- vector("list", length(events))
+  for (i in seq_along(events)) {
+    ev   <- events[i]
+    mask <- which(event_ids == ev)
+    obs  <- intersect(obs_idx, mask)
+    if (length(obs) == 0L) next
+    obs_pos <- match(obs, mask)
+    lp_ev   <- lp[mask]
+    probs   <- exp(lp_ev)
+    probs   <- probs / sum(probs)
+    ord     <- order(probs, decreasing = TRUE)
+    rnks    <- match(obs_pos, ord)
+    rnks    <- rnks[!is.na(rnks)]
+    if (length(rnks) == 0L) next
+    rows[[i]] <- data.frame(
+      time     = ev,
+      rel_rank = 1 - rnks / length(mask),
+      cum_prob = cumsum(probs[ord])[rnks]
+    )
+  }
+  pe <- do.call(rbind, rows)
+  if (is.null(pe) || nrow(pe) == 0L) return(NULL)
+  list(
+    per_event = pe,
+    summary   = data.frame(
+      mean_rel_rank   = mean(pe$rel_rank),
+      median_rel_rank = stats::median(pe$rel_rank),
+      mean_cum_prob   = mean(pe$cum_prob),
+      top_pct         = top_pct,
+      top_pct_prop    = mean(pe$rel_rank >= 1 - top_pct)
+    )
+  )
+}
+
+# Full recall: joint + per-type (if type column exists)
+.diagnostics_recall <- function(lp, df, top_pct = 0.05) {
+  obs_idx   <- which(df$obs == 1L)
+  event_ids <- df$time
+  out <- list()
+
+  out$recall <- .recall_block(lp, obs_idx, event_ids, top_pct)
+
+  if ("type" %in% names(df) && !all(is.na(df$type))) {
+    types <- sort(unique(df$type[!is.na(df$type)]))
+    if (length(types) > 1L) {
+      out$recall_by_type <- list()
+      for (tp in types) {
+        tp_mask <- which(df$type == tp)
+        tp_obs  <- intersect(obs_idx, tp_mask)
+        if (length(tp_obs) == 0L) next
+        out$recall_by_type[[tp]] <- .recall_block(
+          lp[tp_mask], match(tp_obs, tp_mask),
+          event_ids[tp_mask], top_pct
+        )
+      }
+    }
+  }
+
+  out
+}
+
+# Print helper for recall output
+.print_recall_summary <- function(rc, label) {
+  if (is.null(rc)) return()
+  rs  <- rc$summary
+  pct <- round(rs$top_pct_prop * 100, 1)
+  cat(sprintf("  %-10s: mean rank = %.3f | top %g%% = %s%%\n",
+              label, rs$mean_rel_rank, rs$top_pct * 100, pct))
+}
+
+# Plot helper for recall output
+.plot_recall_scatter <- function(rc, main, ...) {
+  if (is.null(rc)) return()
+  pe <- rc$per_event
+  graphics::plot(pe$time, pe$rel_rank,
+                 xlab = "Time point", ylab = "Relative rank",
+                 main = main,
+                 pch = ".", col = grDevices::adjustcolor("black", 0.3), ...)
+  graphics::abline(h = mean(pe$rel_rank), col = "red", lty = 2)
+}

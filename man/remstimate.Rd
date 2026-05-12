@@ -7,7 +7,7 @@
 remstimate(
   reh,
   stats,
-  method = c("MLE", "HMC", "GLMM", "GLMNET", "MIXREM"),
+  method = c("MLE", "GLM", "HMC", "GLMM", "GLMNET", "MIXREM"),
   ncores = 1L,
   nsim = 500L,
   nchains = 1L,
@@ -38,7 +38,9 @@ remstimate(
 \code{aomstats} object.}
 
 \item{method}{Estimation method. One of \code{"MLE"} (default),
-\code{"HMC"}, \code{"GLMM"}, \code{"GLMNET"}, or \code{"MIXREM"}.}
+\code{"GLM"}, \code{"HMC"}, \code{"GLMM"}, \code{"GLMNET"}, or
+\code{"MIXREM"}. \code{"GLM"} fits via \code{glm()} — equivalent to
+MLE for interval timing, useful for comparison or for duration models.}
 
 \item{ncores}{[\emph{MLE/HMC}] Number of threads. Default \code{1L}.}
 

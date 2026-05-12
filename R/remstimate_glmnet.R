@@ -112,3 +112,59 @@ summary.remstimate_glmnet <- function(object, ...) {
 
 #' @export
 coef.remstimate_glmnet <- function(object, ...) object$coefficients
+
+#' @export
+#' @method diagnostics remstimate_glmnet
+diagnostics.remstimate_glmnet <- function(object, reh = NULL, stats = NULL,
+                                           top_pct = 0.05, ...) {
+  df <- object$stacked_data
+  if (is.null(df)) stop("No stacked data stored in fit object.", call. = FALSE)
+
+  stat_names <- attr(object, "statistics")
+  coefs      <- object$coefficients
+
+  X  <- as.matrix(df[, stat_names, drop = FALSE])
+  lp <- as.numeric(X %*% coefs[stat_names])
+
+  out <- .diagnostics_recall(lp, df, top_pct)
+  class(out) <- c("diagnostics_remstimate", "diagnostics", "remstimate")
+  out
+}
+
+#' @export
+#' @method print diagnostics_remstimate
+print.diagnostics_remstimate <- function(x, ...) {
+  cat("Diagnostics for Relational Event Model\n")
+  cat(strrep("-", 50), "\n")
+
+  if (!is.null(x$recall)) {
+    cat("\nRecall:\n")
+    .print_recall_summary(x$recall, "Joint")
+  }
+  if (!is.null(x$recall_by_type)) {
+    cat("\nRecall by type:\n")
+    for (tp in names(x$recall_by_type))
+      .print_recall_summary(x$recall_by_type[[tp]], paste0("  ", tp))
+  }
+  invisible(x)
+}
+
+#' @export
+#' @method plot remstimate_glmnet
+plot.remstimate_glmnet <- function(x, reh = NULL, stats = NULL,
+                                    diagnostics_object = NULL,
+                                    which = 1L, ...) {
+  if (is.null(diagnostics_object))
+    diagnostics_object <- diagnostics(x, reh, stats)
+
+  if (which == 1L) {
+    .plot_recall_scatter(diagnostics_object$recall, "Recall: GLMNET", ...)
+  } else if (which == 2L && !is.null(diagnostics_object$recall_by_type)) {
+    rbt <- diagnostics_object$recall_by_type
+    old_par <- graphics::par(mfrow = c(1, length(rbt)))
+    on.exit(graphics::par(old_par))
+    for (tp in names(rbt))
+      .plot_recall_scatter(rbt[[tp]], paste("Type:", tp), ...)
+  }
+  invisible(x)
+}

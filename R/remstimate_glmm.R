@@ -59,15 +59,15 @@
 }
 
 .glmm_fit_one <- function(df, stat_names, ordinal, random, engine, verbose, ...) {
-  vaste_kant <- .remstimate_fixed_rhs(stat_names, ordinal)
+  fixed_part1 <- .remstimate_fixed_rhs(stat_names, ordinal)
   familie    <- if (ordinal) {
-    df$event  <- factor(df$event)
-    vaste_kant <- sub("^-1 \\+ ", "-1 + event + ", vaste_kant)
+    df$time  <- factor(df$time)
+    fixed_part1 <- sub("^-1 \\+ ", "-1 + time + ", fixed_part1)
     message("ordinal: binomial GLMM with event fixed effects (approx. clogit)")
     binomial()
   } else poisson()
 
-  fml <- as.formula(paste("obs ~", vaste_kant, "+", deparse(random[[2]])))
+  fml <- as.formula(paste("obs ~", fixed_part1, "+", deparse(random[[2]])))
   if (verbose) message("fit: ", deparse(fml))
 
   if (engine == "lme4")
@@ -124,3 +124,66 @@ summary.remstimate_glmm <- function(object, ...) {
 coef.remstimate_glmm   <- function(object, ...) object$coefficients
 #' @export
 logLik.remstimate_glmm <- function(object, ...) object$loglik
+
+#' @export
+#' @method diagnostics remstimate_glmm
+diagnostics.remstimate_glmm <- function(object, reh = NULL, stats = NULL,
+                                         top_pct = 0.05,
+                                         use_ranef = TRUE, ...) {
+  model <- attr(object, "model")
+  if (model == "actor") {
+    warning("Diagnostics for actor-oriented GLMM not yet supported.",
+            call. = FALSE)
+    return(invisible(NULL))
+  }
+
+  df <- object$stacked_data
+  if (is.null(df)) stop("No stacked data stored in fit object.", call. = FALSE)
+
+  fit <- object$backend_fit
+  if (use_ranef && !is.null(fit)) {
+    # predict() includes random effects (BLUPs) for dyad/actor-specific predictions
+    lp <- tryCatch(
+      stats::predict(fit, type = "link"),
+      error = function(e) NULL
+    )
+  } else {
+    lp <- NULL
+  }
+
+  # Fallback: fixed effects only
+  if (is.null(lp)) {
+    stat_names <- attr(object, "statistics")
+    coefs      <- object$coefficients
+    X  <- as.matrix(df[, stat_names, drop = FALSE])
+    lp <- as.numeric(X %*% coefs[stat_names])
+  }
+
+  out <- .diagnostics_recall(lp, df, top_pct)
+  out$use_ranef <- use_ranef && !is.null(fit)
+  class(out) <- c("diagnostics_remstimate", "diagnostics", "remstimate")
+  out
+}
+
+#' @export
+#' @method plot remstimate_glmm
+plot.remstimate_glmm <- function(x, reh = NULL, stats = NULL,
+                                  diagnostics_object = NULL,
+                                  which = 1L, ...) {
+  if (is.null(diagnostics_object))
+    diagnostics_object <- diagnostics(x, reh, stats)
+  if (is.null(diagnostics_object)) return(invisible(x))
+
+  if (which == 1L) {
+    lbl <- if (isTRUE(diagnostics_object$use_ranef))
+      "Recall: GLMM (incl. random effects)" else "Recall: GLMM (fixed effects only)"
+    .plot_recall_scatter(diagnostics_object$recall, lbl, ...)
+  } else if (which == 2L && !is.null(diagnostics_object$recall_by_type)) {
+    rbt <- diagnostics_object$recall_by_type
+    old_par <- graphics::par(mfrow = c(1, length(rbt)))
+    on.exit(graphics::par(old_par))
+    for (tp in names(rbt))
+      .plot_recall_scatter(rbt[[tp]], paste("Type:", tp), ...)
+  }
+  invisible(x)
+}

@@ -60,8 +60,8 @@
 
   vaste_kant <- .remstimate_fixed_rhs(stat_names, ordinal)
   if (ordinal) {
-    df$event   <- factor(df$event)
-    vaste_kant <- sub("^-1 \\+ ", "-1 + event + ", vaste_kant)
+    df$time   <- factor(df$time)
+    vaste_kant <- sub("^-1 \\+ ", "-1 + time + ", vaste_kant)
     familie    <- flexmix::FLXMRglm(family = "binomial")
   } else {
     familie <- flexmix::FLXMRglm(family = "poisson")
@@ -150,3 +150,122 @@ summary.remstimate_mixrem  <- function(object, ...) summary(object$backend_fit, 
 coef.remstimate_mixrem     <- function(object, ...) object$coefficients
 #' @export
 logLik.remstimate_mixrem   <- function(object, ...) object$loglik
+
+#' @export
+#' @method diagnostics remstimate_mixrem
+diagnostics.remstimate_mixrem <- function(object, reh = NULL, stats = NULL,
+                                           top_pct = 0.05, ...) {
+  model <- attr(object, "model")
+  if (model == "actor") {
+    warning("Diagnostics for actor-oriented MIXREM not yet supported.",
+            call. = FALSE)
+    return(invisible(NULL))
+  }
+
+  df <- object$stacked_data
+  if (is.null(df)) stop("No stacked data stored in fit object.", call. = FALSE)
+
+  stat_names <- attr(object, "statistics")
+  coef_mat   <- object$coefficients  # [P x K]
+  fit        <- object$backend_fit
+  K          <- ncol(coef_mat)
+
+  # Posterior-weighted linear predictor
+  X <- as.matrix(df[, stat_names, drop = FALSE])
+
+  # Subset coef_mat to stat_names rows (in case of extra rows like time FE)
+  coef_rows <- intersect(rownames(coef_mat), stat_names)
+  if (length(coef_rows) == 0L) {
+    # Fallback: assume row order matches stat_names
+    coef_rows <- stat_names[seq_len(min(nrow(coef_mat), length(stat_names)))]
+  }
+
+  if (!is.null(fit) && K > 1L) {
+    post <- tryCatch(flexmix::posterior(fit), error = function(e) NULL)
+    if (!is.null(post)) {
+      # LP per component, then posterior-weighted average
+      lp_k <- lapply(seq_len(K), function(k) {
+        bk <- coef_mat[coef_rows, k]
+        as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
+      })
+      lp <- rowSums(vapply(seq_len(K), function(k) post[, k] * lp_k[[k]],
+                           numeric(nrow(X))))
+    } else {
+      # Fallback: use first (largest) component
+      bk <- coef_mat[coef_rows, 1L]
+      lp <- as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
+    }
+  } else {
+    # Single component
+    bk <- if (is.matrix(coef_mat)) coef_mat[coef_rows, 1L] else coef_mat[coef_rows]
+    lp <- as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
+  }
+
+  out <- .diagnostics_recall(lp, df, top_pct)
+
+  # Per-component recall
+  if (K > 1L) {
+    out$recall_by_component <- list()
+    for (k in seq_len(K)) {
+      bk <- coef_mat[coef_rows, k]
+      lp_k <- as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
+      out$recall_by_component[[paste0("Component.", k)]] <-
+        .recall_block(lp_k, which(df$obs == 1L), df$time, top_pct)
+    }
+  }
+
+  class(out) <- c("diagnostics_mixrem", "diagnostics_remstimate",
+                   "diagnostics", "remstimate")
+  out
+}
+
+#' @export
+#' @method print diagnostics_mixrem
+print.diagnostics_mixrem <- function(x, ...) {
+  cat("Diagnostics for Relational Event Model (MIXREM)\n")
+  cat(strrep("-", 50), "\n")
+
+  if (!is.null(x$recall)) {
+    cat("\nRecall (posterior-weighted):\n")
+    .print_recall_summary(x$recall, "Joint")
+  }
+  if (!is.null(x$recall_by_type)) {
+    cat("\nRecall by type:\n")
+    for (tp in names(x$recall_by_type))
+      .print_recall_summary(x$recall_by_type[[tp]], paste0("  ", tp))
+  }
+  if (!is.null(x$recall_by_component)) {
+    cat("\nRecall by component:\n")
+    for (k in names(x$recall_by_component))
+      .print_recall_summary(x$recall_by_component[[k]], paste0("  ", k))
+  }
+  invisible(x)
+}
+
+#' @export
+#' @method plot remstimate_mixrem
+plot.remstimate_mixrem <- function(x, reh = NULL, stats = NULL,
+                                    diagnostics_object = NULL,
+                                    which = 1L, ...) {
+  if (is.null(diagnostics_object))
+    diagnostics_object <- diagnostics(x, reh, stats)
+  if (is.null(diagnostics_object)) return(invisible(x))
+
+  if (which == 1L) {
+    .plot_recall_scatter(diagnostics_object$recall,
+                         "Recall: MIXREM (posterior-weighted)", ...)
+  } else if (which == 2L && !is.null(diagnostics_object$recall_by_component)) {
+    rbt <- diagnostics_object$recall_by_component
+    old_par <- graphics::par(mfrow = c(1, length(rbt)))
+    on.exit(graphics::par(old_par))
+    for (k in names(rbt))
+      .plot_recall_scatter(rbt[[k]], k, ...)
+  } else if (which == 3L && !is.null(diagnostics_object$recall_by_type)) {
+    rbt <- diagnostics_object$recall_by_type
+    old_par <- graphics::par(mfrow = c(1, length(rbt)))
+    on.exit(graphics::par(old_par))
+    for (tp in names(rbt))
+      .plot_recall_scatter(rbt[[tp]], paste("Type:", tp), ...)
+  }
+  invisible(x)
+}

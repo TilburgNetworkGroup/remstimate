@@ -10,7 +10,9 @@
 #' @param stats   A \code{tomstats}, \code{tomstats_sampled}, or
 #'   \code{aomstats} object.
 #' @param method  Estimation method. One of \code{"MLE"} (default),
-#'   \code{"HMC"}, \code{"GLMM"}, \code{"GLMNET"}, or \code{"MIXREM"}.
+#'   \code{"GLM"}, \code{"HMC"}, \code{"GLMM"}, \code{"GLMNET"}, or
+#'   \code{"MIXREM"}. \code{"GLM"} fits via \code{glm()} — equivalent to
+#'   MLE for interval timing, useful for comparison or for duration models.
 #' @param ncores  [\emph{MLE/HMC}] Number of threads. Default \code{1L}.
 #' @param nsim    [\emph{HMC}] MCMC iterations per chain after burnin. Default \code{500L}.
 #' @param nchains [\emph{HMC}] Number of chains. Default \code{1L}.
@@ -104,7 +106,7 @@
 #' @export
 remstimate <- function(reh,
                        stats,
-                       method    = c("MLE", "HMC", "GLMM", "GLMNET", "MIXREM"),
+                       method    = c("MLE", "GLM", "HMC", "GLMM", "GLMNET", "MIXREM"),
                        ncores    = 1L,
                        nsim      = 500L,
                        nchains   = 1L,
@@ -132,29 +134,35 @@ remstimate <- function(reh,
 
   method <- toupper(match.arg(method))
 
-  # ── external backends ───────────────────────────────────────────────────────
-  if (method == "GLM"){
-    # fit Poison models with the glm() and ordinal model with clogit(). Useful for comparison.
+  # ── Duration REM: MLE/HMC need special backends ───────────────────────────
+  if (inherits(reh, "remify_durem") & inherits(stats, "remstats_durem")) {
+    if (method %in% c("MLE", "GLM")) {
+      stacked <- stack_stats(stats, reh, add_actors = FALSE)
+      return(.remstimate_durem_glm(stacked))
+    }
+    if (method == "HMC") {
+      stacked <- stack_stats(stats, reh, add_actors = FALSE)
+      return(.remstimate_durem_brms(stacked, prior = prior, nsim = nsim,
+                                    nchains = nchains, burnin = burnin,
+                                    thin = thin, seed = seed, ...))
+    }
+    # GLMM / GLMNET / MIXREM fall through — .remstimate_make_stack()
+    # already handles remstats_durem objects via stack_stats dispatch
   }
 
+  # ── R backends (any model type including durem) ────────────────────────────
   if (method == "GLMM")
     return(.remstimate_glmm(reh, stats, random = random,
                             engine = match.arg(engine), ...))
-
   if (method == "GLMNET")
     return(.remstimate_glmnet(reh, stats, alpha = alpha,
                               nfolds = nfolds,
                               lambda_select = match.arg(lambda_select), ...))
-
   if (method == "MIXREM")
     return(.remstimate_mixrem(reh, stats, random = random, k = k,
                               concomitant = concomitant, nrep = nrep, ...))
 
-  if(inherits(reh, "remify_durem") & inherits(stats, "remstats_durem")){
-    # can we change remstats and reh formats such that it can be read by the implemented functions below???
-  }
-
-  # fit basic REM using either method = "MLE" or "HMC"
+  # fit basic REM with tailored fitting algorithms when either method = "MLE" or "HMC"
   if(!is.numeric(nsimWAIC) || length(nsimWAIC) != 1 || nsimWAIC < 1){
     warning("'nsimWAIC' must be a positive integer. Using default value of 100.")
     nsimWAIC <- 100L
