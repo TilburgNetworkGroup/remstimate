@@ -1,8 +1,5 @@
 # remstimate 3.0.0
-Date: 2026-04-30
-
-# Updates
-Change of functionality of remstimate() and diagnostics()
+Date: 2026-05-12
 
 ## Coordinated submission
 This is a coordinated submission together with remify (4.0.0) and 

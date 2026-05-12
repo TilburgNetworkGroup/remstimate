@@ -1,6 +1,7 @@
 # remstimate 3.0.0
 
-* Version for remverse.
+* Update for compatibility with remify 4.0.0 and remstats 4.0.0.
+* Change of functionality of remstimate() and diagnostics().
 
 # remstimate 2.3.14.9000
 
