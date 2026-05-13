@@ -143,14 +143,19 @@
     lp_ev   <- lp[mask]
     probs   <- exp(lp_ev)
     probs   <- probs / sum(probs)
+    D_t     <- length(mask)
     ord     <- order(probs, decreasing = TRUE)
     rnks    <- match(obs_pos, ord)
     rnks    <- rnks[!is.na(rnks)]
     if (length(rnks) == 0L) next
+    obs_probs <- probs[obs_pos]
     rows[[i]] <- data.frame(
-      time     = ev,
-      rel_rank = 1 - rnks / length(mask),
-      cum_prob = cumsum(probs[ord])[rnks]
+      time       = ev,
+      rel_rank   = 1 - rnks / D_t,
+      cum_prob   = cumsum(probs[ord])[rnks],
+      obs_prob   = obs_probs,
+      prob_ratio = obs_probs * D_t,
+      log_loss   = -log(obs_probs)
     )
   }
   pe <- do.call(rbind, rows)
@@ -161,6 +166,8 @@
       mean_rel_rank   = mean(pe$rel_rank),
       median_rel_rank = stats::median(pe$rel_rank),
       mean_cum_prob   = mean(pe$cum_prob),
+      mean_prob_ratio = mean(pe$prob_ratio),
+      mean_log_loss   = mean(pe$log_loss),
       top_pct         = top_pct,
       top_pct_prop    = mean(pe$rel_rank >= 1 - top_pct)
     )
@@ -199,11 +206,12 @@
   if (is.null(rc)) return()
   rs  <- rc$summary
   pct <- round(rs$top_pct_prop * 100, 1)
-  cat(sprintf("  %-10s: mean rank = %.3f | top %g%% = %s%%\n",
-              label, rs$mean_rel_rank, rs$top_pct * 100, pct))
+  cat(sprintf("  %-10s: mean rank = %.3f | prob ratio = %.2f | top %g%% = %s%%\n",
+              label, rs$mean_rel_rank, rs$mean_prob_ratio,
+              rs$top_pct * 100, pct))
 }
 
-# Plot helper for recall output
+# Plot helper for recall output (relative rank)
 .plot_recall_scatter <- function(rc, main, ...) {
   if (is.null(rc)) return()
   pe <- rc$per_event
@@ -212,4 +220,16 @@
                  main = main,
                  pch = ".", col = grDevices::adjustcolor("black", 0.3), ...)
   graphics::abline(h = mean(pe$rel_rank), col = "red", lty = 2)
+}
+
+# Plot helper for probability ratio
+.plot_probratio_scatter <- function(rc, main, ...) {
+  if (is.null(rc)) return()
+  pe <- rc$per_event
+  graphics::plot(pe$time, pe$prob_ratio,
+                 xlab = "Time point", ylab = "Probability ratio",
+                 main = main,
+                 pch = ".", col = grDevices::adjustcolor("black", 0.3), ...)
+  graphics::abline(h = 1, col = "grey50", lty = 3)
+  graphics::abline(h = mean(pe$prob_ratio), col = "red", lty = 2)
 }

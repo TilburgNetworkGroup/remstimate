@@ -35,8 +35,33 @@
          pch    = c(16,  NA,  NA),
          col    = c(grDevices::rgb(0, 0, 0, 0.35), 1, 4),
          lwd    = c(NA,  1.5, 2))
-  mtext(sprintf("Recall  (median rank = %.3f  |  top %g%% = %.1f%%)",
-                rs$median_rel_rank, top * 100, rs$top_pct_prop * 100),
+  mtext(sprintf("Recall  (median rank = %.3f  |  prob ratio = %.2f  |  top %g%% = %.1f%%)",
+                rs$median_rel_rank, rs$mean_prob_ratio, top * 100, rs$top_pct_prop * 100),
+        side = 3, line = if (is.null(label)) 1 else 2, cex = 1.2)
+  if (!is.null(label))
+    mtext(label, side = 3, line = 1, cex = 1)
+}
+
+# ── prob ratio plot helper ────────────────────────────────────────────────────
+
+.plot_probratio <- function(rc, label = NULL) {
+  pe  <- rc$per_event
+  rs  <- rc$summary
+
+  plot(pe$event, pe$prob_ratio,
+       xlab = "Event", ylab = "Probability ratio (1 = chance)",
+       main = "",
+       pch  = 16, cex = 0.6,
+       col  = grDevices::rgb(0, 0, 0, 0.35))
+  abline(h = 1,                    lty = 3, col = "grey50", lwd = 1.5)
+  abline(h = rs$mean_prob_ratio,   lty = 2, col = 2, lwd = 1.5)
+  legend(0.5 * max(pe$event), max(pe$prob_ratio) * 0.3,
+         legend = c("Prob ratio", "Chance level", "Mean"),
+         lty    = c(NA,  3,   2),
+         pch    = c(16,  NA,  NA),
+         col    = c(grDevices::rgb(0, 0, 0, 0.35), "grey50", 2),
+         lwd    = c(NA,  1.5, 1.5))
+  mtext(sprintf("Prob ratio  (mean = %.2f)", rs$mean_prob_ratio),
         side = 3, line = if (is.null(label)) 1 else 2, cex = 1.2)
   if (!is.null(label))
     mtext(label, side = 3, line = 1, cex = 1)
@@ -80,7 +105,7 @@ plot.diagnostics <- function(x,
   reh      <- x$.reh.processed
   model    <- attr(reh, "model")
   selected <- which
-  which    <- rep(FALSE, 5)
+  which    <- rep(FALSE, 6)
   which[selected] <- TRUE
 
   if (!is.null(object) && !inherits(object, "remstimate"))
@@ -199,6 +224,12 @@ plot.diagnostics <- function(x,
     if (which[3L] && !is.null(x$recall)) {
        par(mfrow = c(1,1))
       .plot_recall(x$recall, label = "Tie model")
+    }
+
+    # (6) probability ratio
+    if (which[6L] && !is.null(x$recall)) {
+      par(mfrow = c(1,1))
+      .plot_probratio(x$recall, label = "Tie model")
     }
 
     # (4) posterior density (HMC)
@@ -362,6 +393,12 @@ plot.diagnostics <- function(x,
       if (which[3L] && !is.null(sub$recall)) {
         par(mfrow = c(1,1))
         .plot_recall(sub$recall, label = title_model[i])
+      }
+
+      # (6) probability ratio
+      if (which[6L] && !is.null(sub$recall)) {
+        par(mfrow = c(1,1))
+        .plot_probratio(sub$recall, label = title_model[i])
       }
 
       # (4) posterior density (HMC)

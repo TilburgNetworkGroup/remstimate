@@ -184,6 +184,10 @@ plot.remstimate_glmm <- function(x, reh = NULL, stats = NULL,
     on.exit(graphics::par(old_par))
     for (tp in names(rbt))
       .plot_recall_scatter(rbt[[tp]], paste("Type:", tp), ...)
+  } else if (which == 3L) {
+    lbl <- if (isTRUE(diagnostics_object$use_ranef))
+      "Prob ratio: GLMM (incl. random effects)" else "Prob ratio: GLMM (fixed effects only)"
+    .plot_probratio_scatter(diagnostics_object$recall, lbl, ...)
   }
   invisible(x)
 }

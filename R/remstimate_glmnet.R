@@ -165,6 +165,8 @@ plot.remstimate_glmnet <- function(x, reh = NULL, stats = NULL,
     on.exit(graphics::par(old_par))
     for (tp in names(rbt))
       .plot_recall_scatter(rbt[[tp]], paste("Type:", tp), ...)
+  } else if (which == 3L) {
+    .plot_probratio_scatter(diagnostics_object$recall, "Prob ratio: GLMNET", ...)
   }
   invisible(x)
 }

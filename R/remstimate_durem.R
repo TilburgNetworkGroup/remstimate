@@ -606,6 +606,20 @@ plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
             for (tp in names(rbt))
                 .plot_recall_scatter(rbt[[tp]], paste("End type:", tp))
         }
+    } else if (which == 9L) {
+        # Probability ratio: joint
+        .plot_probratio_scatter(diagnostics_object$recall,
+                                "Prob ratio: joint", ...)
+    } else if (which == 10L) {
+        # Probability ratio: start + end side by side
+        has_start <- !is.null(diagnostics_object$recall_start)
+        has_end   <- !is.null(diagnostics_object$recall_end)
+        n_panels  <- 1L + has_start + has_end
+        old_par   <- graphics::par(mfrow = c(1, n_panels))
+        on.exit(graphics::par(old_par))
+        .plot_probratio_scatter(diagnostics_object$recall, "Joint")
+        if (has_start) .plot_probratio_scatter(diagnostics_object$recall_start, "Start")
+        if (has_end)   .plot_probratio_scatter(diagnostics_object$recall_end, "End")
     }
 
     invisible(x)

@@ -266,6 +266,9 @@ plot.remstimate_mixrem <- function(x, reh = NULL, stats = NULL,
     on.exit(graphics::par(old_par))
     for (tp in names(rbt))
       .plot_recall_scatter(rbt[[tp]], paste("Type:", tp), ...)
+  } else if (which == 4L) {
+    .plot_probratio_scatter(diagnostics_object$recall,
+                             "Prob ratio: MIXREM (posterior-weighted)", ...)
   }
   invisible(x)
 }

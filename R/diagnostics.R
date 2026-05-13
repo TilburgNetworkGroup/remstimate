@@ -11,14 +11,19 @@
     S     <- matrix(stats_3d[valid, , m], nrow = length(valid))
     probs <- exp(as.numeric(baseline + S %*% pars))
     probs <- probs / sum(probs)
+    D_t   <- length(valid)
     ord   <- order(probs, decreasing = TRUE)
     pos   <- match(obs, valid); pos <- pos[!is.na(pos)]
     rnks  <- match(pos, ord);   rnks <- rnks[!is.na(rnks)]
     if (!length(rnks)) next
+    obs_probs <- probs[pos[!is.na(match(pos, seq_along(probs)))]]
     rows[[m]] <- data.frame(
-      event    = m,
-      rel_rank = 1 - rnks / length(valid),
-      cum_prob = cumsum(probs[ord])[rnks]
+      event      = m,
+      rel_rank   = 1 - rnks / D_t,
+      cum_prob   = cumsum(probs[ord])[rnks],
+      obs_prob   = obs_probs,
+      prob_ratio = obs_probs * D_t,
+      log_loss   = -log(obs_probs)
     )
   }
   pe <- do.call(rbind, rows)
@@ -28,6 +33,8 @@
       mean_rel_rank   = mean(pe$rel_rank),
       median_rel_rank = median(pe$rel_rank),
       mean_cum_prob   = mean(pe$cum_prob),
+      mean_prob_ratio = mean(pe$prob_ratio),
+      mean_log_loss   = mean(pe$log_loss),
       top_pct         = top_pct,
       top_pct_prop    = mean(pe$rel_rank >= 1 - top_pct)
     )
@@ -376,8 +383,8 @@ print.diagnostics <- function(x, ...) {
     if (!is.null(sub$recall)) {
       rs  <- sub$recall$summary
       pct <- round(rs$top_pct_prop * 100, 1)
-      cat(sprintf("  Recall     : mean rank = %.3f  |  top %g%% = %s%%\n",
-                  rs$mean_rel_rank, rs$top_pct * 100, pct))
+      cat(sprintf("  Recall     : mean rank = %.3f  |  prob ratio = %.2f  |  top %g%% = %s%%\n",
+                  rs$mean_rel_rank, rs$mean_prob_ratio, rs$top_pct * 100, pct))
     }
   }
 
@@ -421,6 +428,8 @@ summary.diagnostics <- function(object, ...) {
       mean_rel_rank   = round(rs$mean_rel_rank, 4),
       median_rel_rank = round(rs$median_rel_rank, 4),
       mean_cum_prob   = round(rs$mean_cum_prob, 4),
+      mean_prob_ratio = round(rs$mean_prob_ratio, 4),
+      mean_log_loss   = round(rs$mean_log_loss, 4),
       top_pct         = rs$top_pct,
       top_pct_prop    = round(rs$top_pct_prop, 4),
       row.names       = NULL
@@ -551,11 +560,15 @@ diagnostics.remstimate_mixrem <- function(object, reh, stats, top_pct = 0.05, ..
       pos     <- match(d, geldig);       pos  <- pos[!is.na(pos)]
       rnks    <- match(pos, volgorde);   rnks <- rnks[!is.na(rnks)]
       if (!length(rnks)) next
+      obs_probs_j <- kansen[pos[!is.na(match(pos, seq_along(kansen)))]]
       rijen[[m]] <- data.frame(
-        event     = m,
-        rel_rank  = 1 - rnks / length(geldig),
-        cum_prob  = cumsum(kansen[volgorde])[rnks],
-        component = j
+        event      = m,
+        rel_rank   = 1 - rnks / length(geldig),
+        cum_prob   = cumsum(kansen[volgorde])[rnks],
+        obs_prob   = obs_probs_j,
+        prob_ratio = obs_probs_j * length(geldig),
+        log_loss   = -log(obs_probs_j),
+        component  = j
       )
     }
     pe <- do.call(rbind, rijen)
@@ -564,6 +577,8 @@ diagnostics.remstimate_mixrem <- function(object, reh, stats, top_pct = 0.05, ..
            mean_rel_rank   = mean(pe$rel_rank),
            median_rel_rank = median(pe$rel_rank),
            mean_cum_prob   = mean(pe$cum_prob),
+           mean_prob_ratio = mean(pe$prob_ratio),
+           mean_log_loss   = mean(pe$log_loss),
            top_pct         = top_pct,
            top_pct_prop    = mean(pe$rel_rank >= 1 - top_pct)
          ))
@@ -637,13 +652,13 @@ print.diagnostics_mixrem <- function(x, ...) {
   cat("\nRecall per component:\n")
   for (nm in names(x$per_component)) {
     rs <- x$per_component[[nm]]$summary
-    cat(sprintf("  %-14s  mean rank = %.3f  |  top 5%% = %.1f%%\n",
-                nm, rs$mean_rel_rank, rs$top_pct_prop * 100))
+    cat(sprintf("  %-14s  mean rank = %.3f  |  prob ratio = %.2f  |  top 5%% = %.1f%%\n",
+                nm, rs$mean_rel_rank, rs$mean_prob_ratio, rs$top_pct_prop * 100))
   }
   if (!is.null(x$combined)) {
     rs <- x$combined$summary
-    cat(sprintf("  %-14s  mean rank = %.3f  |  top 5%% = %.1f%%\n",
-                "Combined", rs$mean_rel_rank, rs$top_pct_prop * 100))
+    cat(sprintf("  %-14s  mean rank = %.3f  |  prob ratio = %.2f  |  top 5%% = %.1f%%\n",
+                "Combined", rs$mean_rel_rank, rs$mean_prob_ratio, rs$top_pct_prop * 100))
   }
   invisible(x)
 }
