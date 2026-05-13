@@ -27,14 +27,17 @@
        ylim = c(0, 1),
        pch  = 16, cex = 0.6,
        col  = grDevices::rgb(0, 0, 0, 0.35))
-  abline(h = rs$median_rel_rank, lty = 2, col = 1, lwd = 1.5)   # no-skill reference
-  abline(h = 1 - top,   lty = 1, col = 4, lwd = 2)   # top_pct threshold
-  legend(0.5 * max(pe$event), 0.3,
-         legend = c("Rank", "Median rank", "Top % threshold"),
-         lty    = c(NA,  2,   1),
-         pch    = c(16,  NA,  NA),
-         col    = c(grDevices::rgb(0, 0, 0, 0.35), 1, 4),
-         lwd    = c(NA,  1.5, 2))
+  abline(h = 0.5,                 lty = 3, col = "grey50", lwd = 1.5)  # null model
+  abline(h = rs$median_rel_rank,  lty = 2, col = 1, lwd = 1.5)
+  abline(h = 1 - top,             lty = 1, col = 4, lwd = 2)
+  legend("bottomleft",
+         legend = c("Rank", "Null model (0.5)", "Median rank", "Top % threshold"),
+         lty    = c(NA,  3,   2,   1),
+         pch    = c(16,  NA,  NA,  NA),
+         col    = c(grDevices::rgb(0, 0, 0, 0.35), "grey50", 1, 4),
+         lwd    = c(NA,  1.5, 1.5, 2),
+         cex    = 0.8,
+         bg     = "white")
   mtext(sprintf("Recall  (median rank = %.3f  |  top %g%% = %.1f%%)",
                 rs$median_rel_rank, top * 100, rs$top_pct_prop * 100),
         side = 3, line = if (is.null(label)) 1 else 2, cex = 1.2)
@@ -139,12 +142,12 @@ plot.diagnostics <- function(x,
            xlab = "Theoretical Quantiles", ylab = "Observed Quantiles", cex = 0.8)
       mtext("Q-Q waiting times", side = 3, line = 2, cex = 1.5)
       abline(a = 0, b = 1, lty = 2, lwd = 1.5)
-      hist(observed, freq = FALSE,
-           xlab = "Waiting times", ylab = "Density",
+      hist(observed, freq = FALSE, breaks = "FD",
+           xlab = "Rescaled waiting times", ylab = "Density",
            main = "", col = "grey90", border = "white")
-      curve(dexp, from = 0, to = as.numeric(quantile(observed, 0.99)),
-            add = TRUE, col = 1, lty = 2, lwd = 1.5)
-      mtext("Density plot of waiting times", side = 3, line = 2, cex = 1.5)
+      curve(dexp, from = 0, to = max(observed) * 1.05,
+            add = TRUE, col = 2, lty = 2, lwd = 1.5)
+      mtext("Density of rescaled waiting times", side = 3, line = 2, cex = 1.5)
     }
 
     # (2) standardized Schoenfeld's residuals
@@ -295,12 +298,12 @@ plot.diagnostics <- function(x,
         mtext("Q-Q waiting times", side = 3, line = 2, cex = 1.5)
         mtext(title_model[i],      side = 3, line = 1, cex = 1)
         abline(a = 0, b = 1, lty = 2, lwd = 1.5)
-        hist(observed, freq = FALSE,
-             xlab = "Waiting times", ylab = "Density",
+        hist(observed, freq = FALSE, breaks = "FD",
+             xlab = "Rescaled waiting times", ylab = "Density",
              main = "", col = "grey90", border = "white")
-        curve(dexp, from = 0, to = as.numeric(quantile(observed, 0.99)),
-              add = TRUE, col = 1, lty = 2, lwd = 1.5)
-        mtext("Density plot of waiting times", side = 3, line = 2, cex = 1.5)
+        curve(dexp, from = 0, to = max(observed) * 1.05,
+              add = TRUE, col = 2, lty = 2, lwd = 1.5)
+        mtext("Density of rescaled waiting times", side = 3, line = 2, cex = 1.5)
         mtext(title_model[i],                 side = 3, line = 1, cex = 1)
       }
 
