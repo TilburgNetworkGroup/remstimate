@@ -152,8 +152,7 @@ plot.diagnostics <- function(x,
 
     # (2) standardized Schoenfeld's residuals
     if (which[2L] && has_resid) {
-      if (!is.null(object) && !is.null(attr(object, "where_is_baseline")) &&
-          "baseline" %in% tolower(effects_to_check))
+      if ("baseline" %in% tolower(effects_to_check))
         effects_to_check <- effects_to_check[tolower(effects_to_check) != "baseline"]
       if (length(effects_to_check) > 0L && !all(effects_to_check %in% avail_diag))
         stop("one or more effects not found inside the object 'diagnostics'.")
@@ -200,7 +199,7 @@ plot.diagnostics <- function(x,
 
     # (3) recall: scatter of relative ranks
     if (which[3L] && !is.null(x$recall)) {
-       par(mfrow = c(1,1))
+      par(mfrow = c(1,1))
       .plot_recall(x$recall, label = "Tie model")
     }
 
@@ -309,9 +308,7 @@ plot.diagnostics <- function(x,
 
       # (2) standardized Schoenfeld's residuals
       if (which[2L] && has_resid_i) {
-        if (senderRate[i] && !is.null(object) &&
-            !is.null(attr(object, "where_is_baseline")) &&
-            "baseline" %in% tolower(effects_to_check))
+        if (senderRate[i] && "baseline" %in% tolower(effects_to_check))
           effects_to_check <- effects_to_check[tolower(effects_to_check) != "baseline"]
         if (length(effects_to_check) > 0L && !all(effects_to_check %in% avail_diag_i))
           stop("one or more effects not found in diagnostics for '", which_model[i], "'.")
