@@ -1,5 +1,5 @@
 # -- recall helper -------------------------------------------------------------
-.recall_block <- function(pars, baseline, stats_3d, obs_ids,
+.recall_block_3d <- function(pars, baseline, stats_3d, obs_ids,
                            valid_ids = NULL, top_pct = 0.05) {
   M    <- dim(stats_3d)[3L]
   rows <- vector("list", M)
@@ -257,7 +257,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
     # recall
     obs_dyad_ids <- if (is.list(attr(reh,"dyadID"))) attr(reh,"dyadID") else
                     as.list(attr(reh,"dyadID"))
-    diagnostics$recall <- .recall_block(
+    diagnostics$recall <- .recall_block_3d(
       pars     = as.vector(object$coefficients)[select_vars],
       baseline = baseline_value,
       stats_3d = stats,
@@ -342,7 +342,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
                             reh$receiver_riskset[[as.integer(senders[1])]])
                         else NULL
       }
-      diagnostics[[which_model[i]]]$recall <- .recall_block(
+      diagnostics[[which_model[i]]]$recall <- .recall_block_3d(
         pars      = as.vector(object[[which_model[i]]]$coefficients)[select_vars],
         baseline  = baseline_value,
         stats_3d  = stats[[which_stats[i]]],
@@ -532,7 +532,7 @@ diagnostics.remstimate_mixrem <- function(object, reh, stats, top_pct = 0.05, ..
 
   per_component <- setNames(lapply(seq_len(k), function(j) {
     basis_j <- if (is.null(waar_is_baseline)) 0 else object$coefficients[waar_is_baseline, j]
-    .recall_block(
+    .recall_block_3d(
       pars     = as.vector(object$coefficients[selectie, j]),
       baseline = basis_j,
       stats_3d = stats_sub,
@@ -604,9 +604,9 @@ diagnostics.remstimate_mixrem <- function(object, reh, stats, top_pct = 0.05, ..
   stat_names <- if (is_sender) dimnames(stats$sender_stats)[[3]] else
     dimnames(stats$receiver_stats)[[3]]
 
-  waar_is_baseline <- if (is_sender) .remstimate_find_baseline(stat_names) else NULL
-  selectie         <- if (is.null(waar_is_baseline)) seq_along(stat_names) else
-    seq_along(stat_names)[-waar_is_baseline]
+  location_baseline <- if (is_sender) .remstimate_find_baseline(stat_names) else NULL
+  selectie         <- if (is.null(location_baseline)) seq_along(stat_names) else
+    seq_along(stat_names)[-location_baseline]
   stats_sub <- if (length(selectie) == 1L)
     array(stats_arr[, selectie, ], dim = c(dim(stats_arr)[1], 1, dim(stats_arr)[3]))
   else stats_arr[, selectie, , drop = FALSE]
@@ -626,9 +626,9 @@ diagnostics.remstimate_mixrem <- function(object, reh, stats, top_pct = 0.05, ..
 
   k <- ncol(sub_obj$coefficients)
   per_component <- setNames(lapply(seq_len(k), function(j) {
-    basis_j <- if (is.null(waar_is_baseline) || !is_sender) 0 else
-      sub_obj$coefficients[waar_is_baseline, j]
-    .recall_block(
+    basis_j <- if (is.null(location_baseline) || !is_sender) 0 else
+      sub_obj$coefficients[location_baseline, j]
+    .recall_block_3d(
       pars      = as.vector(sub_obj$coefficients[selectie, j]),
       baseline  = basis_j,
       stats_3d  = stats_sub,

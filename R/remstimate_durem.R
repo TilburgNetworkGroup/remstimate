@@ -325,8 +325,11 @@ coef.remstimate_durem <- function(object, ...) object$coefficients
 
 #' @export
 #' @method logLik remstimate_durem
-logLik.remstimate_durem <- function(object, ...) object$loglik
-
+logLik.remstimate_durem <- function(object, ...) {
+  structure(object$loglik, class = "logLik",
+            df = length(object$coefficients),
+            nobs = object$df.null)
+}
 
 # ── diagnostics ─────────────────────────────────────────────────────────────
 

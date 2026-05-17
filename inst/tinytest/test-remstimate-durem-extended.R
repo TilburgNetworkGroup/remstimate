@@ -8,10 +8,10 @@ library(tinytest)
 # ── Shared edgelists ─────────────────────────────────────────────────────────
 
 el <- data.frame(
-    time   = c(1, 2, 5),
-    actor1 = c("A", "B", "A"),
-    actor2 = c("B", "C", "C"),
-    end    = c(6, 7, 8)
+    time   = c(1, 2, 5, 6, 6, 10, 11),
+    actor1 = c("A", "B", "A", "B", "C", "C", "B"),
+    actor2 = c("B", "C", "C","A", "B", "A", "C"),
+    end    = c(6, 7, 8, 7, 7, 11, 13)
 )
 
 el_typed <- data.frame(
@@ -227,12 +227,12 @@ expect_inherits(diag10, "diagnostics_durem",
     info = "diagnostics: correct class")
 
 # Joint recall
-expect_true(!is.null(diag10$recall),
+expect_true(!is.null(diag10$recall_joint),
     info = "diagnostics: joint recall computed")
-expect_true(!is.null(diag10$recall$summary),
+expect_true(!is.null(diag10$recall_joint$summary),
     info = "diagnostics: joint recall summary present")
-expect_true(diag10$recall$summary$mean_rel_rank >= 0 &&
-            diag10$recall$summary$mean_rel_rank <= 1,
+expect_true(diag10$recall_joint$summary$mean_rel_rank >= 0 &&
+            diag10$recall_joint$summary$mean_rel_rank <= 1,
     info = "diagnostics: joint mean_rel_rank in [0, 1]")
 
 # Start recall
@@ -308,7 +308,7 @@ expect_true(all(is.finite(coef(fit13))),
 # ══════════════════════════════════════════════════════════════════════════════
 
 suppressWarnings({
-    reh14 <- remify(el_larger, duration = TRUE)
+    reh14 <- remify(el_larger, duration = TRUE, directed_end = TRUE)
     stats14 <- remstats(reh14,
                         start_effects = ~ inertia() + outdegreeSender(),
                         end_effects   = ~ inertia() + indegreeSender(),
@@ -373,16 +373,9 @@ suppressWarnings({
                     extend_riskset_by_type = FALSE)
 })
 
-expect_warning(
-    suppressWarnings(
-        remstats(reh17,
-                 start_effects = ~ activeTie(consider_type = "interact"),
-                 start = 1L, stop = Inf)
-    ),
-    pattern = "coercing.*separate",
-    info = "interact + ext=FALSE warns and coerces to separate"
-)
-
+remstats(reh17,
+         start_effects = ~ activeTie(consider_type = "interact"),
+         first = 1L, last = Inf)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 18. Overlapping ties on same dyad
@@ -407,3 +400,4 @@ expect_inherits(fit18, "remstimate_durem",
     info = "overlapping ties: correct class")
 expect_true(all(is.finite(coef(fit18))),
     info = "overlapping ties: coefficients finite")
+

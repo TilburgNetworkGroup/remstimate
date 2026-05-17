@@ -78,7 +78,7 @@ df_ord <- stacked_ord$remstats_stack
 # Conditional logistic regression stratified by event
 library(survival)
 fit_clogit <- survival::clogit(
-  obs ~ -1 + inertia + indegreeSender + outdegreeSender + survival::strata(event),
+  obs ~ -1 + inertia + indegreeSender + outdegreeSender + survival::strata(time_index),
   data = df_ord
 )
 
@@ -168,7 +168,7 @@ df_typed_ord <- stacked_typed_ord$remstats_stack
 stat_cols_ord <- setdiff(names(est_typed_ord$coefficients), "baseline")
 fmla_typed_ord <- as.formula(paste(
   "obs ~ -1 +", paste(stat_cols_ord, collapse = " + "),
-  "+ survival::strata(event)"
+  "+ survival::strata(time_index)"
 ))
 
 fit_clogit_typed <- survival::clogit(fmla_typed_ord, data = df_typed_ord)
@@ -226,7 +226,7 @@ df_samp_ord <- stacked_samp_ord$remstats_stack
 
 fit_clogit_samp <- survival::clogit(
   obs ~ -1 + inertia + indegreeSender + outdegreeSender +
-    survival::strata(event),
+    survival::strata(time_index),
   weights = weight,
   method = "approximate",
   data = df_samp_ord
@@ -260,8 +260,8 @@ ts_aom_int <- aomstats(
   receiver_effects = receiver_effects,
   memory           = "decay",
   memory_value     = 1000,
-  start            = 2,
-  stop             = 30
+  first            = 2,
+  last             = 30
 )
 
 est_aom_int <- remstimate(
@@ -294,7 +294,7 @@ expect_equal(
 df_receiver_int <- stacked_aom_int$receiver_stack
 
 fit_clogit_receiver <- survival::clogit(
-  obs ~ -1 + inertia + indegreeReceiver + survival::strata(event),
+  obs ~ -1 + inertia + indegreeReceiver + survival::strata(time_index),
   data = df_receiver_int
 )
 
@@ -322,8 +322,8 @@ ts_aom_ord <- aomstats(
     outdegreeReceiver(consider_type = "ignore"),
   memory           = "decay",
   memory_value     = 1000,
-  start            = 2,
-  stop             = 30
+  first            = 2,
+  last             = 30
 )
 
 est_aom_ord <- remstimate(
@@ -340,7 +340,7 @@ df_sender_ord <- stacked_aom_ord$sender_stack
 
 # baseline column is present but dropped for ordinal (absorbed by strata)
 fit_clogit_sender <- survival::clogit(
-  obs ~ -1 + indegreeSender + survival::strata(event),
+  obs ~ -1 + indegreeSender + survival::strata(time_index),
   data = df_sender_ord
 )
 
@@ -355,7 +355,7 @@ expect_equal(
 df_receiver_ord <- stacked_aom_ord$receiver_stack
 
 fit_clogit_receiver_ord <- survival::clogit(
-  obs ~ -1 + inertia + outdegreeReceiver + survival::strata(event),
+  obs ~ -1 + inertia + outdegreeReceiver + survival::strata(time_index),
   data = df_receiver_ord
 )
 
@@ -374,8 +374,8 @@ ts_aom_rec_only <- aomstats(
   receiver_effects = ~ inertia(consider_type = FALSE),
   memory           = "decay",
   memory_value     = 1000,
-  start            = 2,
-  stop             = 30
+  first            = 2,
+  last             = 30
 )
 
 stacked_rec_only <- stack_stats(ts_aom_rec_only, reh_actor_test)
@@ -394,8 +394,8 @@ ts_aom_send_only <- aomstats(
   sender_effects = ~ indegreeSender(),
   memory         = "decay",
   memory_value   = 1000,
-  start          = 2,
-  stop           = 30
+  first          = 2,
+  last           = 30
 )
 
 stacked_send_only <- stack_stats(ts_aom_send_only, reh_actor_test)

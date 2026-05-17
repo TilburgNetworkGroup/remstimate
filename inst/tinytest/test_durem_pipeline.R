@@ -21,6 +21,14 @@ el_typed <- data.frame(
   duration = c(2, 2, 2, 3, 3, 3)
 )
 
+el_typed_ord <- data.frame(
+  time     = c(1, 2, 3, 4, 6, 6, 7, 7, 9, 10, 12, 12),
+  actor1   = c("A", "B", "A", "B", "A", "B", "B", "C", "B", "A", "B", "A"),
+  actor2   = c("B", "C", "B", "C", "B", "C", "A", "B", "A", "B", "A", "B"),
+  type     = c("X", "X", "Y", "Y", "X", "Y", "Y", "Y", "X", "Y", "Y", "Y"),
+  duration = c(2, 2, 2, 3, 3, 3)
+)
+
 
 # ── 1. Basic durem, interval timing ─────────────────────────────────────────
 
@@ -102,7 +110,7 @@ expect_true(nrow(stacked_excl$remstats_stack) <
 
 # ── 5. Typed durem, ext=TRUE, ordinal ────────────────────────────────────────
 
-reh_te_ord <- remify(el_typed, duration = TRUE, extend_riskset_by_type = TRUE,
+reh_te_ord <- remify(el_typed_ord, duration = TRUE, extend_riskset_by_type = TRUE,
                      riskset = "active", model = "tie", ordinal = TRUE)
 stats_te_ord <- remstats(reh_te_ord,
                          start_effects = ~ inertia(consider_type = "interact"),

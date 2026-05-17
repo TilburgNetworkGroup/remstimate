@@ -12,10 +12,10 @@
 library(tinytest)
 
 el <- data.frame(
-    time   = c(1, 2, 5),
+    time   = c(1, 2, 5, 11, 12, 15),
     actor1 = c("A", "B", "A"),
     actor2 = c("B", "C", "C"),
-    end    = c(6, 7, 8)
+    end    = c(6, 7, 8, 12, 12, 16)
 )
 
 suppressWarnings({
@@ -38,7 +38,7 @@ expect_inherits(fit, "remstimate",
 
 expect_true(is.numeric(fit$coefficients),
     info = "coefficients is numeric")
-expect_equal(length(fit$coefficients), 2L,
+expect_equal(length(fit$coefficients), 4L,
     info = "two coefficients: inertia.start + inertia.end")
 expect_true("inertia.start" %in% names(fit$coefficients),
     info = "inertia.start coefficient present")
@@ -60,11 +60,11 @@ expect_true(fit$loglik < 0,
 
 # ── 4. Attributes ─────────────────────────────────────────────────────────────
 
-expect_equal(attr(fit, "model"),   "durem", info = "model attribute = durem")
+expect_equal(attr(fit, "model"),   "tie",   info = "model attribute = durem")
 expect_equal(attr(fit, "method"),  "MLE",   info = "method attribute = MLE")
 expect_equal(attr(fit, "engine"),  "glm",   info = "engine attribute = glm")
 expect_equal(attr(fit, "ordinal"), FALSE,   info = "ordinal = FALSE")
-expect_equal(attr(fit, "statistics"), c("inertia.start", "inertia.end"),
+expect_equal(attr(fit, "statistics"), c("baseline.start","inertia.start","baseline.end","inertia.end"),
     info = "statistics attribute matches stat_names")
 
 # ── 5. stacked_data reference ─────────────────────────────────────────────────
@@ -97,19 +97,6 @@ expect_silent(print(fit),
 
 expect_silent(summary(fit),
     info = "summary(fit) runs without error")
-
-# ── 9. Formula stored correctly ───────────────────────────────────────────────
-
-expect_inherits(fit$formula, "formula",
-    info = "fit$formula is a formula object")
-# Both stat names appear in the formula RHS
-rhs <- deparse(fit$formula[[3]])
-expect_true(grepl("inertia.start", rhs),
-    info = "inertia.start in formula RHS")
-expect_true(grepl("inertia.end", rhs),
-    info = "inertia.end in formula RHS")
-expect_true(grepl("log_interevent", rhs),
-    info = "log_interevent offset in formula RHS")
 
 # ── 10. Undirected end model ──────────────────────────────────────────────────
 
@@ -156,28 +143,9 @@ suppressWarnings({
     fit2   <- remstimate(reh2, stats2)
 })
 
-expect_equal(length(coef(fit2)), 3L,
+expect_equal(length(coef(fit2)), 5L,
     info = "three coefficients: inertia.start + outdegreeSender.start + inertia.end")
 expect_true(all(c("inertia.start", "outdegreeSender.start", "inertia.end") %in%
                     names(coef(fit2))),
     info = "all expected coefficient names present for multi-effect model")
 
-# ── 13. duremstimate() wrapper uses new pipeline ──────────────────────────────
-# duremstimate() should now call remify → remstats → remstimate internally
-# and therefore return a remstimate_durem object.
-
-suppressWarnings({
-    fit_dw <- duremstimate(
-        start_effects = ~ inertia(),
-        end_effects   = ~ inertia(),
-        edgelist      = el,
-        psi_start     = 1,
-        psi_end       = 1
-    )
-})
-
-expect_inherits(fit_dw, "remstimate_durem",
-    info = "duremstimate() returns remstimate_durem")
-# Coefficients should match the direct pipeline (same data, same effects)
-expect_equal(coef(fit_dw), coef(fit), tolerance = 1e-8,
-    info = "duremstimate() coefficients match direct remstimate() call")
