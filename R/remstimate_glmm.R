@@ -3,18 +3,23 @@
 # remstimate(reh, stats, method = "GLMM", random = ~ (1|actor1), engine = "lme4")
 
 .remstimate_glmm <- function(reh, stats,
-                              random  = NULL,
-                              engine  = c("lme4", "glmmTMB"),
-                              verbose = FALSE,
-                              ...) {
-
+                             random  = NULL,
+                             engine  = c("lme4", "glmmTMB"),
+                             verbose = FALSE,
+                             ...) {
   engine <- match.arg(engine)
+
+  s <- .remstimate_make_stack(reh, stats, add_actors = TRUE)
+
+  # Ordinal models need coxme (conditional logit + random effects)
+  if (s$ordinal) {
+    engine <- "coxme"
+  }
+
   if (!requireNamespace(engine, quietly = TRUE))
     stop("install.packages('", engine, "')")
   if (is.null(random))
     stop("provide a random formula, e.g. ~ (1 | actor1)")
-
-  s <- .remstimate_make_stack(reh, stats, add_actors = TRUE)
 
   if (s$model == "tie") {
 
@@ -59,21 +64,22 @@
 }
 
 .glmm_fit_one <- function(df, stat_names, ordinal, random, engine, verbose, ...) {
-  fixed_part1 <- .remstimate_fixed_rhs(stat_names, ordinal)
-  familie    <- if (ordinal) {
-    df$time  <- factor(df$time)
-    fixed_part1 <- sub("^-1 \\+ ", "-1 + time + ", fixed_part1)
-    message("ordinal: binomial GLMM with event fixed effects (approx. clogit)")
-    binomial()
-  } else poisson()
-
-  fml <- as.formula(paste("obs ~", fixed_part1, "+", deparse(random[[2]])))
-  if (verbose) message("fit: ", deparse(fml))
-
-  if (engine == "lme4")
+  if (engine == "coxme") {
+    if (!requireNamespace("coxme", quietly = TRUE))
+      stop("install.packages('coxme')")
+    df$.surv_time <- rep(1, nrow(df))
+    formula_obj <- stats::as.formula(paste0(
+      "survival::Surv(.surv_time, obs) ~ ",
+      paste(stat_names, collapse = " + "),
+      " + ", deparse(random[[2]]),
+      " + strata(time_index)"
+    ))
+    coxme::coxme(formula_obj, data = df)
+  } else if (engine == "lme4") {
     lme4::glmer(fml, family = familie, data = df, ...)
-  else
+  } else {
     glmmTMB::glmmTMB(fml, family = familie, data = df, ...)
+  }
 }
 
 .glmm_fixef <- function(fit, engine) {
