@@ -23,7 +23,7 @@ effects <- ~ inertia(consider_type = FALSE) +
 ts_full <- tomstats(effects, reh = reh,
                                 attr_actors = info,
                                 memory = "decay", memory_value = 1000,
-                                start = 2, stop = 30,
+                                first = 2, last = 30,
                                 sampling = FALSE)
 
 D <- nrow(attr(ts_full, "riskset"))  # number of dyads in active riskset
@@ -68,7 +68,7 @@ expect_true(isTRUE(est_full2$converged), info = "full: converged")
 ts_samp_full <- tomstats(effects, reh = reh,
                                      attr_actors = info,
                                      memory = "decay", memory_value = 1000,
-                                     start = 2, stop = 30,
+                                     first = 2, last = 30,
                                      sampling = TRUE,
                                      samp_num = D,
                                      seed = 1L)
@@ -102,7 +102,7 @@ expect_true(is.finite(est_samp_full$loglik),
 ts_samp <- tomstats(effects, reh = reh,
                                 attr_actors = info,
                                 memory = "decay", memory_value = 1000,
-                                start = 2, stop = 30,
+                                first = 2, last = 30,
                                 sampling = TRUE,
                                 samp_num = 5L,
                                 seed = 42L)
@@ -155,7 +155,7 @@ expect_equal(est_samp$samp_num, 5L,
 ts_samp2 <- tomstats(effects, reh = reh,
                                  attr_actors = info,
                                  memory = "decay", memory_value = 1000,
-                                 start = 2, stop = 30,
+                                 first = 2, last = 30,
                                  sampling = TRUE, samp_num = 5L, seed = 99L)
 
 est_samp2 <- remstimate(reh = reh, stats = ts_samp2, method = "MLE", ncores = 1L)
@@ -177,7 +177,7 @@ effects_typed <- ~ inertia(consider_type = "separate") +
 ts_typed_full <- tomstats(effects_typed, reh = reh,
                                       attr_actors = info,
                                       memory = "decay", memory_value = 1000,
-                                      start = 2, stop = 30,
+                                      first = 2, last = 30,
                                       sampling = FALSE)
 
 est_typed_full <- remstimate(reh = reh, stats = ts_typed_full,
@@ -195,7 +195,7 @@ D_typed <- nrow(attr(ts_typed_full, "riskset"))
 ts_typed_samp <- tomstats(effects_typed, reh = reh,
                                       attr_actors = info,
                                       memory = "decay", memory_value = 1000,
-                                      start = 2, stop = 30,
+                                      first = 2, last = 30,
                                       sampling = TRUE,
                                       samp_num = min(5L, D_typed),
                                       seed = 7L)

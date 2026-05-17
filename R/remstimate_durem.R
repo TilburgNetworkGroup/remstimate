@@ -13,6 +13,7 @@
 
 # ── Poisson GLM / clogit backend (MLE) ────────────────────────────────────
 
+#' @importFrom survival strata clogit coxph
 #' @keywords internal
 .remstimate_durem_glm <- function(stacked) {
 
@@ -33,7 +34,7 @@
         formula_obj <- stats::as.formula(paste0(
             "obs ~ ",
             paste(stat_names, collapse = " + "),
-            " + strata(time)"
+            " + strata(time_index)"
         ))
 
         fit <- survival::clogit(formula_obj, data = df)
@@ -393,7 +394,7 @@ diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05, ...
             is_end <- rowSums(abs(df[, sn_end, drop = FALSE])) > 0
 
         # ── Joint recall: all competing dyads ────────────────────────────────
-        out$recall <- .recall_block(lp, obs_idx, event_ids, top_pct)
+        out$recall_joint <- .recall_block(lp, obs_idx, event_ids, top_pct)
 
         # ── Start recall: observed starts ranked among start-risk dyads ──────
         start_obs <- intersect(obs_idx, which(is_start))
@@ -490,9 +491,9 @@ print.diagnostics_durem <- function(x, ...) {
         print(x$residual_summary, row.names = FALSE)
     }
 
-    if (!is.null(x$recall) || !is.null(x$recall_start) || !is.null(x$recall_end)) {
+    if (!is.null(x$recall_joint) || !is.null(x$recall_start) || !is.null(x$recall_end)) {
         cat("\nRecall:\n")
-        .print_recall_summary(x$recall,       "Joint")
+        .print_recall_summary(x$recall_joint, "Joint")
         .print_recall_summary(x$recall_start, "Start")
         .print_recall_summary(x$recall_end,   "End")
     }
@@ -550,7 +551,7 @@ plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
 
     if (which == 1L) {
         # Joint recall
-        .plot_recall_scatter(diagnostics_object$recall, "Recall: joint (all competing dyads)")
+        .plot_recall_scatter(diagnostics_object$recall_joint, "Recall: joint (all competing dyads)")
     } else if (which == 2L) {
         # Deviance residuals
         if (!is.null(diagnostics_object$deviance_residuals)) {
@@ -573,7 +574,7 @@ plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
         n_panels  <- 1L + has_start + has_end
         old_par   <- graphics::par(mfrow = c(1, n_panels))
         on.exit(graphics::par(old_par))
-        .plot_recall_scatter(diagnostics_object$recall, "Joint")
+        .plot_recall_scatter(diagnostics_object$recall_joint, "Joint")
         if (has_start) .plot_recall_scatter(diagnostics_object$recall_start, "Start")
         if (has_end)   .plot_recall_scatter(diagnostics_object$recall_end,   "End")
     } else if (which == 6L) {
@@ -608,7 +609,7 @@ plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
         }
     } else if (which == 9L) {
         # Probability ratio: joint
-        .plot_probratio_scatter(diagnostics_object$recall,
+        .plot_probratio_scatter(diagnostics_object$recall_joint,
                                 "Prob ratio: joint", ...)
     } else if (which == 10L) {
         # Probability ratio: start + end side by side
@@ -617,7 +618,7 @@ plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
         n_panels  <- 1L + has_start + has_end
         old_par   <- graphics::par(mfrow = c(1, n_panels))
         on.exit(graphics::par(old_par))
-        .plot_probratio_scatter(diagnostics_object$recall, "Joint")
+        .plot_probratio_scatter(diagnostics_object$recall_joint, "Joint")
         if (has_start) .plot_probratio_scatter(diagnostics_object$recall_start, "Start")
         if (has_end)   .plot_probratio_scatter(diagnostics_object$recall_end, "End")
     }

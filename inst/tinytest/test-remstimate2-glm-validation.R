@@ -30,7 +30,7 @@ effects <- ~ inertia(consider_type = FALSE) +
 ts_int <- tomstats(effects, reh = reh_int,
                                attr_actors = info,
                                memory = "decay", memory_value = 1000,
-                               start = 2, stop = 30,
+                               first = 2, last = 30,
                                sampling = FALSE)
 
 est_int <- remstimate(reh = reh_int, stats = ts_int,
@@ -66,7 +66,7 @@ effects_no_baseline <- ~ inertia(consider_type = FALSE) +
 ts_ord <- tomstats(effects_no_baseline, reh = reh_ord,
                                attr_actors = info,
                                memory = "decay", memory_value = 1000,
-                               start = 2, stop = 30,
+                               first = 2, last = 30,
                                sampling = FALSE)
 
 est_ord <- remstimate(reh = reh_ord, stats = ts_ord,
@@ -99,7 +99,7 @@ reh_full <- remify(edgelist = history_sub, model = "tie",
 ts_full_rs <- tomstats(effects, reh = reh_full,
                                    attr_actors = info,
                                    memory = "decay", memory_value = 1000,
-                                   start = 2, stop = 30,
+                                   first = 2, last = 30,
                                    sampling = FALSE)
 
 est_full_rs <- remstimate(reh = reh_full, stats = ts_full_rs,
@@ -128,7 +128,7 @@ effects_typed <- ~ inertia(consider_type = "separate") +
 ts_typed <- tomstats(effects_typed, reh = reh_int,
                                  attr_actors = info,
                                  memory = "decay", memory_value = 1000,
-                                 start = 2, stop = 30,
+                                 first = 2, last = 30,
                                  sampling = FALSE)
 
 est_typed <- remstimate(reh = reh_int, stats = ts_typed,
@@ -156,7 +156,7 @@ expect_equal(
 ts_typed_ord <- tomstats(effects_typed, reh = reh_ord,
                                      attr_actors = info,
                                      memory = "decay", memory_value = 1000,
-                                     start = 2, stop = 30,
+                                     first = 2, last = 30,
                                      sampling = FALSE)
 
 est_typed_ord <- remstimate(reh = reh_ord, stats = ts_typed_ord,
@@ -188,7 +188,7 @@ samp_num <- 10L
 ts_samp_int <- tomstats(effects, reh = reh_int,
                                     attr_actors = info,
                                     memory = "decay", memory_value = 1000,
-                                    start = 2, stop = 30,
+                                    first = 2, last = 30,
                                     sampling = TRUE, samp_num = samp_num, seed = 1L)
 
 est_samp_int <- remstimate(reh = reh_int, stats = ts_samp_int,
@@ -215,7 +215,7 @@ expect_equal(
 ts_samp_ord <- tomstats(effects_no_baseline, reh = reh_ord,
                                     attr_actors = info,
                                     memory = "decay", memory_value = 1000,
-                                    start = 2, stop = 30,
+                                    first = 2, last = 30,
                                     sampling = TRUE, samp_num = samp_num, seed = 1L)
 
 est_samp_ord <- remstimate(reh = reh_ord, stats = ts_samp_ord,

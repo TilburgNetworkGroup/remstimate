@@ -96,7 +96,7 @@
     method       = "MIXREM",
     engine       = "flexmix",
     ordinal      = ordinal,
-    extra        = list(k = k, prior_probs = kansen, bic = flexmix::BIC(fit))
+    extra        = list(k = k, prior_probs = kansen, bic = stats::BIC(fit))
   )
 }
 
@@ -167,6 +167,7 @@ diagnostics.remstimate_mixrem <- function(object, reh = NULL, stats = NULL,
 
   stat_names <- attr(object, "statistics")
   coef_mat   <- object$coefficients  # [P x K]
+  rownames(coef_mat) <- gsub("^coef\\.", "", rownames(coef_mat))
   fit        <- object$backend_fit
   K          <- ncol(coef_mat)
 

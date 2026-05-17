@@ -30,7 +30,7 @@ stacked <- stack_stats(stats, reh)
 
 expect_true(inherits(stacked, "remstats_stacked"),
             info = "stack_stats returns remstats_stacked")
-expect_true("time" %in% colnames(stacked$remstats_stack),
+expect_true("time_index" %in% colnames(stacked$remstats_stack),
             info = "stacked output has 'time' column")
 expect_true(!"event" %in% colnames(stacked$remstats_stack),
             info = "stacked output no longer has 'event' column")
@@ -122,14 +122,14 @@ expect_true(!is.null(fit_te_ord$coefficients),
 diag <- diagnostics(fit, reh, stats)
 expect_true(inherits(diag, "diagnostics_durem"),
             info = "diagnostics returns diagnostics_durem")
-expect_true(!is.null(diag$recall),
+expect_true(!is.null(diag$recall_joint),
             info = "diagnostics has joint recall")
 
 
 # ── 7. Diagnostics: typed durem (per-type recall) ───────────────────────────
 
 diag_te <- diagnostics(fit_te, reh_te, stats_te)
-expect_true(!is.null(diag_te$recall),
+expect_true(!is.null(diag_te$recall_joint),
             info = "ext=TRUE diagnostics has joint recall")
 expect_true(!is.null(diag_te$recall_by_type),
             info = "ext=TRUE diagnostics has per-type recall")
@@ -229,3 +229,4 @@ if (requireNamespace("glmnet", quietly = TRUE)) {
   expect_true(!is.null(diag_glmnet_te$recall),
               info = "GLMNET typed durem diagnostics has recall")
 }
+
