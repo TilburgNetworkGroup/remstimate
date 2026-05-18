@@ -4,7 +4,13 @@
 \alias{frailty_rem}
 \title{Frailty REM}
 \usage{
-frailty_rem(reh, stats, engine = "lme4", ...)
+frailty_rem(
+  reh,
+  stats,
+  approach = c("frequentist", "Bayesian"),
+  engine = "lme4",
+  ...
+)
 }
 \arguments{
 \item{reh}{A \code{remify} or \code{remify_durem} object.}
@@ -12,9 +18,13 @@ frailty_rem(reh, stats, engine = "lme4", ...)
 \item{stats}{A \code{remstats} object (\code{tomstats}, \code{aomstats},
 or \code{remstats_durem}).}
 
-\item{engine}{Backend for interval models: \code{"lme4"} (default) or
-\code{"glmmTMB"}. Ignored for ordinal models, which always use
-\code{coxme}.}
+\item{approach}{Either \code{frequentist} or \code{Bayesian} estimation,
+is supported.}
+
+\item{engine}{For \code{frequentist}, the backend for interval models:
+\code{"lme4"} (default) or
+  \code{"glmmTMB"}. Ignored for ordinal models, which always use
+  \code{coxme}. For \code{Bayesian} estimation, \code{brms} is always used.}
 
 \item{...}{Additional arguments passed to \code{\link{remstimate}}.}
 }
@@ -31,7 +41,8 @@ random-effects formula.
 }
 \details{
 For \strong{tie-oriented models}, each actor receives a random intercept
-for sending (\code{actor1}) and receiving (\code{actor2}). In directed
+for sending (\code{actor1}) and receiving (\code{actor2}), i.e.
+\code{(1 | actor1) + (1 | actor2)}. In directed
 models these capture sender activity and receiver attractiveness; in
 undirected models both reflect general sociability.
 
@@ -43,7 +54,8 @@ For \strong{duration models} (\code{remify_durem}), random intercepts
 are crossed with the \code{process} indicator (start vs end), giving
 each actor separate frailty terms for event initiation and termination.
 
-When \code{extend_riskset_by_type = TRUE}, random intercepts are further
+When \code{extend_riskset_by_type = TRUE} (only possible for a tie-oriented
+model), random intercepts are further
 crossed with the event \code{type}, allowing actor heterogeneity to vary
 across event types.
 

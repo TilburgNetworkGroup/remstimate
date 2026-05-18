@@ -7,157 +7,156 @@
 remstimate(
   reh,
   stats,
-  method = c("MLE", "GLM", "HMC", "GLMM", "GLMNET", "MIXREM"),
+  approach = c("frequentist", "Bayesian"),
+  random = NULL,
+  penalty = NULL,
+  mixture = NULL,
+  engine = "auto",
+  prior = NULL,
+  seed = NULL,
   ncores = 1L,
-  nsim = 500L,
-  nchains = 1L,
-  burnin = 500L,
-  thin = 10L,
+  nsim = 2000L,
+  nchains = 4L,
+  burnin = 1000L,
+  thin = 1L,
   init = NULL,
   L = 50L,
   epsilon = 0.002,
-  prior = NULL,
-  seed = NULL,
   WAIC = FALSE,
   nsimWAIC = 100L,
-  random = NULL,
-  engine = c("lme4", "glmmTMB"),
   alpha = 1,
   nfolds = 10L,
   lambda_select = c("1se", "min"),
   k = 2L,
   concomitant = NULL,
   nrep = 3L,
+  method = NULL,
   ...
 )
 }
 \arguments{
-\item{reh}{A \code{remify} object.}
+\item{reh}{A \code{remify} or \code{remify_durem} object.}
 
-\item{stats}{A \code{tomstats}, \code{tomstats_sampled}, or
-\code{aomstats} object.}
+\item{stats}{A \code{tomstats}, \code{tomstats_sampled},
+\code{aomstats}, or \code{remstats_durem} object.}
 
-\item{method}{Estimation method. One of \code{"MLE"} (default),
-\code{"GLM"}, \code{"HMC"}, \code{"GLMM"}, \code{"GLMNET"}, or
-\code{"MIXREM"}. \code{"GLM"} fits via \code{glm()} — equivalent to
-MLE for interval timing, useful for comparison or for duration models.}
+\item{approach}{\code{"frequentist"} (default) or \code{"Bayesian"}.}
 
-\item{ncores}{[\emph{MLE/HMC}] Number of threads. Default \code{1L}.}
+\item{random}{One-sided formula for random effects, e.g.
+\code{~ (1 | actor1) + (1 | actor2)}. When provided, uses GLMM
+(frequentist) or brms (Bayesian). Also used for MIXREM clustering.}
 
-\item{nsim}{[\emph{HMC}] MCMC iterations per chain after burnin. Default \code{500L}.}
+\item{penalty}{List with penalisation settings, e.g.
+\code{list(alpha = 1)} for lasso. When provided, uses glmnet.}
 
-\item{nchains}{[\emph{HMC}] Number of chains. Default \code{1L}.}
+\item{mixture}{List with mixture settings, e.g.
+\code{list(k = 2, random = ~ (1 | dyad))}. When provided, uses flexmix.}
 
-\item{burnin}{[\emph{HMC}] Burn-in iterations. Default \code{500L}.}
+\item{engine}{Backend engine. For GLMM: \code{"lme4"} (default),
+\code{"glmmTMB"}, or \code{"brms"}. For penalised: \code{"glmnet"}.
+Ordinal models automatically use \code{coxme}.
+Set to \code{"auto"} (default) for automatic selection.}
 
-\item{thin}{[\emph{HMC}] Thinning interval. Default \code{10L}.}
+\item{prior}{[\emph{Bayesian}] List with \code{mean} and \code{vcov};
+defaults to standard normal (basic) or brms defaults (random effects).}
 
-\item{init}{[\emph{HMC}] Initial parameter values; defaults to MLE estimates.}
+\item{seed}{Random seed.}
 
-\item{L}{[\emph{HMC}] Leapfrog steps. Default \code{50L}.}
+\item{ncores}{Number of threads (C++ backends). Default \code{1L}.}
 
-\item{epsilon}{[\emph{HMC}] Leapfrog step size. Default \code{0.002}.}
+\item{nsim}{[\emph{Bayesian}] MCMC iterations per chain after burnin.
+Default \code{2000L}.}
 
-\item{prior}{[\emph{HMC}] List with \code{mean} and \code{vcov}; defaults
-to standard normal.}
+\item{nchains}{[\emph{Bayesian}] Number of chains. Default \code{4L}.}
 
-\item{seed}{[\emph{HMC}] Random seed.}
+\item{burnin}{[\emph{Bayesian}] Burn-in iterations. Default \code{1000L}.}
+
+\item{thin}{[\emph{Bayesian}] Thinning interval. Default \code{1L}.}
+
+\item{init}{[\emph{C++ HMC}] Initial parameter values; defaults to
+MLE estimates.}
+
+\item{L}{[\emph{C++ HMC}] Leapfrog steps. Default \code{50L}.}
+
+\item{epsilon}{[\emph{C++ HMC}] Leapfrog step size. Default \code{0.002}.}
 
 \item{WAIC}{Compute WAIC? Default \code{FALSE}.}
 
 \item{nsimWAIC}{Number of posterior draws for WAIC. Default \code{100L}.}
 
-\item{random}{[\emph{GLMM / MIXREM}] One-sided formula for random
-effects or mixture clustering, e.g. \code{~ (1 | actor1)} or
-\code{~ (1 + inertia | dyad)}.  Grouping variables must be columns in
-the stacked data: \code{actor1} (sender), \code{actor2} (receiver),
-\code{dyad} (dyad index).}
-
-\item{engine}{[\emph{GLMM}] \code{"lme4"} (default) or \code{"glmmTMB"}.}
-
-\item{alpha}{[\emph{GLMNET}] Elastic-net mixing: \code{1} = lasso
+\item{alpha}{[\emph{Penalised}] Elastic-net mixing: \code{1} = lasso
 (default), \code{0} = ridge.}
 
-\item{nfolds}{[\emph{GLMNET}] CV folds. Default \code{10L}.}
+\item{nfolds}{[\emph{Penalised}] CV folds. Default \code{10L}.}
 
-\item{lambda_select}{[\emph{GLMNET}] Which lambda to use: \code{"1se"}
+\item{lambda_select}{[\emph{Penalised}] Which lambda: \code{"1se"}
 (default) or \code{"min"}.}
 
-\item{k}{[\emph{MIXREM}] Number of mixture components (integer or
-vector). Default \code{2L}. When a vector, returns a
-\code{remstimate_mixrem_list}; use \code{\link{bic_table}} to compare.}
+\item{k}{[\emph{Mixture}] Number of components. Default \code{2L}.}
 
-\item{concomitant}{[\emph{MIXREM}] Optional one-sided formula for the
-concomitant model, e.g. \code{~ actor1_degree}.}
+\item{concomitant}{[\emph{Mixture}] Optional concomitant formula.}
 
-\item{nrep}{[\emph{MIXREM}] Random restarts for flexmix. Default \code{3L}.}
+\item{nrep}{[\emph{Mixture}] Random restarts for flexmix. Default
+\code{3L}.}
+
+\item{method}{[\emph{Deprecated}] Legacy argument for backward
+compatibility. Use \code{approach} instead. Accepts \code{"MLE"} or
+\code{"HMC"} for basic models.}
 
 \item{...}{Further arguments passed to the backend.}
 }
 \value{
-A \code{remstimate} S3 object. The subclass depends on the method:
-  \code{remstimate} (MLE/HMC), \code{remstimate_glmm},
-  \code{remstimate_glmnet}, or \code{remstimate_mixrem}.
-  All objects have a \code{$coefficients} slot and support
-  \code{summary()}, \code{coef()}, \code{diagnostics()}, and \code{plot()}.
+A \code{remstimate} S3 object.
 }
 \description{
-Estimates relational event model parameters. Supports
-  tie-oriented and actor-oriented models via Maximum Likelihood
-  (\code{"MLE"}), Hamiltonian Monte Carlo (\code{"HMC"}), mixed-effects
-  Poisson regression (\code{"GLMM"}), penalised regression (\code{"GLMNET"}),
-  and finite mixture models (\code{"MIXREM"}).
+Fit a relational event model, using a \code{reh} object of class
+\code{remify} and a \code{stats} object of class \code{remstats}
+
+  The model structure is determined by the arguments:
+  \itemize{
+    \item No structure arguments: basic REM (tie or actor, depending on
+      \code{reh}/\code{stats}).
+    \item \code{random}: mixed-effects model (GLMM or Bayesian via brms).
+    \item \code{penalty}: penalized relational event modeling (GLMNET).
+    \item \code{mixture}: finite mixture model (MIXREM / flexmix).
+  }
+
+  The estimation approach is set via \code{approach}:
+  \itemize{
+    \item \code{"frequentist"} (default): MLE, lme4/glmmTMB, glmnet, or
+      flexmix depending on the structure.
+    \item \code{"Bayesian"}: HMC via C++ (basic models) or brms
+      (random-effects models).
+  }
 }
 \examples{
-# ---- MLE, tie-oriented ----
+# ---- Basic MLE ----
 data(tie_data)
-tie_reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
-tie_model <- ~ 1 + remstats::indegreeSender() +
-                   remstats::inertia() + remstats::reciprocity()
-tie_stats <- remstats::remstats(reh = tie_reh, tie_effects = tie_model)
-fit_mle <- remstimate(reh = tie_reh, stats = tie_stats, method = "MLE")
-summary(fit_mle)
-
-# ---- MLE, actor-oriented ----
-data(ao_data)
-ao_reh <- remify::remify(edgelist = ao_data$edgelist, model = "actor")
-ao_stats <- remstats::remstats(reh = ao_reh,
-  sender_effects   = ~ 1 + remstats::indegreeSender(),
-  receiver_effects = ~ remstats::inertia() + remstats::reciprocity())
-fit_ao <- remstimate(reh = ao_reh, stats = ao_stats, method = "MLE")
-summary(fit_ao)
+reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+stats <- remstats::remstats(reh = reh,
+  tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+fit <- remstimate(reh, stats)
+summary(fit)
 
 \donttest{
-# ---- GLMM: sender frailty ----
-data(history, package = "remstats")
-data(info,    package = "remstats")
-colnames(history)[colnames(history) == "setting"] <- "type"
-reh <- remify::remify(edgelist = history[1:100, ], model = "tie",
-                       riskset = "active")
-effects <- ~ inertia(consider_type = FALSE) +
-              indegreeSender(consider_type = FALSE)
-stats <- remstats::tomstats(effects, reh = reh, attr_actors = info,
-                             memory = "decay", memory_value = 1000)
+# ---- Bayesian (C++ HMC) ----
+fit_bayes <- remstimate(reh, stats, approach = "Bayesian")
 
-fit_glmm <- remstimate(reh, stats, method = "GLMM",
-                        random = ~ (1 | actor1) + (1 | actor2))
-fit_glmm
-lme4::ranef(fit_glmm$backend_fit)
+# ---- Random effects (frequentist) ----
+fit_glmm <- remstimate(reh, stats,
+  random = ~ (1 | actor1) + (1 | actor2))
 
-# ---- GLMNET: lasso ----
-fit_lasso <- remstimate(reh, stats, method = "GLMNET", alpha = 1)
-fit_lasso
-plot(fit_lasso, reh, stats = stats, which = 6)   # regularisation path
+# ---- Random effects (Bayesian via brms) ----
+fit_brms <- remstimate(reh, stats,
+  random = ~ (1 | actor1) + (1 | actor2),
+  approach = "Bayesian")
 
-# ---- MIXREM: two-component mixture ----
-fit_mix <- remstimate(reh, stats, method = "MIXREM",
-                       random = ~ (1 + inertia | dyad), k = 2)
-fit_mix
+# ---- Penalised (lasso) ----
+fit_lasso <- remstimate(reh, stats, penalty = list(alpha = 1))
 
-# compare k = 2:4 via BIC
-fits <- remstimate(reh, stats, method = "MIXREM",
-                   random = ~ (1 + inertia | dyad), k = 2:4)
-bic_table(fits)
+# ---- Mixture ----
+fit_mix <- remstimate(reh, stats,
+  mixture = list(k = 2, random = ~ (1 + inertia | dyad)))
 }
 
 }

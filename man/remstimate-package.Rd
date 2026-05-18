@@ -5,7 +5,7 @@
 \alias{remstimate-package}
 \title{remstimate: Optimization Frameworks for Tie-Oriented and Actor-Oriented Relational Event Models}
 \description{
-A comprehensive set of tools designed for optimizing likelihood within a tie-oriented (Butts, C., 2008, \doi{10.1111/j.1467-9531.2008.00203.x}) or an actor-oriented modelling framework (Stadtfeld, C., & Block, P., 2017, \doi{10.15195/v4.a14}) in relational event networks. The package accommodates both frequentist and Bayesian approaches. Maximum Likelihood Optimization (MLE) is supported. Bayesian estimation is done via Hamiltonian Monte Carlo (HMC).
+Tools for fitting, diagnozing, and analyzing relational event models. There is support for tie-oriented modeling (Butts, C., 2008, \doi{10.1111/j.1467-9531.2008.00203.x}) and an actor-oriented modeling framework (Stadtfeld, C., & Block, P., 2017, \doi{10.15195/v4.a14}). The package accommodates both frequentist and Bayesian approaches. There is support for modeling of events with a duration, for random effects models (e.g., frailty relational event models), discrete mixture models (e.g., dyadic latent class modeling), and penalized approaches (e.g., using the lasso).
 }
 \seealso{
 Useful links:
@@ -20,9 +20,9 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Joris Mulder \email{j.mulder3@tilburguniversity.edu}
   \item Rumana Lakdawala
   \item Fabio Generoso Vieira
-  \item Joris Mulder \email{j.mulder3@tilburguniversity.edu}
 }
 
 Other contributors:

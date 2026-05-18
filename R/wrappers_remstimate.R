@@ -21,39 +21,19 @@
 #' @param ... Additional arguments passed to \code{remstimate}.
 #' @return A \code{remstimate_mixrem} object.
 #' @references Lakdawala, Leenders, and Mulder (2025). Not all bonds are created
-#' equal: Dyadic latent class models for relational event data. \emph{arXiv preprint}.
-#' \doi{10.48550/arXiv.2501.04418}.
+#' equal: Dyadic latent class models for relational event data. \emph{arXiv preprint (2501.04418)}.
 #' @examples
 #' \donttest{
 #' # Tie-oriented frailty
-#' reh <- remify::remify(edgelist, model = "tie")
-#' stats <- remstats::remstats(reh, tie_effects = ~ inertia() + reciprocity())
-#' fit <- frailty_rem(reh, stats)
-#' summary(fit)
-#' lme4::ranef(fit$backend_fit)
-#'
-#' # Actor-oriented frailty
-#' reh_ao <- remify::remify(edgelist, model = "actor")
-#' stats_ao <- remstats::remstats(reh_ao,
-#'   sender_effects = ~ 1 + indegreeSender(),
-#'   receiver_effects = ~ inertia())
-#' fit_ao <- frailty_rem(reh_ao, stats_ao)
-#'
-#' # Duration model frailty
-#' reh_dur <- remify::remify(edgelist, duration = TRUE)
-#' stats_dur <- remstats::remstats(reh_dur,
-#'   start_effects = ~ inertia(), end_effects = ~ inertia())
-#' fit_dur <- frailty_rem(reh_dur, stats_dur)
+#' # EXAMPLES
 #' }
 #'
 #' @export
 dlcrem <- function(reh, stats, k = 2L, nrep = 3L, ...) {
-  sn <- .get_durem_or_standard_stat_names(stats)
   random <- stats::as.formula(
-    paste0("~ (1 + ", paste(sn, collapse = " + "), " | dyad)")
+    paste0("~ (1 | dyad)")
   )
-  remstimate(reh, stats, method = "MIXREM", random = random,
-             k = k, nrep = nrep, ...)
+  remstimate(reh, stats, mixture = list(k = k, random = random), nrep = nrep, ...)
 }
 
 
@@ -96,9 +76,12 @@ dlcrem <- function(reh, stats, k = 2L, nrep = 3L, ...) {
 #' @param reh A \code{remify} or \code{remify_durem} object.
 #' @param stats A \code{remstats} object (\code{tomstats}, \code{aomstats},
 #'   or \code{remstats_durem}).
-#' @param engine Backend for interval models: \code{"lme4"} (default) or
+#' @param approach Either \code{frequentist} or \code{Bayesian} estimation,
+#' is supported.
+#' @param engine For \code{frequentist}, the backend for interval models:
+#' \code{"lme4"} (default) or
 #'   \code{"glmmTMB"}. Ignored for ordinal models, which always use
-#'   \code{coxme}.
+#'   \code{coxme}. For \code{Bayesian} estimation, \code{brms} is always used.
 #' @param ... Additional arguments passed to \code{\link{remstimate}}.
 #'
 #' @return A \code{remstimate_glmm} object. See \code{\link{remstimate}}
@@ -131,15 +114,15 @@ dlcrem <- function(reh, stats, k = 2L, nrep = 3L, ...) {
 #' }
 #'
 #' @export
-frailty_rem <- function(reh, stats, engine = "lme4", ...) {
+frailty_rem <- function(reh, stats, approach = c("frequentist","Bayesian"), engine = "lme4", ...) {
   is_durem    <- inherits(reh, "remify_durem")
   is_actor    <- inherits(stats, "aomstats")
   ext_by_type <- isTRUE(reh$meta$with_type_riskset)
 
   if (is_actor) {
     random <- list(
-      sender   = ~ (1 | actor1),
-      receiver = ~ (1 | actor2)
+      sender   = ~ (1 | actor),
+      receiver = ~ (1 | actor)
     )
   } else if (is_durem && ext_by_type) {
     random <- ~ (1 | actor1:process:type) + (1 | actor2:process:type)
@@ -151,7 +134,7 @@ frailty_rem <- function(reh, stats, engine = "lme4", ...) {
     random <- ~ (1 | actor1) + (1 | actor2)
   }
 
-  remstimate(reh, stats, method = "GLMM", random = random,
+  remstimate(reh, stats, approach = approach, random = random,
              engine = engine, ...)
 }
 

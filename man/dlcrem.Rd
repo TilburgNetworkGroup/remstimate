@@ -27,29 +27,11 @@ each with class-specific coefficients.
 \examples{
 \donttest{
 # Tie-oriented frailty
-reh <- remify::remify(edgelist, model = "tie")
-stats <- remstats::remstats(reh, tie_effects = ~ inertia() + reciprocity())
-fit <- frailty_rem(reh, stats)
-summary(fit)
-lme4::ranef(fit$backend_fit)
-
-# Actor-oriented frailty
-reh_ao <- remify::remify(edgelist, model = "actor")
-stats_ao <- remstats::remstats(reh_ao,
-  sender_effects = ~ 1 + indegreeSender(),
-  receiver_effects = ~ inertia())
-fit_ao <- frailty_rem(reh_ao, stats_ao)
-
-# Duration model frailty
-reh_dur <- remify::remify(edgelist, duration = TRUE)
-stats_dur <- remstats::remstats(reh_dur,
-  start_effects = ~ inertia(), end_effects = ~ inertia())
-fit_dur <- frailty_rem(reh_dur, stats_dur)
+# EXAMPLES
 }
 
 }
 \references{
 Lakdawala, Leenders, and Mulder (2025). Not all bonds are created
-equal: Dyadic latent class models for relational event data. \emph{arXiv preprint}.
-\doi{10.48550/arXiv.2501.04418}.
+equal: Dyadic latent class models for relational event data. \emph{arXiv preprint (2501.04418)}.
 }
