@@ -43,10 +43,10 @@
     fit_s <- fit_r <- NULL
     if (!is.null(s$df$sender))
       fit_s <- .glmm_fit_one(s$df$sender, s$stat_names$sender_model,
-                              s$ordinal, random, engine, verbose, ...)
+                             s$ordinal, random$sender %||% random, engine, verbose, ...)
     if (!is.null(s$df$receiver))
       fit_r <- .glmm_fit_one(s$df$receiver, s$stat_names$receiver_model,
-                              s$ordinal, random, engine, verbose, ...)
+                             s$ordinal, random$receiver %||% random, engine, verbose, ...)
 
     .remstimate_wrap(
       coefficients = list(sender_model   = .glmm_fixef(fit_s, engine),
@@ -75,10 +75,26 @@
       " + strata(time_index)"
     ))
     coxme::coxme(formula_obj, data = df)
-  } else if (engine == "lme4") {
-    lme4::glmer(fml, family = familie, data = df, ...)
   } else {
-    glmmTMB::glmmTMB(fml, family = familie, data = df, ...)
+    # Build formula: obs ~ stat1 + stat2 + ... + (1 | actor1) + offset(log_interevent)
+    fixed_part <- paste(stat_names, collapse = " + ")
+    rand_part  <- deparse(random[[2]])
+    if (!ordinal && "log_interevent" %in% names(df)) {
+      fml <- stats::as.formula(paste0(
+        "obs ~ ", fixed_part, " + ", rand_part, " + offset(log_interevent)"
+      ))
+    } else {
+      fml <- stats::as.formula(paste0(
+        "obs ~ ", fixed_part, " + ", rand_part
+      ))
+    }
+    familie <- if (ordinal) stats::binomial() else stats::poisson()
+
+    if (engine == "lme4") {
+      lme4::glmer(fml, family = familie, data = df, ...)
+    } else {
+      glmmTMB::glmmTMB(fml, family = familie, data = df, ...)
+    }
   }
 }
 
