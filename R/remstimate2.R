@@ -137,12 +137,12 @@ remstimate <- function(reh,
   # ── Backward compatibility: method = "MLE" / "HMC" ────────────────────────
   if (!is.null(method)) {
     method <- toupper(method)
-    if (method %in% c("MLE", "GLM")) {
+    if (method %in% c("MLE")) {
       approach <- "frequentist"
     } else if (method == "HMC") {
       approach <- "Bayesian"
     } else {
-      stop("'method' is deprecated for extended models. ",
+      stop("'method' is deprecated. ",
            "Use 'approach' with 'random', 'penalty', or 'mixture'.",
            call. = FALSE)
     }
@@ -264,9 +264,9 @@ remstimate <- function(reh,
   }
 
   if (inherits(stats, "aomstats") && model == "tie")
-    stop("'stats' is an 'aomstats' object but 'reh' is a tie-oriented model.")
+    stop("'stats' is an 'aomstats' object but 'reh' is tie-oriented")
   if (inherits(stats, c("tomstats", "tomstats_sampled")) && model == "actor")
-    stop("'stats' is a 'tomstats' object but 'reh' is an actor-oriented model.")
+    stop("'stats' is a 'tomstats' object but 'reh' is actor-oriented.")
   if (!model %in% c("tie", "actor"))
     stop("C++ backends currently support 'tie' and 'actor' models only.")
   if (model == "actor" && !directed)

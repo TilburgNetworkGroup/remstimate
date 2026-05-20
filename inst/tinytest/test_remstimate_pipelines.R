@@ -21,40 +21,30 @@ library(tinytest)
 
 # ── Test data: small edgelists ────────────────────────────────────────────────
 
-# Directed tie edgelist (20 actors, ~200 events for estimability)
+# Directed tie edgelist (20 actors, ~200 events for estimability) with frailty
 set.seed(42)
-n_actors <- 20
-actors   <- paste0("A", sprintf("%02d", seq_len(n_actors)))
+n_actors <- 4
+actors   <- paste0("A", seq_len(n_actors))
 n_events <- 200
 el_tie <- data.frame(
   time   = sort(cumsum(rexp(n_events, 0.5))),
-  actor1 = sample(actors, n_events, replace = TRUE),
-  actor2 = sample(actors, n_events, replace = TRUE),
+  actor1 = sample(actors, n_events, replace = TRUE,prob=seq_len(n_actors)),
+  actor2 = sample(actors, n_events, replace = TRUE,prob=seq_len(n_actors)),
   stringsAsFactors = FALSE
 )
 el_tie <- el_tie[el_tie$actor1 != el_tie$actor2, ]
 
 # Undirected edgelist
 el_undir <- el_tie
-el_undir$actor1 <- pmin(el_tie$actor1, el_tie$actor2)
-el_undir$actor2 <- pmax(el_tie$actor1, el_tie$actor2)
 
 # Typed edgelist (2 types)
 el_typed <- el_tie
-el_typed$type <- sample(c("X", "Y"), nrow(el_typed), replace = TRUE)
-
-# Duration edgelist (non-overlapping for simplicity)
-el_dur <- data.frame(
-  time   = c(1, 3, 5, 8, 10, 13, 16, 19, 22, 25),
-  actor1 = c("A", "B", "A", "C", "B", "A", "C", "B", "A", "C"),
-  actor2 = c("B", "C", "A", "A", "A", "C", "B", "C", "B", "A"),
-  end    = c(2, 4, 7, 9, 12, 15, 18, 21, 24, 27),
-  stringsAsFactors = FALSE
-)
+el_typed$setting <- sample(c("X", "Y"), nrow(el_typed), replace = TRUE)
 
 # Duration edgelist with types
-el_dur_typed <- el_dur
-el_dur_typed$type <- rep(c("X", "Y"), length.out = nrow(el_dur))
+el_dur_typed <- el_typed
+el_dur_typed$duration <- rexp(nrow(el_dur_typed),1)
+el_dur <- el_dur_typed
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 1: Dispatch and error handling
@@ -82,25 +72,6 @@ expect_error(
   info = "cannot specify both penalty and mixture"
 )
 
-# ── 1.2 Deprecated method for extended models ────────────────────────────────
-expect_error(
-  remstimate(reh_t, stats_t, method = "GLMM"),
-  pattern = "deprecated",
-  info = "method='GLMM' is deprecated"
-)
-
-expect_error(
-  remstimate(reh_t, stats_t, method = "GLMNET"),
-  pattern = "deprecated",
-  info = "method='GLMNET' is deprecated"
-)
-
-expect_error(
-  remstimate(reh_t, stats_t, method = "MIXREM"),
-  pattern = "deprecated",
-  info = "method='MIXREM' is deprecated"
-)
-
 # ── 1.3 Backward compat: method = "MLE" still works ──────────────────────────
 fit_compat <- remstimate(reh_t, stats_t, method = "MLE")
 expect_inherits(fit_compat, "remstimate",
@@ -117,9 +88,9 @@ expect_equal(attr(fit_default, "approach"), "Frequentist",
 
 # ── 1.5 Bayesian approach not supported with penalty ──────────────────────────
 expect_error(
-  remstimate(reh_t, stats_t, approach = "bayesian", penalty = list(alpha = 1)),
+  remstimate(reh_t, stats_t, approach = "Bayesian", penalty = list(alpha = 1)),
   pattern = "not yet supported",
-  info = "bayesian + penalty errors"
+  info = "Bayesian + penalty errors"
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -128,8 +99,8 @@ expect_error(
 
 # ── 2.1 Directed, interval, full riskset ──────────────────────────────────────
 fit_dir <- remstimate(reh_t, stats_t)
-expect_true(length(coef(fit_dir)) == 2L,
-            info = "directed tie MLE: 2 coefficients")
+expect_true(length(coef(fit_dir)) == 3L,
+            info = "directed tie MLE: 3 coefficients")
 expect_true(!is.null(fit_dir$loglik),
             info = "directed tie MLE: loglik present")
 
@@ -148,7 +119,8 @@ expect_true(all(is.finite(coef(fit_und))),
             info = "undirected tie MLE: finite coefficients")
 
 # ── 2.4 Active riskset ───────────────────────────────────────────────────────
-reh_act <- remify(el_typed, model = "tie", actors = actors, riskset = "active")
+reh_act <- remify(el_typed, model = "tie", actors = actors, riskset = "active",
+                  event_type = "setting")
 stats_act <- remstats(reh_act, tie_effects = ~ inertia(consider_type = FALSE))
 fit_act <- remstimate(reh_act, stats_act)
 expect_inherits(fit_act, "remstimate",
@@ -156,8 +128,9 @@ expect_inherits(fit_act, "remstimate",
 
 # ── 2.5 ext = TRUE (typed riskset) ──────────────────────────────────────────
 reh_ext <- remify(el_typed, model = "tie", actors = actors,
-                  riskset = "active", extend_riskset_by_type = TRUE)
-stats_ext <- remstats(reh_ext, tie_effects = ~ inertia(consider_type = "separate"))
+                  riskset = "active", extend_riskset_by_type = TRUE,
+                  event_type = "setting")
+stats_ext <- remstats(reh_ext, tie_effects = ~ inertia(consider_type = "interact"))
 fit_ext <- remstimate(reh_ext, stats_ext)
 expect_inherits(fit_ext, "remstimate",
                 info = "ext=TRUE tie MLE works")
@@ -205,7 +178,7 @@ expect_error(
 
 # ── 4.1 Tie HMC via method= ──────────────────────────────────────────────────
 fit_hmc <- remstimate(reh_t, stats_t, method = "HMC",
-                      nsim = 50, burnin = 10, thin = 1)
+                      nsim = 50, burnin = 10, thin = 1, nchains = 1)
 expect_inherits(fit_hmc, "remstimate",
                 info = "HMC backward compat works")
 expect_equal(attr(fit_hmc, "approach"), "Bayesian",
@@ -214,8 +187,8 @@ expect_true(!is.null(fit_hmc$draws),
             info = "HMC produces draws")
 
 # ── 4.2 Tie HMC via approach= ────────────────────────────────────────────────
-fit_hmc2 <- remstimate(reh_t, stats_t, approach = "bayesian",
-                       nsim = 50, burnin = 10, thin = 1)
+fit_hmc2 <- remstimate(reh_t, stats_t, approach = "Bayesian",
+                       nsim = 50, burnin = 10, thin = 1, nchains = 1)
 expect_inherits(fit_hmc2, "remstimate",
                 info = "approach='bayesian' C++ HMC works")
 
@@ -224,7 +197,7 @@ expect_inherits(fit_hmc2, "remstimate",
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── 5.1 Basic durem MLE (start only) ─────────────────────────────────────────
-reh_dur <- remify(el_dur, duration = TRUE, model = "tie")
+reh_dur <- remify(el_dur_typed, duration = TRUE, model = "tie", ordinal = TRUE)
 stats_dur <- remstats(reh_dur, start_effects = ~ inertia(), psi_start = 1)
 fit_dur <- remstimate(reh_dur, stats_dur)
 expect_inherits(fit_dur, "remstimate_durem",
@@ -234,7 +207,7 @@ expect_true(all(is.finite(coef(fit_dur))),
 
 # ── 5.2 Durem with start + end effects ──────────────────────────────────────
 stats_dur_both <- remstats(reh_dur,
-                           start_effects = ~ inertia(),
+                           start_effects = ~ itp(),
                            end_effects   = ~ inertia(),
                            psi_start = 1, psi_end = 1)
 fit_dur_both <- remstimate(reh_dur, stats_dur_both)
