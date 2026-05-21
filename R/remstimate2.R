@@ -156,8 +156,10 @@ remstimate <- function(reh,
   has_penalty <- !is.null(penalty)
   has_mixture <- !is.null(mixture)
 
-  if ((has_random + has_penalty + has_mixture) > 1L)
-    stop("Specify at most one of: random, penalty, mixture.", call. = FALSE)
+  if (has_mixture && (has_random || has_penalty))
+    stop("'mixture' cannot be combined with 'random' or 'penalty'.", call. = FALSE)
+  if (has_random && has_penalty && approach == "frequentist")
+    stop("Combine 'random' and 'penalty' only with approach = 'Bayesian'.", call. = FALSE)
 
   # ── WAIC validation ────────────────────────────────────────────────────────
   if (!is.logical(WAIC) || length(WAIC) != 1)
@@ -184,13 +186,28 @@ remstimate <- function(reh,
   }
 
   # ── Penalised dispatch ─────────────────────────────────────────────────────
+  # In the penalty dispatch section of remstimate():
   if (has_penalty) {
-    if (approach == "Bayesian")
-      stop("Bayesian penalised estimation not yet supported.", call. = FALSE)
-    pen_alpha <- penalty$alpha %||% alpha
-    return(.remstimate_glmnet(reh, stats, alpha = pen_alpha,
-                              nfolds = nfolds,
-                              lambda_select = match.arg(lambda_select), ...))
+    if (approach == "Bayesian") {
+      shrinkage <- penalty$prior %||% "horseshoe"
+      shrinkage_prior <- switch(shrinkage,
+                                lasso     = brms::prior(lasso(), class = "b"),
+                                horseshoe = brms::prior(horseshoe(), class = "b"),
+                                r2d2      = brms::prior(R2D2(), class = "b"),
+                                stop("Unknown shrinkage prior: '", shrinkage, "'. ",
+                                     "Choose 'lasso', 'horseshoe', or 'r2d2'.", call. = FALSE)
+      )
+      return(.remstimate_brms(reh, stats, random = random,
+                              prior = shrinkage_prior, nsim = nsim,
+                              nchains = nchains, burnin = burnin,
+                              thin = thin, seed = seed, ...))
+    } else {
+      # frequentist: glmnet as before
+      pen_alpha <- penalty$alpha %||% alpha
+      return(.remstimate_glmnet(reh, stats, alpha = pen_alpha,
+                                nfolds = nfolds,
+                                lambda_select = match.arg(lambda_select), ...))
+    }
   }
 
   # ── Random effects dispatch ────────────────────────────────────────────────
@@ -925,9 +942,9 @@ remstimate <- function(reh,
 # ══════════════════════════════════════════════════════════════════════════════
 
 .remstimate_brms <- function(reh, stats, random,
-                              prior = NULL, nsim = 2000L,
-                              nchains = 4L, burnin = 1000L,
-                              thin = 1L, seed = NULL, ...) {
+                             prior = NULL, nsim = 2000L,
+                             nchains = 4L, burnin = 1000L,
+                             thin = 1L, seed = NULL, ...) {
   if (!requireNamespace("brms", quietly = TRUE))
     stop("install.packages('brms')")
 
@@ -942,15 +959,16 @@ remstimate <- function(reh,
     fml <- stats::as.formula(paste0(
       "obs ~ ", fixed_part, " + ", rand_part, " + offset(log_interevent)"
     ))
-    fam <- brms::poisson()
+    fam <- poisson()
   } else if (s$ordinal) {
     fml <- stats::as.formula(paste0("obs ~ ", fixed_part, " + ", rand_part))
     fam <- brms::bernoulli()
   } else {
     fml <- stats::as.formula(paste0("obs ~ ", fixed_part, " + ", rand_part))
-    fam <- brms::poisson()
+    fam <- poisson()
   }
 
+  if (is.null(seed)) seed <- NA
   fit <- brms::brm(
     formula = fml, family = fam, data = df,
     iter = nsim + burnin, warmup = burnin, chains = nchains,

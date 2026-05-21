@@ -55,21 +55,9 @@ reh_t <- remify(el_tie, model = "tie", actors = actors)
 stats_t <- remstats(reh_t, tie_effects = ~ inertia() + reciprocity())
 
 expect_error(
-  remstimate(reh_t, stats_t, random = ~ (1 | actor1), penalty = list(alpha = 1)),
-  pattern = "at most one",
-  info = "cannot specify both random and penalty"
-)
-
-expect_error(
   remstimate(reh_t, stats_t, random = ~ (1 | actor1), mixture = list(k = 2)),
-  pattern = "at most one",
-  info = "cannot specify both random and mixture"
-)
-
-expect_error(
-  remstimate(reh_t, stats_t, penalty = list(alpha = 1), mixture = list(k = 2)),
-  pattern = "at most one",
-  info = "cannot specify both penalty and mixture"
+  pattern = "cannot be combined",
+  info = "'mixture' cannot be combined with 'random' or 'penalty'."
 )
 
 # ── 1.3 Backward compat: method = "MLE" still works ──────────────────────────
@@ -85,13 +73,6 @@ expect_inherits(fit_default, "remstimate",
                 info = "default call (no approach) works")
 expect_equal(attr(fit_default, "approach"), "Frequentist",
              info = "default approach is Frequentist")
-
-# ── 1.5 Bayesian approach not supported with penalty ──────────────────────────
-expect_error(
-  remstimate(reh_t, stats_t, approach = "Bayesian", penalty = list(alpha = 1)),
-  pattern = "not yet supported",
-  info = "Bayesian + penalty errors"
-)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 2: Basic MLE — tie model variations
@@ -230,7 +211,7 @@ expect_inherits(fit_dur_de, "remstimate_durem",
 
 # ── 5.5 Durem Bayesian (brms) ────────────────────────────────────────────────
 if (requireNamespace("brms", quietly = TRUE)) {
-  fit_dur_bayes <- remstimate(reh_dur, stats_dur, approach = "bayesian",
+  fit_dur_bayes <- remstimate(reh_dur, stats_dur, approach = "Bayesian",
                               nsim = 50, burnin = 10, nchains = 1)
   expect_inherits(fit_dur_bayes, "remstimate_durem",
                   info = "durem bayesian (brms) works")
