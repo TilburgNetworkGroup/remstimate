@@ -16,7 +16,7 @@ remstimate(
   seed = NULL,
   ncores = 1L,
   nsim = 2000L,
-  nchains = 4L,
+  nchains = 2L,
   burnin = 1000L,
   thin = 1L,
   init = NULL,
@@ -43,22 +43,22 @@ remstimate(
 \item{approach}{\code{"frequentist"} (default) or \code{"Bayesian"}.}
 
 \item{random}{One-sided formula for random effects, e.g.
-\code{~ (1 | actor1) + (1 | actor2)}. When provided, uses GLMM
-(frequentist) or brms (Bayesian). Also used for MIXREM clustering.}
+\code{~ (1 | actor1) + (1 | actor2)}.}
 
 \item{penalty}{List with penalisation settings, e.g.
 \code{list(alpha = 1)} for lasso. When provided, uses glmnet.}
 
 \item{mixture}{List with mixture settings, e.g.
-\code{list(k = 2, random = ~ (1 | dyad))}. When provided, uses flexmix.}
+\code{list(k = 2, random = ~ (1 | dyad))}, which would fit the dyadic latent
+class model (Lakdawala et al., 2026). When provided, uses flexmix.}
 
-\item{engine}{Backend engine. For GLMM: \code{"lme4"} (default),
-\code{"glmmTMB"}, or \code{"brms"}. For penalised: \code{"glmnet"}.
+\item{engine}{Backend engine. For GLMM: \code{"lme4"} (default) or
+\code{"glmmTMB"}. For penalised: \code{"glmnet"} or \code{"shrinkem"}.
 Ordinal models automatically use \code{coxme}.
 Set to \code{"auto"} (default) for automatic selection.}
 
 \item{prior}{[\emph{Bayesian}] List with \code{mean} and \code{vcov};
-defaults to standard normal (basic) or brms defaults (random effects).}
+defaults to standard normal (basic)}
 
 \item{seed}{Random seed.}
 
@@ -116,8 +116,8 @@ Fit a relational event model, using a \code{reh} object of class
   \itemize{
     \item No structure arguments: basic REM (tie or actor, depending on
       \code{reh}/\code{stats}).
-    \item \code{random}: mixed-effects model (GLMM or Bayesian via brms).
-    \item \code{penalty}: penalized relational event modeling (GLMNET).
+    \item \code{random}: mixed-effects model (GLMM).
+    \item \code{penalty}: penalized relational event modeling (GLMNET or Bayesian via shrinkem).
     \item \code{mixture}: finite mixture model (MIXREM / flexmix).
   }
 
@@ -125,8 +125,8 @@ Fit a relational event model, using a \code{reh} object of class
   \itemize{
     \item \code{"frequentist"} (default): MLE, lme4/glmmTMB, glmnet, or
       flexmix depending on the structure.
-    \item \code{"Bayesian"}: HMC via C++ (basic models) or brms
-      (random-effects models).
+    \item \code{"Bayesian"}: HMC via C++ (basic models) or shrinkem
+      (penalized models).
   }
 }
 \examples{
@@ -146,13 +146,11 @@ fit_bayes <- remstimate(reh, stats, approach = "Bayesian")
 fit_glmm <- remstimate(reh, stats,
   random = ~ (1 | actor1) + (1 | actor2))
 
-# ---- Random effects (Bayesian via brms) ----
-fit_brms <- remstimate(reh, stats,
-  random = ~ (1 | actor1) + (1 | actor2),
-  approach = "Bayesian")
-
 # ---- Penalised (lasso) ----
 fit_lasso <- remstimate(reh, stats, penalty = list(alpha = 1))
+
+#' # ---- Penalised using Bayesian horseshoe (shrinkem) ----
+fit_horseshoe <- remstimate(reh, stats, penalty = list(prior = "horseshoe"))
 
 # ---- Mixture ----
 fit_mix <- remstimate(reh, stats,

@@ -50,7 +50,12 @@ Suggests:
     rmarkdown,
     tinytest,
     survival,
-    coxme
+    coxme,
+    glmnet,
+    lme4,
+    glmmTMB,
+    flexmix,
+    shrinkem (>= 0.3.0)
 LinkingTo:
     Rcpp,
     RcppArmadillo,

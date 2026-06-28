@@ -2,6 +2,25 @@
 
 .remstimate_make_stack <- function(reh, stats, add_actors = TRUE) {
 
+  # ── Pre-stacked pass-through (idempotent) ──────────────────────────────────
+  if (inherits(stats, "remstats_stacked")) {
+    if (!isTRUE(stats$model == "actor")) {
+      df <- stats$remstats_stack
+      if (is.null(df$samp_offset))
+        df$samp_offset <- if ("weight" %in% names(df)) log(df$weight) else 0
+      return(list(df = df, stat_names = stats$stat_names,
+                  ordinal = isTRUE(stats$ordinal), model = "tie"))
+    }
+    df_s <- stats$sender_stack; df_r <- stats$receiver_stack
+    if (!is.null(df_s) && is.null(df_s$samp_offset)) df_s$samp_offset <- 0
+    if (!is.null(df_r) && is.null(df_r$samp_offset)) df_r$samp_offset <- 0
+    sn_s <- stats$sender_stat_names;   if (is.null(sn_s)) sn_s <- character(0)
+    sn_r <- stats$receiver_stat_names; if (is.null(sn_r)) sn_r <- character(0)
+    return(list(df = list(sender = df_s, receiver = df_r),
+                stat_names = list(sender_model = sn_s, receiver_model = sn_r),
+                ordinal = isTRUE(stats$ordinal), model = "actor"))
+  }
+
   model     <- if (inherits(stats, "aomstats")) "actor" else "tie"
   stacking_stats <- remstats::stack_stats(stats, reh, add_actors = add_actors)
 
@@ -16,7 +35,7 @@
       df$samp_offset <- rep(0, nrow(df))
     }
     if (inherits(stats, "remstats_durem")) {
-      stat_names <- c(dimnames(stats$start_stats)[[3]],dimnames(stats$end_stats)[[3]])
+      stat_names <- stats$stacked$stat_names
     }else{
       stat_names <- dimnames(stats)[[3]]
     }
@@ -51,10 +70,13 @@
 
 # model matrix for glmnet
 .remstimate_model_matrix <- function(df, stat_names, ordinal) {
+  off <- df$samp_offset
+  if (!ordinal && !is.null(df$log_interevent))
+    off <- off + df$log_interevent
   list(
     X       = as.matrix(df[, stat_names, drop = FALSE]),
     y       = df$obs,
-    offset  = if (!ordinal) df$log_interevent + df$samp_offset else df$samp_offset,
+    offset  = off,
     weights = if ("weight" %in% names(df)) df$weight else NULL
   )
 }

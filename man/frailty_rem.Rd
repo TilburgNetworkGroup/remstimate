@@ -24,7 +24,7 @@ is supported.}
 \item{engine}{For \code{frequentist}, the backend for interval models:
 \code{"lme4"} (default) or
   \code{"glmmTMB"}. Ignored for ordinal models, which always use
-  \code{coxme}. For \code{Bayesian} estimation, \code{brms} is always used.}
+  \code{coxme}. Bayesian frailty is not offered this version}
 
 \item{...}{Additional arguments passed to \code{\link{remstimate}}.}
 }

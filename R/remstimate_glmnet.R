@@ -64,6 +64,10 @@
 
 .glmnet_fit_one <- function(df, stat_names, ordinal, alpha, nfolds, lambda_select, ...) {
   mm     <- .remstimate_model_matrix(df, stat_names, ordinal)
+  if (ncol(mm$X) < 2L)
+    stop("glmnet needs >= 2 statistics; this model has only: ",
+         paste(colnames(mm$X), collapse = ", "),
+         ". For a model with a single effect, do not use 'penalty'.", call. = FALSE)
   cv_fit <- glmnet::cv.glmnet(mm$X, mm$y,
                                family  = if (!ordinal) "poisson" else "binomial",
                                alpha   = alpha,
@@ -117,6 +121,12 @@ coef.remstimate_glmnet <- function(object, ...) object$coefficients
 #' @method diagnostics remstimate_glmnet
 diagnostics.remstimate_glmnet <- function(object, reh = NULL, stats = NULL,
                                            top_pct = 0.05, ...) {
+  if (attr(object,"model") == "actor") {
+    warning("Diagnostics for actor-oriented GLMNEt not yet supported.",
+            call. = FALSE)
+    return(invisible(NULL))
+  }
+
   df <- object$stacked_data
   if (is.null(df)) stop("No stacked data stored in fit object.", call. = FALSE)
 

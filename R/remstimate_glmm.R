@@ -12,7 +12,10 @@
   s <- .remstimate_make_stack(reh, stats, add_actors = TRUE)
 
   # Ordinal models need coxme (conditional logit + random effects)
-  if (s$ordinal) {
+  if (s$ordinal && engine != "coxme") {
+    message(sprintf(
+      "Ordinal model: '%s' cannot fit conditional logit with random effects; using 'coxme' instead.",
+      engine))
     engine <- "coxme"
   }
 
@@ -68,10 +71,19 @@
     if (!requireNamespace("coxme", quietly = TRUE))
       stop("install.packages('coxme')")
     df$.surv_time <- rep(1, nrow(df))
+    # coxme cannot parse `a:b` interaction grouping; build real factor columns
+    rterms <- paste(deparse(random[[2]]), collapse = " ")
+    grp <- trimws(sub("\\|", "", regmatches(rterms, gregexpr("\\|[^)]+", rterms))[[1]]))
+    for (g in grp) if (grepl(":", g, fixed = TRUE)) {
+      parts   <- trimws(strsplit(g, ":", fixed = TRUE)[[1]])
+      newname <- paste(parts, collapse = "_")
+      df[[newname]] <- interaction(df[parts], drop = TRUE)
+      rterms <- gsub(g, newname, rterms, fixed = TRUE)
+    }
     formula_obj <- stats::as.formula(paste0(
       "survival::Surv(.surv_time, obs) ~ ",
       paste(stat_names, collapse = " + "),
-      " + ", deparse(random[[2]]),
+      " + ", rterms,
       " + strata(time_index)"
     ))
     coxme::coxme(formula_obj, data = df)

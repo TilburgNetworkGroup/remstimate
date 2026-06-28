@@ -81,7 +81,7 @@ dlcrem <- function(reh, stats, k = 2L, nrep = 3L, ...) {
 #' @param engine For \code{frequentist}, the backend for interval models:
 #' \code{"lme4"} (default) or
 #'   \code{"glmmTMB"}. Ignored for ordinal models, which always use
-#'   \code{coxme}. For \code{Bayesian} estimation, \code{brms} is always used.
+#'   \code{coxme}. Bayesian frailty is not offered this version
 #' @param ... Additional arguments passed to \code{\link{remstimate}}.
 #'
 #' @return A \code{remstimate_glmm} object. See \code{\link{remstimate}}
@@ -114,24 +114,30 @@ dlcrem <- function(reh, stats, k = 2L, nrep = 3L, ...) {
 #' }
 #'
 #' @export
-frailty_rem <- function(reh, stats, approach = c("frequentist","Bayesian"), engine = "lme4", ...) {
+frailty_rem <- function(reh, stats, approach = c("frequentist","Bayesian"),
+                        engine = "lme4", ...) {
   is_durem    <- inherits(reh, "remify_durem")
   is_actor    <- inherits(stats, "aomstats")
   ext_by_type <- isTRUE(reh$meta$with_type_riskset)
 
+  # Split start/end random intercepts only when BOTH processes are in the
+  # stack. A start-only or end-only model has a single process level, so
+  # `:process` is degenerate (collapses to actorN).
+  split_process <- FALSE
+  if (is_durem) {
+    proc <- stats$stacked$remstats_stack$process
+    split_process <- !is.null(proc) && length(unique(proc)) > 1L
+  }
+
   if (is_actor) {
-    random <- list(
-      sender   = ~ (1 | actor),
-      receiver = ~ (1 | actor)
-    )
-  } else if (is_durem && ext_by_type) {
-    random <- ~ (1 | actor1:process:type) + (1 | actor2:process:type)
-  } else if (is_durem) {
-    random <- ~ (1 | actor1:process) + (1 | actor2:process)
-  } else if (ext_by_type) {
-    random <- ~ (1 | actor1:type) + (1 | actor2:type)
+    random <- list(sender = ~ (1 | actor), receiver = ~ (1 | actor))
   } else {
-    random <- ~ (1 | actor1) + (1 | actor2)
+    proc_tag <- if (is_durem && split_process) ":process" else ""
+    type_tag <- if (ext_by_type) ":type" else ""
+    random <- stats::as.formula(sprintf(
+      "~ (1 | actor1%s%s) + (1 | actor2%s%s)",
+      proc_tag, type_tag, proc_tag, type_tag
+    ))
   }
 
   remstimate(reh, stats, approach = approach, random = random,

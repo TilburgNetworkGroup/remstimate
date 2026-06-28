@@ -87,17 +87,17 @@ expect_true(!is.null(fit_te$coefficients),
             info = "ext=TRUE MLE fit has coefficients")
 
 
-# ── 4. type_exclusive = TRUE vs FALSE ────────────────────────────────────────
+# ── 4. dur_type_exclusive = TRUE vs FALSE ────────────────────────────────────────
 
 reh_excl <- remify(el_typed, duration = TRUE, extend_riskset_by_type = TRUE,
-                   riskset = "active", model = "tie", type_exclusive = TRUE)
+                   riskset = "active", model = "tie", dur_type_exclusive = TRUE)
 stats_excl <- remstats(reh_excl,
                        start_effects = ~ inertia(consider_type = "interact"),
                        psi_start = 1)
 stacked_excl <- stack_stats(stats_excl, reh_excl)
 
 reh_indep <- remify(el_typed, duration = TRUE, extend_riskset_by_type = TRUE,
-                    riskset = "active", model = "tie", type_exclusive = FALSE)
+                    riskset = "active", model = "tie", dur_type_exclusive = FALSE)
 stats_indep <- remstats(reh_indep,
                         start_effects = ~ inertia(consider_type = "interact"),
                         psi_start = 1)
@@ -105,7 +105,7 @@ stacked_indep <- stack_stats(stats_indep, reh_indep)
 
 expect_true(nrow(stacked_excl$remstats_stack) <
               nrow(stacked_indep$remstats_stack),
-            info = "type_exclusive=TRUE produces fewer rows than FALSE")
+            info = "dur_type_exclusive=TRUE produces fewer rows than FALSE")
 
 
 # ── 5. Typed durem, ext=TRUE, ordinal ────────────────────────────────────────
@@ -182,7 +182,7 @@ expect_silent(capture.output(summary(fit_ord)),
 # ── 11. GLMNET + durem diagnostics ──────────────────────────────────────────
 
 if (requireNamespace("glmnet", quietly = TRUE)) {
-  fit_glmnet <- remstimate(reh, stats, method = "GLMNET")
+  fit_glmnet <- remstimate(reh, stats, penalty = list(""), approach = "frequentist")
   expect_true(inherits(fit_glmnet, "remstimate"),
               info = "GLMNET durem fit works")
 
@@ -197,7 +197,7 @@ if (requireNamespace("glmnet", quietly = TRUE)) {
 # ── 12. GLMM + durem diagnostics ────────────────────────────────────────────
 
 if (requireNamespace("lme4", quietly = TRUE)) {
-  fit_glmm <- remstimate(reh, stats, method = "GLMM",
+  fit_glmm <- remstimate(reh, stats,
                           random = ~ (1 | actor1))
   expect_true(inherits(fit_glmm, "remstimate"),
               info = "GLMM durem fit works")
@@ -213,8 +213,7 @@ if (requireNamespace("lme4", quietly = TRUE)) {
 # ── 13. MIXREM + durem diagnostics ──────────────────────────────────────────
 
 if (requireNamespace("flexmix", quietly = TRUE)) {
-  fit_mix <- remstimate(reh, stats, method = "MIXREM",
-                         random = ~ (1 | dyad), k = 2)
+  fit_mix <- remstimate(reh, stats, mixture = list(k = 2, random = ~ (1 | dyad)))
   expect_true(inherits(fit_mix, "remstimate"),
               info = "MIXREM durem fit works")
 
@@ -232,7 +231,7 @@ if (requireNamespace("flexmix", quietly = TRUE)) {
 
 if (requireNamespace("glmnet", quietly = TRUE)) {
   # GLMNET uses add_actors=FALSE, so no type column — no per-type recall
-  fit_glmnet_te <- remstimate(reh_te, stats_te, method = "GLMNET")
+  fit_glmnet_te <- remstimate(reh_te, stats_te, penalty = list(alpha = 1))
   diag_glmnet_te <- diagnostics(fit_glmnet_te)
   expect_true(!is.null(diag_glmnet_te$recall),
               info = "GLMNET typed durem diagnostics has recall")

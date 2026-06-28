@@ -3,7 +3,7 @@
 \name{diagnostics}
 \alias{diagnostics}
 \alias{diagnostics.remstimate}
-\title{Compute the diagnostics of a \code{remstimate} object}
+\title{Compute the diagnostics of a \code{remstimate} object. Diagnostics are based on point estimates, also for Bayesian fit.}
 \usage{
 diagnostics(object, reh, stats, ...)
 
@@ -21,7 +21,7 @@ diagnostics(object, reh, stats, ...)
 \item{top_pct}{numeric scalar in (0,1): threshold for the top-percentage recall summary (default 0.05).}
 }
 \description{
-Compute the diagnostics of a \code{remstimate} object
+Compute the diagnostics of a \code{remstimate} object. Diagnostics are based on point estimates, also for Bayesian fit.
 }
 \section{Methods (by class)}{
 \itemize{

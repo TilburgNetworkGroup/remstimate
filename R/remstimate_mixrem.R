@@ -58,16 +58,19 @@
 .mixrem_fit_one <- function(df, stat_names, ordinal, geparsed, k,
                               concomitant, nrep, model = "tie", ...) {
 
-  vaste_kant <- .remstimate_fixed_rhs(stat_names, ordinal)
+  vaste_klant <- .remstimate_fixed_rhs(stat_names, ordinal)
   if (ordinal) {
-    df$time   <- factor(df$time)
-    vaste_kant <- sub("^-1 \\+ ", "-1 + time + ", vaste_kant)
-    familie    <- flexmix::FLXMRglm(family = "binomial")
+    df$time_index <- factor(df$time_index)
+    df$obs_fail <- 1 - df$obs                    # flexmix binomial needs cbind(succ, fail)
+    vaste_klant   <- sub("^-1 \\+ ", "-1 + time_index + ", vaste_klant)
+    familie     <- flexmix::FLXMRglm(family = "binomial")
+    respons     <- "cbind(obs, obs_fail)"
   } else {
     familie <- flexmix::FLXMRglm(family = "poisson")
+    respons <- "obs"
   }
 
-  fml  <- as.formula(paste("obs ~", vaste_kant, "|", geparsed$group))
+  fml  <- as.formula(paste(respons, "~", vaste_klant, "|", geparsed$group))
   conc <- if (!is.null(concomitant)) flexmix::FLXPmultinom(concomitant) else flexmix::FLXPconstant()
 
   fit <- flexmix::flexmix(fml, data = df, k = k,
@@ -78,12 +81,17 @@
   coef_mat <- flexmix::parameters(fit)
   if (is.null(dim(coef_mat)))
     coef_mat <- matrix(coef_mat, ncol = 1, dimnames = list(names(coef_mat), "Comp.1"))
+  rownames(coef_mat) <- gsub("^coef\\.", "", rownames(coef_mat))
 
   kansen <- flexmix::prior(fit)
   volgorde <- order(kansen, decreasing = TRUE)
   coef_mat <- coef_mat[, volgorde, drop = FALSE]
   kansen   <- kansen[volgorde]
   colnames(coef_mat) <- paste0("Component.", seq_len(k))
+
+  # drop ordinal time-stratum dummies — report substantive statistics only
+  keep     <- intersect(stat_names, rownames(coef_mat))
+  coef_mat <- coef_mat[keep, , drop = FALSE]
 
   .remstimate_wrap(
     coefficients = coef_mat,
@@ -211,7 +219,7 @@ diagnostics.remstimate_mixrem <- function(object, reh = NULL, stats = NULL,
       bk <- coef_mat[coef_rows, k]
       lp_k <- as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
       out$recall_by_component[[paste0("Component.", k)]] <-
-        .recall_block(lp_k, which(df$obs == 1L), df$time, top_pct)
+        .recall_block(lp_k, which(df$obs == 1L), df$time_index, top_pct)
     }
   }
 

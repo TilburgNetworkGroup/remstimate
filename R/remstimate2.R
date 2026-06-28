@@ -7,8 +7,8 @@
 #'   \itemize{
 #'     \item No structure arguments: basic REM (tie or actor, depending on
 #'       \code{reh}/\code{stats}).
-#'     \item \code{random}: mixed-effects model (GLMM or Bayesian via brms).
-#'     \item \code{penalty}: penalized relational event modeling (GLMNET).
+#'     \item \code{random}: mixed-effects model (GLMM).
+#'     \item \code{penalty}: penalized relational event modeling (GLMNET or Bayesian via shrinkem).
 #'     \item \code{mixture}: finite mixture model (MIXREM / flexmix).
 #'   }
 #'
@@ -16,8 +16,8 @@
 #'   \itemize{
 #'     \item \code{"frequentist"} (default): MLE, lme4/glmmTMB, glmnet, or
 #'       flexmix depending on the structure.
-#'     \item \code{"Bayesian"}: HMC via C++ (basic models) or brms
-#'       (random-effects models).
+#'     \item \code{"Bayesian"}: HMC via C++ (basic models) or shrinkem
+#'       (penalized models).
 #'   }
 #'
 #' @param reh       A \code{remify} or \code{remify_durem} object.
@@ -25,18 +25,18 @@
 #'   \code{aomstats}, or \code{remstats_durem} object.
 #' @param approach  \code{"frequentist"} (default) or \code{"Bayesian"}.
 #' @param random    One-sided formula for random effects, e.g.
-#'   \code{~ (1 | actor1) + (1 | actor2)}. When provided, uses GLMM
-#'   (frequentist) or brms (Bayesian). Also used for MIXREM clustering.
+#'   \code{~ (1 | actor1) + (1 | actor2)}.
 #' @param penalty   List with penalisation settings, e.g.
 #'   \code{list(alpha = 1)} for lasso. When provided, uses glmnet.
 #' @param mixture   List with mixture settings, e.g.
-#'   \code{list(k = 2, random = ~ (1 | dyad))}. When provided, uses flexmix.
-#' @param engine    Backend engine. For GLMM: \code{"lme4"} (default),
-#'   \code{"glmmTMB"}, or \code{"brms"}. For penalised: \code{"glmnet"}.
+#'   \code{list(k = 2, random = ~ (1 | dyad))}, which would fit the dyadic latent
+#'   class model (Lakdawala et al., 2026). When provided, uses flexmix.
+#' @param engine    Backend engine. For GLMM: \code{"lme4"} (default) or
+#'   \code{"glmmTMB"}. For penalised: \code{"glmnet"} or \code{"shrinkem"}.
 #'   Ordinal models automatically use \code{coxme}.
 #'   Set to \code{"auto"} (default) for automatic selection.
 #' @param prior     [\emph{Bayesian}] List with \code{mean} and \code{vcov};
-#'   defaults to standard normal (basic) or brms defaults (random effects).
+#'   defaults to standard normal (basic)
 #' @param seed      Random seed.
 #' @param ncores    Number of threads (C++ backends). Default \code{1L}.
 #' @param nsim      [\emph{Bayesian}] MCMC iterations per chain after burnin.
@@ -83,13 +83,11 @@
 #' fit_glmm <- remstimate(reh, stats,
 #'   random = ~ (1 | actor1) + (1 | actor2))
 #'
-#' # ---- Random effects (Bayesian via brms) ----
-#' fit_brms <- remstimate(reh, stats,
-#'   random = ~ (1 | actor1) + (1 | actor2),
-#'   approach = "Bayesian")
-#'
 #' # ---- Penalised (lasso) ----
 #' fit_lasso <- remstimate(reh, stats, penalty = list(alpha = 1))
+#'
+#' #' # ---- Penalised using Bayesian horseshoe (shrinkem) ----
+#' fit_horseshoe <- remstimate(reh, stats, penalty = list(prior = "horseshoe"))
 #'
 #' # ---- Mixture ----
 #' fit_mix <- remstimate(reh, stats,
@@ -112,7 +110,7 @@ remstimate <- function(reh,
                        ncores    = 1L,
                        # Bayesian
                        nsim      = 2000L,
-                       nchains   = 4L,
+                       nchains   = 2L,
                        burnin    = 1000L,
                        thin      = 1L,
                        # C++ HMC legacy
@@ -179,63 +177,52 @@ remstimate <- function(reh,
 
   # ── Mixture dispatch ───────────────────────────────────────────────────────
   if (has_mixture) {
-    mix_random <- mixture$random %||% random
+    mix_random <- mixture$random
     mix_k      <- mixture$k %||% k
     return(.remstimate_mixrem(reh, stats, random = mix_random, k = mix_k,
                               concomitant = concomitant, nrep = nrep, ...))
   }
 
-  # ── Penalised dispatch ─────────────────────────────────────────────────────
-  # In the penalty dispatch section of remstimate():
+  # ── Penalised dispatch ──
   if (has_penalty) {
     if (approach == "Bayesian") {
-      shrinkage <- penalty$prior %||% "horseshoe"
-      shrinkage_prior <- switch(shrinkage,
-                                lasso     = brms::prior(lasso(), class = "b"),
-                                horseshoe = brms::prior(horseshoe(), class = "b"),
-                                r2d2      = brms::prior(R2D2(), class = "b"),
-                                stop("Unknown shrinkage prior: '", shrinkage, "'. ",
-                                     "Choose 'lasso', 'horseshoe', or 'r2d2'.", call. = FALSE)
-      )
-      return(.remstimate_brms(reh, stats, random = random,
-                              prior = shrinkage_prior, nsim = nsim,
-                              nchains = nchains, burnin = burnin,
-                              thin = thin, seed = seed, ...))
+      if (has_random) {
+        stop("Bayesian penalized models with random effects are not available ",
+             "in this version. Use approach = 'frequentist', or drop 'random' ",
+             "for Bayesian regularization via shrinkem.", call. = FALSE)
+      } else {
+        type <- penalty$prior %||% "horseshoe"
+        return(.remstimate_shrinkem(reh, stats, type = type,
+                                    ncores = ncores, seed = seed, ...))
+      }
     } else {
-      # frequentist: glmnet as before
       pen_alpha <- penalty$alpha %||% alpha
-      return(.remstimate_glmnet(reh, stats, alpha = pen_alpha,
-                                nfolds = nfolds,
+      return(.remstimate_glmnet(reh, stats, alpha = pen_alpha, nfolds = nfolds,
                                 lambda_select = match.arg(lambda_select), ...))
     }
   }
 
-  # ── Random effects dispatch ────────────────────────────────────────────────
+  # ── Random effects dispatch ──
   if (has_random) {
     if (approach == "Bayesian") {
-      return(.remstimate_brms(reh, stats, random = random,
-                              prior = prior, nsim = nsim,
-                              nchains = nchains, burnin = burnin,
-                              thin = thin, seed = seed, ...))
-    } else {
-      eng <- if (engine == "auto") "lme4" else engine
-      return(.remstimate_glmm(reh, stats, random = random,
-                              engine = eng, ...))
+      stop("Bayesian random-effects models are not available in this version. ",
+           "Use approach = 'frequentist' (GLMM via lme4/glmmTMB).", call. = FALSE)
     }
+    eng <- if (engine == "auto") "lme4" else engine
+    return(.remstimate_glmm(reh, stats, random = random, engine = eng, ...))
   }
 
   # ── Basic model: no structure modifiers ────────────────────────────────────
-
-  # Duration model → stacked GLM / brms
-  if (is_durem) {
-    stacked <- stack_stats(stats, reh, add_actors = FALSE)
-    if (approach == "Bayesian") {
-      return(.remstimate_durem_brms(stacked, prior = prior, nsim = nsim,
-                                    nchains = nchains, burnin = burnin,
-                                    thin = thin, seed = seed, ...))
-    } else {
-      return(.remstimate_durem_glm(stacked))
-    }
+  # ── Stacked / duration → GLM pipeline ──
+  if (is_durem || inherits(stats, "remstats_stacked")) {
+    if (approach == "Bayesian")
+      stop("Bayesian estimation is not available for duration or pre-stacked ",
+           "models. Use approach = 'frequentist'.", call. = FALSE)
+    stacked <- if (inherits(stats, "remstats_stacked")) stats
+    else stack_stats(stats, reh, add_actors = FALSE)
+    if (isTRUE(stacked$model == "actor"))
+      return(.remstimate_stacked_glm_actor(stacked))
+    return(.remstimate_glm(stacked))   # tie / durem
   }
 
   # Basic tie/actor → C++ backends (backward compatible)
@@ -938,60 +925,6 @@ remstimate <- function(reh,
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Bayesian random effects: brms
-# ══════════════════════════════════════════════════════════════════════════════
-
-.remstimate_brms <- function(reh, stats, random,
-                             prior = NULL, nsim = 2000L,
-                             nchains = 4L, burnin = 1000L,
-                             thin = 1L, seed = NULL, ...) {
-  if (!requireNamespace("brms", quietly = TRUE))
-    stop("install.packages('brms')")
-
-  s <- .remstimate_make_stack(reh, stats, add_actors = TRUE)
-  df <- s$df
-  stat_names <- s$stat_names
-
-  fixed_part <- paste(stat_names, collapse = " + ")
-  rand_part  <- deparse(random[[2]])
-
-  if (!s$ordinal && "log_interevent" %in% names(df)) {
-    fml <- stats::as.formula(paste0(
-      "obs ~ ", fixed_part, " + ", rand_part, " + offset(log_interevent)"
-    ))
-    fam <- poisson()
-  } else if (s$ordinal) {
-    fml <- stats::as.formula(paste0("obs ~ ", fixed_part, " + ", rand_part))
-    fam <- brms::bernoulli()
-  } else {
-    fml <- stats::as.formula(paste0("obs ~ ", fixed_part, " + ", rand_part))
-    fam <- poisson()
-  }
-
-  if (is.null(seed)) seed <- NA
-  fit <- brms::brm(
-    formula = fml, family = fam, data = df,
-    iter = nsim + burnin, warmup = burnin, chains = nchains,
-    thin = thin, seed = seed, prior = prior, ...
-  )
-
-  coefs <- brms::fixef(fit)[, "Estimate"]
-
-  .remstimate_wrap(
-    coefficients = coefs,
-    stat_names   = stat_names,
-    loglik       = tryCatch(as.numeric(brms::log_lik(fit) |> rowSums() |> mean()),
-                            error = function(e) NA_real_),
-    stacked_data = df,
-    backend_fit  = fit,
-    model        = s$model,
-    method       = "GLMM",
-    engine       = "brms",
-    ordinal      = s$ordinal
-  )
-}
-
-# ══════════════════════════════════════════════════════════════════════════════
 # Internal helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1070,4 +1003,11 @@ remstimate <- function(reh,
 }
 
 
+#' @export
+#' @method logLik remstimate
+logLik.remstimate <- function(object, ...) {
+  structure(object$loglik, class = "logLik",
+            df = length(object$coefficients),
+            nobs = object$df.null)
+}
 

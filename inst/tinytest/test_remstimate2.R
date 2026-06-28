@@ -68,7 +68,7 @@ expect_true("inertia" %in% names(fit_act$coefficients),  info = "tie/active risk
 
 # tie | manual riskset
 reh_man <- remify(el, model = "tie", ordinal = FALSE,
-                   riskset = "manual", manual.riskset = manual_rs)
+                   riskset = "manual", manual_riskset = manual_rs)
 st_man  <- remstats(reh_man, tie_effects = ~ inertia())
 fit_man <- remstimate(reh = reh_man, stats = st_man, method = "MLE")
 

@@ -86,7 +86,7 @@ manual_rs <- unique(as.data.frame(rbind(
 ao_reh_manual <- remify(edgelist       = ao_data$edgelist,
                                  model          = "actor",
                                  riskset        = "manual",
-                                 manual.riskset = manual_rs)
+                                 manual_riskset = manual_rs)
 
 ao_stats_manual <- remstats(reh              = ao_reh_manual,
                                        sender_effects   = rate_model,

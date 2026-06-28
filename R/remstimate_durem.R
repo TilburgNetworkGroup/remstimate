@@ -5,7 +5,7 @@
 # is time-varying (dyads toggle between start-risk and end-risk).
 #
 # Backends:
-#   .remstimate_durem_glm   — Poisson GLM (interval) or clogit (ordinal)
+#   .remstimate_glm         — Poisson GLM (interval) or clogit (ordinal)
 #   .remstimate_durem_brms  — Bayesian via brms (interval only; HMC on the stacked Poisson)
 #
 # Called from remstimate() when reh inherits "remify_durem".
@@ -15,11 +15,15 @@
 
 #' @importFrom survival strata clogit coxph
 #' @keywords internal
-.remstimate_durem_glm <- function(stacked) {
+.remstimate_glm <- function(stacked) {
 
-    df         <- stacked$remstats_stack
-    stat_names <- stacked$stat_names
-    ordinal    <- isTRUE(stacked$ordinal)
+  df         <- stacked$remstats_stack
+  stat_names <- stacked$stat_names
+  ordinal    <- isTRUE(stacked$ordinal)
+
+  # case-control sampling correction: offset += log(weight) = -log(pi_d)
+  # cases have weight 1 -> 0; controls weight 1/pi -> -log(pi). Absent => 0.
+  df$.samp_off <- if ("weight" %in% names(df)) log(df$weight) else 0
 
     if (length(stat_names) == 0L)
         stop("No statistics found — check start_effects / end_effects.",
@@ -32,9 +36,9 @@
                  "Install it with install.packages('survival').", call. = FALSE)
 
         formula_obj <- stats::as.formula(paste0(
-            "obs ~ ",
-            paste(stat_names, collapse = " + "),
-            " + strata(time_index)"
+          "obs ~ ",
+          paste(stat_names, collapse = " + "),
+          " + strata(time_index) + offset(.samp_off)"
         ))
 
         fit <- survival::clogit(formula_obj, data = df)
@@ -58,31 +62,31 @@
 
     } else {
         # ── Interval: Poisson GLM ────────────────────────────────────────
-        formula_obj <- stats::as.formula(paste0(
-            "obs ~ -1 + offset(log_interevent) + ",
-            paste(stat_names, collapse = " + ")
-        ))
-
+      formula_obj <- stats::as.formula(paste0(
+        "obs ~ -1 + offset(log_interevent + .samp_off) + ",
+        paste(stat_names, collapse = " + ")
+      ))
         fit <- stats::glm(formula_obj, family = stats::poisson(), data = df)
 
-        coefs      <- stats::coef(fit)
-        loglik_val <- as.numeric(stats::logLik(fit))
-        P          <- length(coefs)
-        M          <- stacked$E
+        coefs <- stats::coef(fit)
+        P     <- length(coefs)
+        M     <- stacked$E
 
-        vcov_mat <- tryCatch(
-            stats::vcov(fit),
-            error = function(e) matrix(NA_real_, P, P)
-        )
-        se <- sqrt(diag(vcov_mat))
-        names(se) <- names(coefs)
+        # Poisson loglik -> REM loglik: drop the offset constant Σ log(dt) over events
+        off_obs    <- sum(df$log_interevent[df$obs == 1L])
+        loglik_val <- as.numeric(stats::logLik(fit)) - off_obs
 
-        null_formula <- stats::as.formula("obs ~ -1 + offset(log_interevent)")
-        null_fit     <- stats::glm(null_formula, family = stats::poisson(), data = df)
-        null_loglik  <- as.numeric(stats::logLik(null_fit))
+        vcov_mat <- tryCatch(stats::vcov(fit),
+                             error = function(e) matrix(NA_real_, P, P))
+        se <- sqrt(diag(vcov_mat)); names(se) <- names(coefs)
 
-        aic_val  <- stats::AIC(fit)
-        bic_val  <- stats::BIC(fit)
+        # baseline-intercept null (matches C++), same offset correction
+        null_fit    <- stats::glm(obs ~ offset(log_interevent + .samp_off),
+                                  family = stats::poisson(), data = df)
+        null_loglik <- as.numeric(stats::logLik(null_fit)) - off_obs
+
+        aic_val  <- 2 * P - 2 * loglik_val
+        bic_val  <- P * log(M) - 2 * loglik_val            # n = E, not nrow
         aicc_val <- aic_val + 2 * P * (P + 1) / max(M - P - 1, 1)
     }
 
@@ -126,96 +130,57 @@
     )
 }
 
+.stacked_block_out <- function(fit, ll, ll0, P, E, eng) {
+  cf <- stats::coef(fit)
+  vc <- tryCatch(stats::vcov(fit), error = function(e) matrix(NA_real_, P, P))
+  se <- sqrt(diag(vc)); names(se) <- names(cf)
+  list(coefficients = cf, loglik = ll, se = se, vcov = vc,
+       residual.deviance = -2*ll, null.deviance = -2*ll0,
+       model.deviance = (-2*ll0) - (-2*ll),
+       AIC = 2*P - 2*ll, BIC = P*log(E) - 2*ll,
+       AICC = (2*P - 2*ll) + 2*P*(P+1)/max(E-P-1, 1),
+       df.null = E, df.model = P, df.residual = E - P,
+       converged = TRUE, backend_fit = fit)
+}
 
-# ── brms backend (HMC) ──────────────────────────────────────────────────────
+.fit_rate_block <- function(df, sn, E, ordinal) {
+  P <- length(sn)
+  if (ordinal) {
+    f <- stats::as.formula(paste0("obs ~ ", paste(sn, collapse=" + "), " + strata(time_index)"))
+    fit <- survival::clogit(f, data = df)
+    .stacked_block_out(fit, fit$loglik[2L], fit$loglik[1L], P, E, "clogit")
+  } else {
+    f   <- stats::as.formula(paste0("obs ~ -1 + offset(log_interevent) + ", paste(sn, collapse=" + ")))
+    fit <- stats::glm(f, family = stats::poisson(), data = df)
+    off <- sum(df$log_interevent[df$obs == 1L])
+    ll  <- as.numeric(stats::logLik(fit)) - off
+    ll0 <- as.numeric(stats::logLik(
+      stats::glm(obs ~ offset(log_interevent), family = stats::poisson(), data = df))) - off
+    .stacked_block_out(fit, ll, ll0, P, E, "glm")
+  }
+}
 
-#' @keywords internal
-.remstimate_durem_brms <- function(stacked,
-                                   prior   = NULL,
-                                   nsim    = 500L,
-                                   nchains = 1L,
-                                   burnin  = 500L,
-                                   thin    = 10L,
-                                   seed    = NULL,
-                                   ...) {
+.fit_choice_block <- function(df, sn, E) {            # always clogit
+  P <- length(sn)
+  f <- stats::as.formula(paste0("obs ~ ", paste(sn, collapse=" + "), " + strata(time_index)"))
+  fit <- survival::clogit(f, data = df)
+  .stacked_block_out(fit, fit$loglik[2L], fit$loglik[1L], P, E, "clogit")
+}
 
-    if (!requireNamespace("brms", quietly = TRUE))
-        stop("Package 'brms' is required for HMC estimation of duration models. ",
-             "Install it with install.packages('brms').", call. = FALSE)
-
-    df         <- stacked$remstats_stack
-    stat_names <- stacked$stat_names
-
-    if (isTRUE(stacked$ordinal))
-        stop("Ordinal + HMC is not yet supported for duration models. ",
-             "Use method = 'MLE' for ordinal durem (clogit backend).",
-             call. = FALSE)
-
-    if (length(stat_names) == 0L)
-        stop("No statistics found — check start_effects / end_effects.",
-             call. = FALSE)
-
-    formula_obj <- stats::as.formula(paste0(
-        "obs ~ -1 + offset(log_interevent) + ",
-        paste(stat_names, collapse = " + ")
-    ))
-
-    if (is.null(prior))
-        prior <- brms::set_prior("normal(0, 10)", class = "b")
-
-    fit <- brms::brm(
-        formula  = formula_obj,
-        family   = stats::poisson(),
-        data     = df,
-        prior    = prior,
-        iter     = nsim + burnin,
-        warmup   = burnin,
-        chains   = nchains,
-        thin     = thin,
-        seed     = seed,
-        ...
-    )
-
-    draws <- brms::as_draws_matrix(fit)
-    b_cols <- grep("^b_", colnames(draws))
-    coef_draws <- as.matrix(draws[, b_cols])
-    colnames(coef_draws) <- stat_names
-
-    coefs    <- colMeans(coef_draws)
-    vcov_mat <- stats::cov(coef_draws)
-    sd_vec   <- sqrt(diag(vcov_mat))
-    P        <- length(coefs)
-    M        <- stacked$E
-
-    names(coefs) <- names(sd_vec) <-
-        rownames(vcov_mat) <- colnames(vcov_mat) <- stat_names
-
-    res <- list(
-        coefficients = coefs,
-        post.mean    = coefs,
-        vcov         = vcov_mat,
-        sd           = sd_vec,
-        loglik       = NULL,
-        draws        = coef_draws,
-        df.null      = M,
-        df.model     = P,
-        df.residual  = M - P,
-        stacked_data = stacked,
-        backend_fit  = fit
-    )
-
-    structure(
-        res,
-        class      = c("remstimate_durem", "remstimate"),
-        formula    = formula_obj,
-        model      = "tie",
-        approach   = "Bayesian",
-        method     = "HMC",
-        engine     = "brms",
-        ordinal    = FALSE,
-        statistics = stat_names,
-        ncores     = 1L
-    )
+.remstimate_stacked_glm_actor <- function(stacked) {
+  E <- stacked$E; ordinal <- isTRUE(stacked$ordinal)
+  out <- list(
+    sender_model   = .fit_rate_block(stacked$sender_stack,   stacked$sender_stat_names,   E, ordinal),
+    receiver_model = .fit_choice_block(stacked$receiver_stack, stacked$receiver_stat_names, E)
+  )
+  structure(out, class = "remstimate",
+            model = "actor", ordinal = ordinal, method = "MLE", approach = "Frequentist",
+            formula = list(
+              rate_model_formula   = stats::reformulate(stacked$sender_stat_names),
+              choice_model_formula = stats::reformulate(stacked$receiver_stat_names)),
+            statistics = list(sender_model   = stacked$sender_stat_names,
+                              receiver_model = stacked$receiver_stat_names),
+            ncores = 1L)
 }
 
 

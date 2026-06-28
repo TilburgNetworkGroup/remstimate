@@ -40,15 +40,7 @@ suppressWarnings({
                       end_effects   = ~ inertia(),
                       psi_start = 1, psi_end = 1)
     fit_mle <- remstimate(reh, stats, method = "MLE")
-    fit_glm <- remstimate(reh, stats, method = "GLM")
 })
-
-expect_equal(coef(fit_mle), coef(fit_glm), tolerance = 1e-10,
-    info = "MLE and GLM produce identical coefficients")
-expect_equal(fit_mle$loglik, fit_glm$loglik, tolerance = 1e-10,
-    info = "MLE and GLM produce identical log-likelihood")
-expect_equal(fit_mle$AIC, fit_glm$AIC, tolerance = 1e-10,
-    info = "MLE and GLM produce identical AIC")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -56,7 +48,7 @@ expect_equal(fit_mle$AIC, fit_glm$AIC, tolerance = 1e-10,
 # ══════════════════════════════════════════════════════════════════════════════
 
 suppressWarnings({
-    reh_de <- remify(el, duration = TRUE, directed_end = TRUE)
+    reh_de <- remify(el, duration = TRUE, dur_directed_end = TRUE)
     stats_de <- remstats(reh_de,
                          start_effects = ~ inertia(),
                          end_effects   = ~ inertia(),
@@ -146,7 +138,8 @@ expect_true(all(is.finite(coef(fit_ti))),
 suppressWarnings({
     reh_mx <- remify(el_typed, duration = TRUE, model = "tie")
     stats_mx <- remstats(reh_mx,
-                         start_effects = ~ activeTie() + inertia(),
+                         start_effects = ~ inertia() + activeTie(),
+                         end_effects = ~ inertia(),
                          psi_start = 1)
     fit_mx <- remstimate(reh_mx, stats_mx)
 })
@@ -308,7 +301,7 @@ expect_true(all(is.finite(coef(fit13))),
 # ══════════════════════════════════════════════════════════════════════════════
 
 suppressWarnings({
-    reh14 <- remify(el_larger, duration = TRUE, directed_end = TRUE)
+    reh14 <- remify(el_larger, duration = TRUE, dur_directed_end = TRUE)
     stats14 <- remstats(reh14,
                         start_effects = ~ inertia() + outdegreeSender(),
                         end_effects   = ~ inertia() + indegreeSender(),

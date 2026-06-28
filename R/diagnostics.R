@@ -42,7 +42,7 @@
 }
 
 # diagnostics
-#' @title Compute the diagnostics of a \code{remstimate} object
+#' @title Compute the diagnostics of a \code{remstimate} object. Diagnostics are based on point estimates, also for Bayesian fit.
 #' @param object is a \code{remstimate} object.
 #' @param reh is a \code{remify} object, the same used for the 'remstimate' object.
 #' @param stats is a \code{remstats} object, the same used for the 'remstimate' object.
@@ -489,8 +489,10 @@ diagnostics.remstimate_glmm <- function(object, reh, stats, top_pct = 0.05, ...)
 #' @export
 #' @method diagnostics remstimate_glmnet
 diagnostics.remstimate_glmnet <- function(object, reh, stats, top_pct = 0.05, ...) {
-  class(object) <- "remstimate"
-  diag_obj <- diagnostics(object, reh, stats, top_pct = top_pct, ...)
+
+  object2 <- object
+  class(object2) <- "remstimate"
+  diag_obj <- diagnostics(object2, reh, stats, top_pct = top_pct, ...)
   diag_obj$.alpha      <- object$alpha
   diag_obj$.lambda_sel <- object$lambda_sel
   diag_obj
