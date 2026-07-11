@@ -300,7 +300,8 @@ logLik.remstimate_durem <- function(object, ...) {
 
 #' @export
 #' @method diagnostics remstimate_durem
-diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05, ...) {
+diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05,
+                                         surprise_threshold = 0.2, ...) {
 
     approach <- attr(object, "approach")
     if (approach == "Bayesian")
@@ -349,7 +350,8 @@ diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05, ...
         lp <- as.numeric(X %*% coefs[stat_names])
 
         obs_idx   <- which(df$obs == 1L)
-        event_ids <- df$time
+        event_ids <- df$time_index
+        df$eidx   <- reh$edgelist_dual$.eidx[df$time_index]
 
         # Identify start vs end rows by nonzero start/end stats.
         # Start rows have baseline.start = 1 (or at least one start stat != 0)
@@ -362,7 +364,7 @@ diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05, ...
             is_end <- rowSums(abs(df[, sn_end, drop = FALSE])) > 0
 
         # ── Joint recall: all competing dyads ────────────────────────────────
-        out$recall_joint <- .recall_block(lp, obs_idx, event_ids, top_pct)
+        out$recall_joint <- .recall_block(lp, obs_idx, event_ids, top_pct, ids = df$eidx)
 
         # ── Start recall: observed starts ranked among start-risk dyads ──────
         start_obs <- intersect(obs_idx, which(is_start))
@@ -372,20 +374,44 @@ diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05, ...
             start_mask   <- which(is_start & event_ids %in% start_events)
             out$recall_start <- .recall_block(
                 lp[start_mask], match(start_obs, start_mask),
-                event_ids[start_mask], top_pct
+                event_ids[start_mask], top_pct, ids = df$eidx[start_mask]
             )
         }
 
         # ── End recall: observed ends ranked among end-risk dyads ────────────
+        # min_D_t = 2: excludes decision epochs where only one dyad was
+        # eligible to end. With D_t = 1 the softmax is trivially 1 regardless
+        # of the fit, so rel_rank/obs_prob/log_loss carry no information there.
         end_obs <- intersect(obs_idx, which(is_end))
         if (length(end_obs) > 0L) {
-            end_events <- unique(event_ids[end_obs])
-            end_mask   <- which(is_end & event_ids %in% end_events)
-            out$recall_end <- .recall_block(
-                lp[end_mask], match(end_obs, end_mask),
-                event_ids[end_mask], top_pct
-            )
+          end_events <- unique(event_ids[end_obs])
+          end_mask   <- which(is_end & event_ids %in% end_events)
+          out$recall_end <- .recall_block(
+            lp[end_mask], match(end_obs, end_mask),
+            event_ids[end_mask], top_pct, ids = df$eidx[end_mask],
+            min_D_t = 2
+          )
         }
+        # ── Surprises: most poorly-predicted observed events ─────────────────
+        out$surprises_joint <- .surprises_from_recall(out$recall_joint, surprise_threshold)
+        out$surprises_start <- .surprises_from_recall(out$recall_start, surprise_threshold)
+        out$surprises_end   <- .surprises_from_recall(out$recall_end,   surprise_threshold)
+
+        out$surprise_offenders_joint <- .offender_table(
+          ids_surprises = .durem_dyad_labels(reh, out$surprises_joint$eidx),
+          ids_all       = .durem_dyad_labels(reh, out$recall_joint$per_event$eidx)
+        )
+        if (!is.null(out$recall_start))
+          out$surprise_offenders_start <- .offender_table(
+            ids_surprises = .durem_dyad_labels(reh, out$surprises_start$eidx),
+            ids_all       = .durem_dyad_labels(reh, out$recall_start$per_event$eidx)
+          )
+        if (!is.null(out$recall_end))
+          out$surprise_offenders_end <- .offender_table(
+            ids_surprises = .durem_dyad_labels(reh, out$surprises_end$eidx),
+            ids_all       = .durem_dyad_labels(reh, out$recall_end$per_event$eidx)
+          )
+        out$surprise_threshold <- surprise_threshold
 
         # ── Per-type recall (ext=TRUE) ──────────────────────────────────────
         if ("type" %in% names(df) && !all(is.na(df$type))) {
@@ -398,7 +424,7 @@ diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05, ...
                     if (length(tp_obs) == 0L) next
                     out$recall_by_type[[tp]] <- .recall_block(
                         lp[tp_mask], match(tp_obs, tp_mask),
-                        event_ids[tp_mask], top_pct
+                        event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask]
                     )
                 }
 
@@ -414,25 +440,39 @@ diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05, ...
                                              event_ids %in% tp_events)
                         out$recall_start_by_type[[tp]] <- .recall_block(
                             lp[tp_mask], match(tp_obs_s, tp_mask),
-                            event_ids[tp_mask], top_pct
+                            event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask]
                         )
                     }
                 }
 
                 if (length(end_obs) > 0L) {
-                    out$recall_end_by_type <- list()
-                    for (tp in types) {
-                        tp_end   <- which(is_end & df$type == tp)
-                        tp_obs_e <- intersect(obs_idx, tp_end)
-                        if (length(tp_obs_e) == 0L) next
-                        tp_events <- unique(event_ids[tp_obs_e])
-                        tp_mask   <- which(is_end & df$type == tp &
-                                             event_ids %in% tp_events)
-                        out$recall_end_by_type[[tp]] <- .recall_block(
-                            lp[tp_mask], match(tp_obs_e, tp_mask),
-                            event_ids[tp_mask], top_pct
-                        )
-                    }
+                  out$recall_end_by_type <- list()
+                  for (tp in types) {
+                    tp_end   <- which(is_end & df$type == tp)
+                    tp_obs_e <- intersect(obs_idx, tp_end)
+                    if (length(tp_obs_e) == 0L) next
+                    tp_events <- unique(event_ids[tp_obs_e])
+                    tp_mask   <- which(is_end & df$type == tp &
+                                         event_ids %in% tp_events)
+                    out$recall_end_by_type[[tp]] <- .recall_block(
+                      lp[tp_mask], match(tp_obs_e, tp_mask),
+                      event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask],
+                      min_D_t = 2
+                    )
+                  }
+                }
+
+                # ── Surprises per type ────────────────────────────────────────
+                surprise_lists <- list(
+                  surprises_by_type       = out$recall_by_type,
+                  surprises_start_by_type = out$recall_start_by_type,
+                  surprises_end_by_type   = out$recall_end_by_type
+                )
+                for (nm in names(surprise_lists)) {
+                  rc_list <- surprise_lists[[nm]]
+                  if (is.null(rc_list) || length(rc_list) == 0L) next
+                  out[[nm]] <- lapply(rc_list, .surprises_from_recall,
+                                      threshold = surprise_threshold)
                 }
             }
         }
@@ -460,10 +500,10 @@ print.diagnostics_durem <- function(x, ...) {
     }
 
     if (!is.null(x$recall_joint) || !is.null(x$recall_start) || !is.null(x$recall_end)) {
-        cat("\nRecall:\n")
-        .print_recall_summary(x$recall_joint, "Joint")
-        .print_recall_summary(x$recall_start, "Start")
-        .print_recall_summary(x$recall_end,   "End")
+      cat("\nRecall:\n")
+      .print_recall_summary(x$recall_joint, "Joint", x$surprises_joint, x$surprise_threshold)
+      .print_recall_summary(x$recall_start, "Start", x$surprises_start, x$surprise_threshold)
+      .print_recall_summary(x$recall_end,   "End",   x$surprises_end,   x$surprise_threshold)
     }
 
     if (!is.null(x$recall_by_type)) {

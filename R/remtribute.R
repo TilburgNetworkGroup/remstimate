@@ -157,7 +157,7 @@ remtribute <- function(reh,
         directed = directed,
         ordinal = if (!is.null(reh$meta)) isTRUE(reh$meta$ordinal) else isTRUE(attr(reh, "ordinal")),
         actors = reh$actors %||% NULL,
-        riskset = if (riskset_src %in% c("active", "manual")) riskset_src else "full",
+        riskset = if (grepl("^active", riskset_src) || identical(riskset_src, "manual")) riskset_src else "full",
         event_type = if (!is.null(reh$meta) && isTRUE(reh$meta$with_type)) "type" else NULL,
         event_attributes = if (attribute != "type") attribute else NULL
       )
@@ -206,12 +206,12 @@ remtribute <- function(reh,
   }
 
   if (!is.null(reh_for_dyads$ids)) {
-    if (riskset %in% c("active", "manual"))
+    if (grepl("^active", riskset) || identical(riskset, "manual"))
       dyad_ids <- as.vector(reh_for_dyads$ids$dyad_active)
     else
       dyad_ids <- as.vector(reh_for_dyads$ids$dyad)
   } else {
-    if (riskset %in% c("active", "manual"))
+    if (grepl("^active", riskset) || identical(riskset, "manual"))
       dyad_ids <- as.vector(attr(reh_for_dyads, "dyadIDactive") %||% attr(reh_for_dyads, "dyadID"))
     else
       dyad_ids <- as.vector(attr(reh_for_dyads, "dyadID"))

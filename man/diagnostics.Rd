@@ -7,7 +7,7 @@
 \usage{
 diagnostics(object, reh, stats, ...)
 
-\method{diagnostics}{remstimate}(object, reh, stats, top_pct = 0.05, ...)
+\method{diagnostics}{remstimate}(object, reh, stats, top_pct = 0.05, surprise_threshold = 0.2, ...)
 }
 \arguments{
 \item{object}{is a \code{remstimate} object.}
@@ -19,9 +19,62 @@ diagnostics(object, reh, stats, ...)
 \item{...}{further arguments to be passed to the 'diagnostics' method.}
 
 \item{top_pct}{numeric scalar in (0,1): threshold for the top-percentage recall summary (default 0.05).}
+
+\item{surprise_threshold}{numeric scalar in (0,1): rows of the recall table with
+\code{rel_rank <= surprise_threshold} are collected into \code{$surprises}
+(default 0.20). Lower \code{rel_rank} means the observed outcome was ranked
+further from the top of the predicted probabilities, i.e. more surprising.}
 }
 \description{
 Compute the diagnostics of a \code{remstimate} object. Diagnostics are based on point estimates, also for Bayesian fit.
+}
+\details{
+Every recall table (\code{$recall$per_event} for tie/actor,
+\code{$recall_joint}/\code{$recall_start}/\code{$recall_end} for durem) and every
+\code{$surprises} table derived from it shares this column layout:
+\describe{
+  \item{event}{Row position within the analyzed subset (tie/actor only).}
+  \item{edgelist_id_row}{The corresponding row index into \code{reh$edgelist_id}
+    (\code{event} resolved to the full, untrimmed object), computed as
+    \code{start_stop[1] - 1 + event}.
+  \item{sub_index}{Which simultaneous observation at that \code{event} this row
+    is, when multiple events share a time point.}
+  \item{obs_id}{The observed outcome as an ID. Tie model: the observed dyad ID.
+    Actor sender submodel: the observed sender actor ID. Actor receiver
+    submodel: the observed receiver actor ID (see \code{sender_id} below for
+    the paired sender).}
+  \item{sender_id, obs_label, sender_label, dyad_label}{Present on
+    \code{$surprises} only. Human-readable resolutions of \code{obs_id}
+    (and, for the actor receiver submodel, the paired sender), added for
+    readability -- not present on the raw \code{$recall} tables.}
+  \item{rel_rank}{\code{1 - rank/D_t}: 1 = observed outcome ranked most likely
+    of all risk-set alternatives; 0 = ranked last (maximally surprising).}
+  \item{cum_prob}{Cumulative predicted probability of everything ranked
+    at-or-above the observed outcome.}
+  \item{obs_prob}{Predicted probability assigned to the observed outcome.}
+  \item{prob_ratio}{\code{obs_prob * D_t}: ratio vs. uniform/random guessing.
+    Near 1 means the model had no real signal for this outcome (e.g. a
+    cold-start actor/dyad); well below 1 means the model actively favored a
+    different outcome (a genuine misspecification signal).}
+  \item{log_loss}{\code{-log(obs_prob)}, the per-observation negative
+    log-likelihood contribution.}
+  \item{D_t}{Size of the risk set (number of eligible alternatives) at that
+    decision. For durem end-process recall, epochs with \code{D_t = 1} are
+    excluded by default, since a single-candidate softmax is always exactly
+    1 regardless of model fit and carries no diagnostic information.}
+}
+}
+\code{$surprise_offenders} (tie, actor sender/receiver) and
+\code{$surprise_offenders_dyad} (actor receiver only) tabulate, per dyad or
+actor, how often it appears among surprises relative to how often it was
+actually observed (\code{prop = n_surprises / n_total}), sorted worst first.
+
+For durem, \code{obs_id}/\code{event}/\code{sub_index} are replaced by
+\code{eidx}, a row index directly into \code{reh$edgelist} (i.e. already
+resolved to the original input edgelist row -- no offset arithmetic needed).
+\code{$surprise_offenders_joint}/\code{_start}/\code{_end} tabulate, per
+dyad (\code{"actor1 -> actor2"}), how often it appears among surprises
+relative to how often it was actually observed in that recall table.
 }
 \section{Methods (by class)}{
 \itemize{

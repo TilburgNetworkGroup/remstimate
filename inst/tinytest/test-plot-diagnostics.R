@@ -122,7 +122,7 @@ expect_error(
 )
 
 # with 'object' (MLE — plots 3/4 silently skipped because method != "HMC")
-expect_silent(
+expect_warning(
   with_null_dev(
     plot(ao_diag, object = ao_mle, which = c(1, 2, 3, 4))
   )
@@ -228,7 +228,7 @@ if (!is.null(ao_hmc)) {
   ao_hmc_diag <- diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_stats)
 
   # plot 3: posterior histograms
-  expect_silent(
+  expect_warning(
     with_null_dev(
       plot(ao_hmc_diag, object = ao_hmc, which = 3)
     )
@@ -242,7 +242,7 @@ if (!is.null(ao_hmc)) {
   )
 
   # specific effects
-  expect_silent(
+  expect_warning(
     with_null_dev(
       plot(ao_hmc_diag, object = ao_hmc, which = c(3, 4),
                        sender_effects = "indegreeSender")
@@ -250,7 +250,7 @@ if (!is.null(ao_hmc)) {
   )
 
   # backward compat via plot.remstimate
-  expect_silent(
+  expect_warning(
     with_null_dev(
       plot(ao_hmc, reh = ao_reh, diagnostics = ao_hmc_diag, which = c(3, 4))
     )

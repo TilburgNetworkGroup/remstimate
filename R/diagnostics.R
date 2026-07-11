@@ -1,6 +1,6 @@
 # -- recall helper -------------------------------------------------------------
 .recall_block_3d <- function(pars, baseline, stats_3d, obs_ids,
-                           valid_ids = NULL, top_pct = 0.05) {
+                             valid_ids = NULL, top_pct = 0.05) {
   M    <- dim(stats_3d)[3L]
   rows <- vector("list", M)
   for (m in seq_len(M)) {
@@ -13,12 +13,22 @@
     probs <- probs / sum(probs)
     D_t   <- length(valid)
     ord   <- order(probs, decreasing = TRUE)
-    pos   <- match(obs, valid); pos <- pos[!is.na(pos)]
-    rnks  <- match(pos, ord);   rnks <- rnks[!is.na(rnks)]
-    if (!length(rnks)) next
-    obs_probs <- probs[pos[!is.na(match(pos, seq_along(probs)))]]
+    pos_all   <- match(obs, valid)
+    keep      <- which(!is.na(pos_all))
+    if (!length(keep)) next
+    pos       <- pos_all[keep]
+    sub_index <- keep
+    rnks      <- match(pos, ord)
+    keep2     <- which(!is.na(rnks))
+    if (!length(keep2)) next
+    rnks      <- rnks[keep2]
+    pos       <- pos[keep2]
+    sub_index <- sub_index[keep2]
+    obs_probs <- probs[pos]
     rows[[m]] <- data.frame(
       event      = m,
+      sub_index  = sub_index,
+      obs_id     = obs[sub_index],
       rel_rank   = 1 - rnks / D_t,
       cum_prob   = cumsum(probs[ord])[rnks],
       obs_prob   = obs_probs,
@@ -41,13 +51,83 @@
   )
 }
 
+# Actor-level offender table for the tie model: how often does an actor
+# appear among surprises as actor1 (sender role) / actor2 (receiver role) /
+# either, relative to how often it appears in that role among all observed
+# events. dyad_map must have columns actor1, actor2 aligned to obs_id (dyad ID).
+.tie_actor_offenders <- function(surprises, per_event, dyad_map, id_col) {
+  if (is.null(surprises) || nrow(surprises) == 0L) return(NULL)
+
+  a1_sur <- dyad_map$actor1[match(surprises$obs_id, dyad_map[[id_col]])]
+  a2_sur <- dyad_map$actor2[match(surprises$obs_id, dyad_map[[id_col]])]
+  a1_all <- dyad_map$actor1[match(per_event$obs_id, dyad_map[[id_col]])]
+  a2_all <- dyad_map$actor2[match(per_event$obs_id, dyad_map[[id_col]])]
+
+  list(
+    sender   = .offender_table(a1_sur, a1_all),
+    receiver = .offender_table(a2_sur, a2_all),
+    either   = .offender_table(c(a1_sur, a2_sur), c(a1_all, a2_all))
+  )
+}
+
 # diagnostics
 #' @title Compute the diagnostics of a \code{remstimate} object. Diagnostics are based on point estimates, also for Bayesian fit.
 #' @param object is a \code{remstimate} object.
 #' @param reh is a \code{remify} object, the same used for the 'remstimate' object.
 #' @param stats is a \code{remstats} object, the same used for the 'remstimate' object.
 #' @param top_pct numeric scalar in (0,1): threshold for the top-percentage recall summary (default 0.05).
+#' @param surprise_threshold numeric scalar in (0,1): rows of the recall table with
+#'   \code{rel_rank <= surprise_threshold} are collected into \code{$surprises}
+#'   (default 0.20). Lower \code{rel_rank} means the observed outcome was ranked
+#'   further from the top of the predicted probabilities, i.e. more surprising.
 #' @param ... further arguments to be passed to the 'diagnostics' method.
+#' @details
+#' Every recall table (\code{$recall$per_event} for tie/actor,
+#' \code{$recall_joint}/\code{$recall_start}/\code{$recall_end} for durem) and every
+#' \code{$surprises} table derived from it shares this column layout:
+#' \describe{
+#'   \item{event}{Row position within the analyzed subset (tie/actor only).}
+#'   \item{edgelist_id_row}{The corresponding row index into \code{reh$edgelist_id}
+#'     (\code{event} resolved to the full, untrimmed object), computed as
+#'     \code{start_stop[1] - 1 + event}.
+#'   \item{sub_index}{Which simultaneous observation at that \code{event} this row
+#'     is, when multiple events share a time point.}
+#'   \item{obs_id}{The observed outcome as an ID. Tie model: the observed dyad ID.
+#'     Actor sender submodel: the observed sender actor ID. Actor receiver
+#'     submodel: the observed receiver actor ID (see \code{sender_id} below for
+#'     the paired sender).}
+#'   \item{sender_id, obs_label, sender_label, dyad_label}{Present on
+#'     \code{$surprises} only. Human-readable resolutions of \code{obs_id}
+#'     (and, for the actor receiver submodel, the paired sender), added for
+#'     readability -- not present on the raw \code{$recall} tables.}
+#'   \item{rel_rank}{\code{1 - rank/D_t}: 1 = observed outcome ranked most likely
+#'     of all risk-set alternatives; 0 = ranked last (maximally surprising).}
+#'   \item{cum_prob}{Cumulative predicted probability of everything ranked
+#'     at-or-above the observed outcome.}
+#'   \item{obs_prob}{Predicted probability assigned to the observed outcome.}
+#'   \item{prob_ratio}{\code{obs_prob * D_t}: ratio vs. uniform/random guessing.
+#'     Near 1 means the model had no real signal for this outcome (e.g. a
+#'     cold-start actor/dyad); well below 1 means the model actively favored a
+#'     different outcome (a genuine misspecification signal).}
+#'   \item{log_loss}{\code{-log(obs_prob)}, the per-observation negative
+#'     log-likelihood contribution.}
+#'   \item{D_t}{Size of the risk set (number of eligible alternatives) at that
+#'     decision. For durem end-process recall, epochs with \code{D_t = 1} are
+#'     excluded by default, since a single-candidate softmax is always exactly
+#'     1 regardless of model fit and carries no diagnostic information.}
+#' }
+#' }
+#' \code{$surprise_offenders} (tie, actor sender/receiver) and
+#' \code{$surprise_offenders_dyad} (actor receiver only) tabulate, per dyad or
+#' actor, how often it appears among surprises relative to how often it was
+#' actually observed (\code{prop = n_surprises / n_total}), sorted worst first.
+#'
+#' For durem, \code{obs_id}/\code{event}/\code{sub_index} are replaced by
+#' \code{eidx}, a row index directly into \code{reh$edgelist} (i.e. already
+#' resolved to the original input edgelist row -- no offset arithmetic needed).
+#' \code{$surprise_offenders_joint}/\code{_start}/\code{_end} tabulate, per
+#' dyad (\code{"actor1 -> actor2"}), how often it appears among surprises
+#' relative to how often it was actually observed in that recall table.
 #' @export
 diagnostics <- function(object, reh, stats, ...) {
   UseMethod("diagnostics")
@@ -69,10 +149,11 @@ denormalize_reh <- function(reh) {
   reh
 }
 
-#' @describeIn diagnostics diagnostics of a 'remstimate' object
-#' @method diagnostics remstimate
-#' @export
-diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
+# ══════════════════════════════════════════════════════════════════════════
+# .diagnostics_prepare() — shared setup extracted from diagnostics.remstimate()
+# ══════════════════════════════════════════════════════════════════════════
+
+.diagnostics_prepare <- function(object, reh, stats) {
   reh <- denormalize_reh(reh)
   if (!inherits(reh, "remify")) {
     stop("'reh' must be a 'remify' object (see ?remify::remify).")
@@ -86,8 +167,13 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
   if ((model_stats != model) | (model_object != model)) {
     stop("attribute 'model' of input 'object' and 'stats' must be the same as the attribute of input 'reh'")
   }
-  # active riskset
-  if (attr(reh, "riskset") == "active") {
+  # active / manual (reduced) riskset. attr(reh,"riskset") is riskset_source,
+  # so it can be "active", "active_saturated" or "manual" - all use the reduced
+  # dyad indexing (activeD / dyadIDactive). Matching only "active" here left the
+  # saturated/manual cases with a full-riskset dyadID and an uncleared omit_dyad
+  # (which lacks a 'riskset' element), causing computeDiagnostics to fail with
+  # 'Index out of bounds: [index=riskset]'.
+  if (grepl("^active", attr(reh, "riskset")) || identical(attr(reh, "riskset"), "manual")) {
     reh$D <- reh$activeD
     if (model == "tie") {
       attr(reh, "dyadID") <- attr(reh, "dyadIDactive")
@@ -95,6 +181,8 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
     }
   }
   ordinal <- attr(reh, "ordinal")
+  ncores  <- NULL   # [new] defensive default; only ever reached if attr(object,"ncores") is NULL,
+  #       which does not occur for any remstimate object produced by this package
   if (!is.null(attr(object, "ncores"))) ncores <- attr(object, "ncores")
   if (is.null(reh$omit_dyad)) reh$omit_dyad <- list()
 
@@ -160,7 +248,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
         variables_rate <- dimnames(stats$sender_stats)[[3]]
         model_formula[["rate_model_formula"]] <- if (!is.null(attr(stats,"formula")$rate))
           attr(stats,"formula")$rate else
-          stats::as.formula(paste("~ ", paste(variables_rate, collapse=" + ")))
+            stats::as.formula(paste("~ ", paste(variables_rate, collapse=" + ")))
         if (any(tolower(variables_rate) %in% c("baseline")))
           where_is_baseline <- which(variables_rate == "baseline")
         stats$sender_stats <- aperm(stats$sender_stats, perm = c(2,3,1))
@@ -169,7 +257,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
         variables_choice <- dimnames(stats$receiver_stats)[[3]]
         model_formula[["choice_model_formula"]] <- if (!is.null(attr(stats,"formula")$choice))
           attr(stats,"formula")$choice else
-          stats::as.formula(paste("~ ", paste(variables_choice, collapse=" + ")))
+            stats::as.formula(paste("~ ", paste(variables_choice, collapse=" + ")))
         stats$receiver_stats <- aperm(stats$receiver_stats, perm = c(2,3,1))
       }
       variables_names <- list(sender_model = variables_rate, receiver_model = variables_choice)
@@ -220,6 +308,34 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
 
   if (ordinal) reh$intereventTime <- c(1)
 
+  list(
+    reh = reh, stats = stats, model = model, ordinal = ordinal, ncores = ncores,
+    stats_attr_method = stats_attr_method, start_stop = start_stop,
+    model_formula = model_formula, variables_names = variables_names,
+    where_is_baseline = where_is_baseline, omit_dyad_receiver = omit_dyad_receiver
+  )
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+# diagnostics.remstimate() — trimmed to call the shared prep
+# ══════════════════════════════════════════════════════════════════════════
+
+#' @describeIn diagnostics diagnostics of a 'remstimate' object
+#' @method diagnostics remstimate
+#' @export
+diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, surprise_threshold = 0.2, ...) {
+  prep <- .diagnostics_prepare(object, reh, stats)
+  reh                <- prep$reh
+  stats              <- prep$stats
+  ordinal            <- prep$ordinal
+  ncores             <- prep$ncores
+  stats_attr_method  <- prep$stats_attr_method
+  start_stop         <- prep$start_stop
+  model_formula      <- prep$model_formula
+  variables_names    <- prep$variables_names
+  where_is_baseline  <- prep$where_is_baseline
+  omit_dyad_receiver <- prep$omit_dyad_receiver
+
   # -- tie model diagnostics ----------------------------------------------------
   if (attr(object,"model") == "tie") {
     length_comparison <- length(object$coefficients) == dim(stats)[2]
@@ -230,9 +346,9 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
     variables_names   <- attr(object, "statistics")
     where_is_baseline <- attr(object, "where_is_baseline")
     select_vars    <- if (is.null(where_is_baseline)) seq_along(variables_names) else
-                      seq_along(variables_names)[-where_is_baseline]
+      seq_along(variables_names)[-where_is_baseline]
     baseline_value <- if (is.null(where_is_baseline)) 0 else
-                      as.vector(object$coefficients)[where_is_baseline]
+      as.vector(object$coefficients)[where_is_baseline]
     stats <- if (length(select_vars) == 1)
       array(stats[,select_vars,], dim = c(dim(stats)[1], 1, dim(stats)[3]))
     else stats[,select_vars,]
@@ -256,7 +372,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
       diagnostics$residuals <- NULL
     # recall
     obs_dyad_ids <- if (is.list(attr(reh,"dyadID"))) attr(reh,"dyadID") else
-                    as.list(attr(reh,"dyadID"))
+      as.list(attr(reh,"dyadID"))
     diagnostics$recall <- .recall_block_3d(
       pars     = as.vector(object$coefficients)[select_vars],
       baseline = baseline_value,
@@ -264,20 +380,63 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
       obs_ids  = obs_dyad_ids,
       top_pct  = top_pct
     )
+    if (!is.null(diagnostics$recall$per_event)) {
+      if (stats_attr_method == "pt") {
+        diagnostics$recall$per_event$edgelist_id_row <-
+          start_stop[1] - 1 + diagnostics$recall$per_event$event
+      } else {
+        diagnostics$recall$per_event$edgelist_id_row <- NA_integer_
+        warning("edgelist_id_row cannot be resolved for stats method 'pe'; ",
+                "returning NA.", call. = FALSE)
+      }
+    }
+    diagnostics$surprises <- .surprises_from_recall(diagnostics$recall, surprise_threshold)
+    diagnostics$surprise_threshold <- surprise_threshold
+    diagnostics$surprise_offenders <- .offender_table(
+      ids_surprises = diagnostics$surprises$obs_id,
+      ids_all       = unlist(obs_dyad_ids),
+      labels        = .dyad_labels(reh)
+    )
+    dm <- reh$index$dyad_map_active %||% reh$index$dyad_map
+    if (!is.null(dm)) {
+      id_col <- if ("dyadIDactive" %in% names(dm)) "dyadIDactive" else "dyadID"
+      diagnostics$surprise_offenders_actor <- .tie_actor_offenders(
+        diagnostics$surprises, diagnostics$recall$per_event, dm, id_col
+      )
+    }
+    if (!is.null(diagnostics$surprises) && nrow(diagnostics$surprises) > 0L) {
+      dyad_lab <- .dyad_labels(reh)
+      diagnostics$surprises$dyad_label <-
+        unname(dyad_lab[as.character(diagnostics$surprises$obs_id)])
+    }
 
-  # -- actor model diagnostics --------------------------------------------------
+    if (!is.null(diagnostics$recall$per_event)) {
+      if (stats_attr_method == "pt") {
+        diagnostics$recall$per_event$edgelist_id_row <-
+          start_stop[1] - 1 + diagnostics$recall$per_event$event
+        diagnostics$recall$per_event$time <-
+          unique(reh$edgelist$time)[diagnostics$recall$per_event$edgelist_id_row]
+      } else {
+        diagnostics$recall$per_event$edgelist_id_row <- NA_integer_
+        diagnostics$recall$per_event$time <- NA_real_
+        warning("edgelist_id_row cannot be resolved for stats method 'pe'; ",
+                "returning NA.", call. = FALSE)
+      }
+    }
+
+    # -- actor model diagnostics --------------------------------------------------
   } else if (attr(object,"model") == "actor") {
     compare_input_sender <- compare_input_receiver <- FALSE
     if (!is.null(stats[["sender_stats"]])) {
       lc <- length(object[["sender_model"]]$coefficients) == dim(stats[["sender_stats"]])[2]
       nc <- lc && all(names(object[["sender_model"]]$coefficients) ==
-                      dimnames(stats[["sender_stats"]])[[2]])
+                        dimnames(stats[["sender_stats"]])[[2]])
       if (!nc | !lc) compare_input_sender <- TRUE
     }
     if (!is.null(stats[["receiver_stats"]])) {
       lc <- length(object[["receiver_model"]]$coefficients) == dim(stats[["receiver_stats"]])[2]
       nc <- lc && all(names(object[["receiver_model"]]$coefficients) ==
-                      dimnames(stats[["receiver_stats"]])[[2]])
+                        dimnames(stats[["receiver_stats"]])[[2]])
       if (!nc | !lc) compare_input_receiver <- TRUE
     }
     if (compare_input_sender | compare_input_receiver)
@@ -294,15 +453,15 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
     for (i in 1:2) {
       if (is.null(stats[[which_stats[i]]])) next
       actor1ID_ls    <- if (actor1ID_condition[i]) attr(reh,"actor1ID") else
-                        unlist(attr(reh,"actor1ID"))
+        unlist(attr(reh,"actor1ID"))
       omit_dyad_actor <- if (senderRate[i]) reh$omit_dyad else omit_dyad_receiver
       baseline_value <- 0
       select_vars    <- seq_len(dim(stats[[which_stats[i]]])[2])
       if (senderRate[i]) {
         baseline_value <- if (is.null(where_is_baseline)) 0 else
-                          as.vector(object[[which_model[i]]]$coefficients)[where_is_baseline]
+          as.vector(object[[which_model[i]]]$coefficients)[where_is_baseline]
         select_vars    <- if (is.null(where_is_baseline)) select_vars else
-                          select_vars[-where_is_baseline]
+          select_vars[-where_is_baseline]
       }
       stats[[which_stats[i]]] <- if (length(select_vars) == 1)
         array(stats[[which_stats[i]]][,select_vars,],
@@ -324,7 +483,7 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
       )
       colnames(diagnostics[[which_model[i]]]$residuals$smoothing_weights) <-
         if (senderRate[i]) variables_names[["sender_model"]][select_vars] else
-        variables_names[["receiver_model"]][select_vars]
+          variables_names[["receiver_model"]][select_vars]
       diagnostics[[which_model[i]]]$rates <- diagnostics[[which_model[i]]]$residuals$rates
       diagnostics[[which_model[i]]]$residuals$rates <- NULL
       if (senderRate[i] & !is.null(where_is_baseline) & length(select_vars) < 1)
@@ -334,13 +493,13 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
       if (senderRate[i]) {
         obs_ids_rc   <- lapply(as.list(actor1ID_ls), as.integer)
         valid_ids_rc <- if (!is.null(reh$sender_riskset))
-                          rep(list(reh$sender_riskset), reh$M) else NULL
+          rep(list(reh$sender_riskset), reh$M) else NULL
       } else {
         obs_ids_rc   <- lapply(attr(reh,"actor2ID"), function(x) as.integer(unlist(x)))
         valid_ids_rc <- if (!is.null(reh$receiver_riskset))
-                          lapply(as.list(attr(reh,"actor1ID")), function(senders)
-                            reh$receiver_riskset[[as.integer(senders[1])]])
-                        else NULL
+          lapply(as.list(attr(reh,"actor1ID")), function(senders)
+            reh$receiver_riskset[[as.integer(senders[1])]])
+        else NULL
       }
       diagnostics[[which_model[i]]]$recall <- .recall_block_3d(
         pars      = as.vector(object[[which_model[i]]]$coefficients)[select_vars],
@@ -350,6 +509,67 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
         valid_ids = valid_ids_rc,
         top_pct   = top_pct
       )
+      if (!is.null(diagnostics[[which_model[i]]]$recall$per_event)) {
+        if (stats_attr_method == "pt") {
+          diagnostics[[which_model[i]]]$recall$per_event$edgelist_id_row <-
+            start_stop[1] - 1 + diagnostics[[which_model[i]]]$recall$per_event$event
+        } else {
+          diagnostics[[which_model[i]]]$recall$per_event$edgelist_id_row <- NA_integer_
+          warning("edgelist_id_row cannot be resolved for stats method 'pe'; ",
+                  "returning NA.", call. = FALSE)
+        }
+      }
+      diagnostics[[which_model[i]]]$surprises <- .surprises_from_recall(
+        diagnostics[[which_model[i]]]$recall, surprise_threshold)
+      diagnostics[[which_model[i]]]$surprise_threshold <- surprise_threshold
+      diagnostics[[which_model[i]]]$surprise_offenders <- .offender_table(
+        ids_surprises = diagnostics[[which_model[i]]]$surprises$obs_id,
+        ids_all       = unlist(obs_ids_rc),
+        labels        = .actor_labels(reh)
+      )
+      if (!senderRate[i]) {
+        sender_ids_surprises <- .lookup_by_event(
+          diagnostics[[which_model[i]]]$surprises$event,
+          diagnostics[[which_model[i]]]$surprises$sub_index,
+          attr(reh, "actor1ID")
+        )
+        diagnostics[[which_model[i]]]$surprises$sender_id <- sender_ids_surprises
+
+        dyad_surprises <- .actor_pair_labels(reh, sender_ids_surprises,
+                                             diagnostics[[which_model[i]]]$surprises$obs_id)
+        dyad_all <- .actor_pair_labels(reh, unlist(attr(reh, "actor1ID")), unlist(obs_ids_rc))
+
+        diagnostics[[which_model[i]]]$surprise_offenders_dyad <- .offender_table(
+          ids_surprises = dyad_surprises,
+          ids_all       = dyad_all
+        )
+        if (!is.null(diagnostics[[which_model[i]]]$surprises) &&
+            nrow(diagnostics[[which_model[i]]]$surprises) > 0L) {
+          act_lab <- .actor_labels(reh)
+          diagnostics[[which_model[i]]]$surprises$obs_label <-
+            unname(act_lab[as.character(diagnostics[[which_model[i]]]$surprises$obs_id)])
+          if (!senderRate[i]) {
+            diagnostics[[which_model[i]]]$surprises$sender_label <-
+              unname(act_lab[as.character(diagnostics[[which_model[i]]]$surprises$sender_id)])
+            diagnostics[[which_model[i]]]$surprises$dyad_label <- paste(
+              diagnostics[[which_model[i]]]$surprises$sender_label, "->",
+              diagnostics[[which_model[i]]]$surprises$obs_label)
+          }
+        }
+      }
+      if (!is.null(diagnostics[[which_model[i]]]$recall$per_event)) {
+        if (stats_attr_method == "pt") {
+          diagnostics[[which_model[i]]]$recall$per_event$edgelist_id_row <-
+            start_stop[1] - 1 + diagnostics[[which_model[i]]]$recall$per_event$event
+          diagnostics[[which_model[i]]]$recall$per_event$time <-
+            unique(reh$edgelist$time)[diagnostics[[which_model[i]]]$recall$per_event$edgelist_id_row]
+        } else {
+          diagnostics[[which_model[i]]]$recall$per_event$edgelist_id_row <- NA_integer_
+          diagnostics[[which_model[i]]]$recall$per_event$time <- NA_real_
+          warning("edgelist_id_row cannot be resolved for stats method 'pe'; ",
+                  "returning NA.", call. = FALSE)
+        }
+      }
     }
   }
   diagnostics$.reh.processed <- reh
@@ -357,6 +577,193 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, ...) {
   class(diagnostics) <- c("diagnostics","remstimate")
   return(diagnostics)
 }
+
+
+.interp_coef_at_time <- function(cf_block, mid_time, query_time) {
+  coefmat <- cf_block$coefficients
+  sep     <- cf_block$separated
+  P <- ncol(coefmat)
+  out <- matrix(NA_real_, length(query_time), P, dimnames = list(NULL, colnames(coefmat)))
+  for (p in seq_len(P)) {
+    y <- coefmat[, p]
+    y[sep[, p]] <- NA
+    valid <- which(!is.na(y))
+    if (!length(valid)) next
+    if (length(valid) == 1L) { out[, p] <- y[valid]; next }
+    out[, p] <- stats::approx(x = mid_time[valid], y = y[valid],
+                              xout = query_time, rule = 2, method = "linear")$y
+  }
+  out
+}
+
+.recall_block_3d_varying <- function(pars_mat, baseline_vec, stats_3d, obs_ids,
+                                     valid_ids = NULL, top_pct = 0.05) {
+  M    <- dim(stats_3d)[3L]
+  rows <- vector("list", M)
+  for (m in seq_len(M)) {
+    obs <- obs_ids[[m]]
+    if (!length(obs)) next
+    valid <- if (is.null(valid_ids)) seq_len(dim(stats_3d)[1L]) else valid_ids[[m]]
+    if (!length(valid)) next
+    S    <- matrix(stats_3d[valid, , m], nrow = length(valid))
+    pars <- pars_mat[m, ]
+    base <- if (length(baseline_vec) > 1L) baseline_vec[m] else baseline_vec
+    probs <- exp(as.numeric(base + S %*% pars))
+    probs <- probs / sum(probs)
+    D_t   <- length(valid)
+    ord   <- order(probs, decreasing = TRUE)
+    pos_all <- match(obs, valid); keep <- which(!is.na(pos_all))
+    if (!length(keep)) next
+    pos <- pos_all[keep]; sub_index <- keep
+    rnks <- match(pos, ord); keep2 <- which(!is.na(rnks))
+    if (!length(keep2)) next
+    rnks <- rnks[keep2]; pos <- pos[keep2]; sub_index <- sub_index[keep2]
+    obs_probs <- probs[pos]
+    rows[[m]] <- data.frame(
+      event = m, sub_index = sub_index, obs_id = obs[sub_index],
+      rel_rank = 1 - rnks / D_t, cum_prob = cumsum(probs[ord])[rnks],
+      obs_prob = obs_probs, prob_ratio = obs_probs * D_t, log_loss = -log(obs_probs)
+    )
+  }
+  pe <- do.call(rbind, rows)
+  list(per_event = pe, summary = data.frame(
+    mean_rel_rank = mean(pe$rel_rank), median_rel_rank = median(pe$rel_rank),
+    mean_cum_prob = mean(pe$cum_prob), mean_prob_ratio = mean(pe$prob_ratio),
+    mean_log_loss = mean(pe$log_loss), top_pct = top_pct,
+    top_pct_prop = mean(pe$rel_rank >= 1 - top_pct)
+  ))
+}
+
+#' @export
+diagnostics.remstimate_window <- function(object, reh, stats, top_pct = 0.05, k = 10, ...) {
+  is_tie <- object$type == "tie"
+  cf <- coef.remstimate_window(object, k = k)
+  mid_time <- rowMeans(object$windows[, c("start_time", "end_time")])
+
+  anchor_fit <- Find(function(f) inherits(f, "remstimate"), object$fits)
+  if (is.null(anchor_fit)) stop("No successful fits in this remstimate_window object.", call. = FALSE)
+
+  prep <- .diagnostics_prepare(anchor_fit, reh, stats)
+  reh <- prep$reh; stats <- prep$stats
+  stats_attr_method <- prep$stats_attr_method; start_stop <- prep$start_stop
+
+  time_axis   <- if (stats_attr_method == "pt") unique(reh$edgelist$time) else reh$edgelist$time
+  event_times <- time_axis[seq_len(reh$M) + (start_stop[1] - 1L)]
+
+  .varying_block <- function(cf_block, stats_3d, obs_ids, valid_ids = NULL) {
+    var_names <- colnames(cf_block$coefficients)
+    wb  <- which(tolower(var_names) == "baseline")
+    sel <- if (length(wb)) seq_along(var_names)[-wb] else seq_along(var_names)
+
+    pars_mat <- .interp_coef_at_time(
+      list(coefficients = cf_block$coefficients[, sel, drop = FALSE],
+           separated    = cf_block$separated[,    sel, drop = FALSE]),
+      mid_time, event_times)
+    baseline_vec <- if (length(wb))
+      .interp_coef_at_time(
+        list(coefficients = cf_block$coefficients[, wb, drop = FALSE],
+             separated    = cf_block$separated[,    wb, drop = FALSE]),
+        mid_time, event_times)[, 1]
+    else 0
+
+    stats_sel <- if (length(sel) == 1L)
+      array(stats_3d[, sel, ], dim = c(dim(stats_3d)[1], 1, dim(stats_3d)[3]))
+    else stats_3d[, sel, , drop = FALSE]
+
+    recall <- .recall_block_3d_varying(pars_mat, baseline_vec, stats_sel, obs_ids, valid_ids, top_pct)
+    recall$per_event$time <- event_times[recall$per_event$event]
+    recall
+  }
+
+  if (is_tie) {
+    obs_dyad_ids <- if (is.list(attr(reh,"dyadID"))) attr(reh,"dyadID") else as.list(attr(reh,"dyadID"))
+    out <- list(recall = .varying_block(cf, stats, obs_dyad_ids), windows = object$windows, type = "tie")
+  } else {
+    out <- list(windows = object$windows, type = "actor")
+    if (!is.null(stats$sender_stats)) {
+      obs_ids   <- lapply(as.list(attr(reh,"actor1ID")), as.integer)
+      valid_ids <- if (!is.null(reh$sender_riskset)) rep(list(reh$sender_riskset), reh$M) else NULL
+      out$sender <- list(recall = .varying_block(cf$sender, stats$sender_stats, obs_ids, valid_ids))
+    }
+    if (!is.null(stats$receiver_stats)) {
+      obs_ids   <- lapply(attr(reh,"actor2ID"), function(x) as.integer(unlist(x)))
+      valid_ids <- if (!is.null(reh$receiver_riskset))
+        lapply(as.list(attr(reh,"actor1ID")), function(s) reh$receiver_riskset[[as.integer(s[1])]])
+      else NULL
+      out$receiver <- list(recall = .varying_block(cf$receiver, stats$receiver_stats, obs_ids, valid_ids))
+    }
+  }
+  class(out) <- c("diagnostics.remstimate_window", "list")
+  out
+}
+
+.plot_recall_window <- function(recall, windows, title_prefix = "") {
+  pe <- recall$per_event
+  if (is.null(pe) || nrow(pe) == 0L) {
+    plot.new(); title(main = paste0(title_prefix, "Recall (no data)")); return(invisible())
+  }
+
+  old_par <- par(mar = c(4, 4, 5, 2) + 0.1)
+  on.exit(par(old_par))
+
+  plot(pe$event, pe$rel_rank, xaxt = "n",
+       xlab = "Event", ylab = "Relative rank (0 = bottom, 1 = top)", main = "",
+       ylim = c(0, 1), pch = 16, cex = 0.6, col = grDevices::rgb(0, 0, 0, 0.35))
+
+  # tryCatch(
+  #   lines(smooth.spline(x = pe$event, y = pe$rel_rank, cv = FALSE), lwd = 3.5, col = 2),
+  #   error = function(e) NULL
+  # )
+
+  ticks <- pretty(pe$event)
+  ticks <- ticks[ticks >= min(pe$event) & ticks <= max(pe$event)]
+  axis(1, at = ticks)
+  time_at_ticks <- stats::approx(pe$event, pe$time, xout = ticks, rule = 2)$y
+  axis(3, at = ticks, labels = round(time_at_ticks, 1))
+  mtext("Time", side = 3, line = 2.2, cex = 0.8)
+
+  med <- stats::median(pe$rel_rank, na.rm = TRUE)
+  abline(h = med, lty = 2, col = "blue", lwd = 1.5)
+
+  ord   <- order(pe$event)
+  x_ord <- pe$event[ord]
+  y_ord <- pe$rel_rank[ord]
+
+  k <- max(3L, min(length(y_ord) - 1L, round(length(y_ord) * 0.1)))
+  if (k %% 2 == 0) k <- k + 1L   # runmed requires an odd bandwidth
+
+  y_med <- tryCatch(stats::runmed(y_ord, k = k), error = function(e) NULL)
+  if (!is.null(y_med)) {
+    sm <- tryCatch(stats::smooth.spline(x_ord, y_med), error = function(e) NULL)
+    if (!is.null(sm)) lines(sm$x, sm$y, col = "firebrick", lwd = 4)
+    else               lines(x_ord, y_med, col = "firebrick", lwd = 4)  # fallback if spline fails
+  }
+
+  if (nrow(windows) > 1)
+    abline(v = windows$end_event[-nrow(windows)], lty = 3, col = "grey70")
+
+  legend("bottomright", inset = 0.02, bg = "white", cex = 0.8,
+         legend = c("Rank", "Median rank", "Smoothed trend"),
+         lty = c(NA, 2, 1), pch = c(16, NA, NA),
+         col = c(grDevices::rgb(0, 0, 0, 0.35), "blue", "firebrick"), lwd = c(NA, 1.5, 2))
+
+  mtext(paste0(title_prefix, sprintf("Recall (median rank = %.3f)", med)),
+        side = 3, line = 3.3, cex = 1.1)
+}
+
+#' @export
+plot.diagnostics.remstimate_window <- function(x, ...) {
+  if (x$type == "tie") {
+    .plot_recall_window(x$recall, x$windows)
+  } else {
+    if (!is.null(x$sender))   .plot_recall_window(x$sender$recall,   x$windows, "sender: ")
+    if (!is.null(x$sender) && !is.null(x$receiver) && interactive())
+      invisible(readline("Press <Enter> for receiver model plot..."))
+    if (!is.null(x$receiver)) .plot_recall_window(x$receiver$recall, x$windows, "receiver: ")
+  }
+  invisible(x)
+}
+
 
 # -- print.diagnostics ---------------------------------------------------------
 
@@ -383,8 +790,15 @@ print.diagnostics <- function(x, ...) {
     if (!is.null(sub$recall)) {
       rs  <- sub$recall$summary
       pct <- round(rs$top_pct_prop * 100, 1)
-      cat(sprintf("  Recall     : mean rank = %.3f  |  prob ratio = %.2f  |  top %g%% = %s%%\n",
-                  rs$mean_rel_rank, rs$mean_prob_ratio, rs$top_pct * 100, pct))
+      low_str <- ""
+      if (!is.null(sub$surprise_threshold)) {
+        n_pe    <- nrow(sub$recall$per_event)
+        n_sur   <- if (is.null(sub$surprises)) 0L else nrow(sub$surprises)
+        low_pct <- if (n_pe > 0) round(100 * n_sur / n_pe, 1) else NA
+        low_str <- sprintf("  |  lowest %g%% = %s%%", sub$surprise_threshold * 100, low_pct)
+      }
+      cat(sprintf("  Recall     : mean rank = %.3f  |  prob ratio = %.2f  |  top %g%% = %s%%%s\n",
+                  rs$mean_rel_rank, rs$mean_prob_ratio, rs$top_pct * 100, pct, low_str))
     }
   }
 
@@ -467,8 +881,6 @@ summary.diagnostics <- function(object, ...) {
   }
   invisible(object)
 }
-
-
 
 
 # diagnostics voor GLMM, GLMNET en MIXREM backends

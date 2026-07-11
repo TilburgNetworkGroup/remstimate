@@ -1,5 +1,21 @@
 # shared helpers for external remstimate backends (GLMM, GLMNET, MIXREM)
 
+# Filter a recall table down to the most poorly-predicted (surprising) events.
+# threshold: keep rows with rel_rank <= threshold (low rel_rank = observed event
+# ranked near the bottom of the risk set = surprising). Sorted most-surprising first.
+.surprises_from_recall <- function(rc, threshold = 0.2) {
+  if (is.null(rc)) return(NULL)
+  pe <- rc$per_event
+  out <- pe[pe$rel_rank <= threshold, , drop = FALSE]
+  out[order(out$rel_rank), , drop = FALSE]
+}
+
+# Resolve durem eidx values to "actor1 -> actor2" dyad labels via reh$edgelist.
+.durem_dyad_labels <- function(reh, eidx) {
+  if (is.null(eidx) || length(eidx) == 0L) return(character(0))
+  paste(reh$edgelist$actor1[eidx], "->", reh$edgelist$actor2[eidx])
+}
+
 .remstimate_make_stack <- function(reh, stats, add_actors = TRUE) {
 
   # ── Pre-stacked pass-through (idempotent) ──────────────────────────────────
@@ -153,7 +169,7 @@
 # Used by diagnostics methods for GLMM, GLMNET, MIXREM, and (optionally) durem.
 
 # Core: rank observed events within time-point groups
-.recall_block <- function(lp, obs_idx, event_ids, top_pct = 0.05) {
+.recall_block <- function(lp, obs_idx, event_ids, top_pct = 0.05, ids = NULL, min_D_t = 1) {
   events <- unique(event_ids)
   rows <- vector("list", length(events))
   for (i in seq_along(events)) {
@@ -161,11 +177,12 @@
     mask <- which(event_ids == ev)
     obs  <- intersect(obs_idx, mask)
     if (length(obs) == 0L) next
+    D_t  <- length(mask)
+    if (D_t < min_D_t) next
     obs_pos <- match(obs, mask)
     lp_ev   <- lp[mask]
     probs   <- exp(lp_ev)
     probs   <- probs / sum(probs)
-    D_t     <- length(mask)
     ord     <- order(probs, decreasing = TRUE)
     rnks    <- match(obs_pos, ord)
     rnks    <- rnks[!is.na(rnks)]
@@ -177,7 +194,9 @@
       cum_prob   = cumsum(probs[ord])[rnks],
       obs_prob   = obs_probs,
       prob_ratio = obs_probs * D_t,
-      log_loss   = -log(obs_probs)
+      log_loss   = -log(obs_probs),
+      D_t        = D_t,
+      eidx       = if (!is.null(ids)) ids[obs] else NA_integer_
     )
   }
   pe <- do.call(rbind, rows)
@@ -224,13 +243,20 @@
 }
 
 # Print helper for recall output
-.print_recall_summary <- function(rc, label) {
+.print_recall_summary <- function(rc, label, surprises = NULL, threshold = NULL) {
   if (is.null(rc)) return()
   rs  <- rc$summary
   pct <- round(rs$top_pct_prop * 100, 1)
-  cat(sprintf("  %-10s: mean rank = %.3f | prob ratio = %.2f | top %g%% = %s%%\n",
+  low_str <- ""
+  if (!is.null(threshold)) {
+    n_pe    <- nrow(rc$per_event)
+    n_sur   <- if (is.null(surprises)) 0L else nrow(surprises)
+    low_pct <- if (n_pe > 0) round(100 * n_sur / n_pe, 1) else NA
+    low_str <- sprintf(" | lowest %g%% = %s%%", threshold * 100, low_pct)
+  }
+  cat(sprintf("  %-10s: mean rank = %.3f | prob ratio = %.2f | top %g%% = %s%%%s\n",
               label, rs$mean_rel_rank, rs$mean_prob_ratio,
-              rs$top_pct * 100, pct))
+              rs$top_pct * 100, pct, low_str))
 }
 
 # Plot helper for recall output (relative rank)
@@ -254,4 +280,57 @@
                  pch = ".", col = grDevices::adjustcolor("black", 0.3), ...)
   graphics::abline(h = 1, col = "grey50", lty = 3)
   graphics::abline(h = mean(pe$prob_ratio), col = "red", lty = 2)
+}
+
+
+# Tabulate how often each observed id (dyad or actor) shows up among surprises
+# vs. among all observed events, so repeat offenders surface immediately.
+.offender_table <- function(ids_surprises, ids_all, labels = NULL) {
+  if (length(ids_all) == 0L) return(NULL)
+  tab_all <- table(ids_all)
+  tab_sur <- table(ids_surprises)
+  ids <- names(tab_all)
+  n_total     <- as.integer(tab_all[ids])
+  n_surprises <- as.integer(tab_sur[ids])
+  n_surprises[is.na(n_surprises)] <- 0L
+  out <- data.frame(
+    id          = ids,
+    n_surprises = n_surprises,
+    n_total     = n_total,
+    prop        = n_surprises / n_total,
+    stringsAsFactors = FALSE
+  )
+  if (!is.null(labels)) out$label <- unname(labels[out$id])
+  out[order(-out$n_surprises, -out$prop), ]
+}
+
+.dyad_labels <- function(reh) {
+  dm <- reh$index$dyad_map_active %||% reh$index$dyad_map
+  if (is.null(dm)) return(NULL)
+  id_col <- if ("dyadIDactive" %in% names(dm)) "dyadIDactive" else "dyadID"
+  setNames(paste(dm$actor1, "->", dm$actor2), dm[[id_col]])
+}
+
+.actor_labels <- function(reh) {
+  ad <- reh$meta$dictionary$actors
+  if (is.null(ad)) return(NULL)
+  setNames(ad$actorName, ad$actorID)
+}
+
+# Look up id_list[[event]][sub_index] per row — recovers the sender for a
+# receiver-model surprise row (receiver choice is conditional on sender).
+.lookup_by_event <- function(event, sub_index, id_list) {
+  mapply(function(ev, si) {
+    v <- id_list[[ev]]
+    if (si > length(v)) return(NA_integer_)
+    as.integer(v[si])
+  }, event, sub_index)
+}
+
+# Build "SenderName -> ReceiverName" labels from raw actor IDs.
+.actor_pair_labels <- function(reh, sender_ids, receiver_ids) {
+  ad <- reh$meta$dictionary$actors
+  if (is.null(ad)) return(NULL)
+  nm <- setNames(ad$actorName, as.character(ad$actorID))
+  paste(unname(nm[as.character(sender_ids)]), "->", unname(nm[as.character(receiver_ids)]))
 }

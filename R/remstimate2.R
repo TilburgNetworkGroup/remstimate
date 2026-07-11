@@ -280,9 +280,14 @@ remstimate <- function(reh,
   max_cores <- parallel::detectCores()
   if (max_cores <= 2L) ncores <- 1L else ncores <- min(ncores, max_cores - 2L)
 
+  # Whether the riskset is a REDUCED one (stats built on the active/manual
+  # dyad set). `riskset` may be a *source* label such as "active_saturated"
+  # or "active_dynamic", so match any "active*" variant, not just "active".
+  reduced_riskset <- grepl("^active", riskset) || identical(riskset, "manual")
+
   # Dyad IDs and interevent times
   if (!is.null(reh$ids)) {
-    if (riskset %in% c("active", "manual"))
+    if (reduced_riskset)
       dyadID <- as.vector(reh$ids$dyad_active)
     else
       dyadID <- as.vector(reh$ids$dyad)
@@ -290,7 +295,7 @@ remstimate <- function(reh,
     simultaneous_idx <- reh$indices_simultaneous_events
     evenly_spaced    <- if (!is.null(reh$simultaneous)) reh$simultaneous$interevent_evenly_spaced else NULL
   } else {
-    if (riskset %in% c("active", "manual"))
+    if (reduced_riskset)
       dyadID <- attr(reh, "dyadIDactive") %||% attr(reh, "dyadID")
     else
       dyadID <- attr(reh, "dyadID")
@@ -299,8 +304,25 @@ remstimate <- function(reh,
     evenly_spaced    <- attr(reh, "evenly_spaced_interevent_time")
   }
 
-  D <- if (riskset %in% c("active", "manual")) (reh$activeD %||% reh$D) else reh$D
+  D <- if (reduced_riskset) (reh$activeD %||% reh$D) else reh$D
   M <- reh$M
+
+  # Guard: the dyad dimension of a tie-oriented 'stats' array must match the
+  # riskset size that 'reh' will index into. When they disagree (e.g. remify
+  # and remstats built different risksets), the C++ backend would otherwise
+  # fail deep inside Armadillo with a cryptic 'Mat::elem(): index out of
+  # bounds'. Fail early with an actionable message instead.
+  if (model == "tie" && !sampled && !inherits(stats, "aomstats") && length(dim(stats)) == 3L) {
+    stats_D <- dim(stats)[2]
+    if (!is.na(stats_D) && stats_D != D) {
+      stop(sprintf(
+        paste0("'stats' has %d dyad columns but the riskset in 'reh' has %d ",
+               "(%s). The remify and remstats objects describe different ",
+               "risksets - rebuild both from the same 'reh'."),
+        stats_D, D, if (reduced_riskset) "activeD" else "D"),
+        call. = FALSE)
+    }
+  }
 
   stats_method <- attr(stats, "method")
   if (is.null(stats_method)) stop("'stats' has no 'method' attribute.")

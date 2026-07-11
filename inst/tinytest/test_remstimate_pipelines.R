@@ -135,7 +135,8 @@ expect_true(!is.null(fit_ao$receiver_model),
             info = "actor MLE has receiver_model")
 
 # ── 3.2 Actor ordinal MLE ────────────────────────────────────────────────────
-reh_ao_ord <- remify(el_tie, model = "actor", actors = actors, ordinal = TRUE)
+reh_ao_ord <- remify(el_tie, model = "actor", actors = actors, ordinal = TRUE,
+                     riskset = "active")
 stats_ao_ord <- remstats(reh_ao_ord,
                          sender_effects   = ~ 1 + indegreeSender(),
                          receiver_effects = ~ inertia())

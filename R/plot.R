@@ -17,29 +17,62 @@
 # ── recall plot helper ────────────────────────────────────────────────────────
 
 .plot_recall <- function(rc, label = NULL) {
-  pe  <- rc$per_event
-  rs  <- rc$summary
-  top <- rs$top_pct
+  pe <- rc$per_event
+  rs <- rc$summary
+  has_time <- !is.null(pe$time) && !all(is.na(pe$time))
+
+  old_par <- par(mar = if (has_time) c(4, 4, 5, 2) + 0.1 else c(5, 4, 4, 2) + 0.1)
+  on.exit(par(old_par))
 
   plot(pe$event, pe$rel_rank,
        xlab = "Event", ylab = "Relative rank (0 = bottom, 1 = top)",
-       main = "",
-       ylim = c(0, 1),
-       pch  = 16, cex = 0.6,
-       col  = grDevices::rgb(0, 0, 0, 0.35))
-  abline(h = rs$median_rel_rank, lty = 2, col = 1, lwd = 1.5)   # no-skill reference
-  abline(h = 1 - top,   lty = 1, col = 4, lwd = 2)   # top_pct threshold
-  legend(0.5 * max(pe$event), 0.3,
-         legend = c("Rank", "Median rank", "Top % threshold"),
-         lty    = c(NA,  2,   1),
-         pch    = c(16,  NA,  NA),
-         col    = c(grDevices::rgb(0, 0, 0, 0.35), 1, 4),
-         lwd    = c(NA,  1.5, 2))
-  mtext(sprintf("Recall  (median rank = %.3f  |  prob ratio = %.2f  |  top %g%% = %.1f%%)",
-                rs$median_rel_rank, rs$mean_prob_ratio, top * 100, rs$top_pct_prop * 100),
-        side = 3, line = if (is.null(label)) 1 else 2, cex = 1.2)
+       main = "", xaxt = if (has_time) "n" else "s",
+       ylim = c(0, 1), pch = 16, cex = 0.6,
+       col = grDevices::rgb(0, 0, 0, 0.35))
+
+  if (has_time) {
+    ticks <- pretty(pe$event)
+    ticks <- ticks[ticks >= min(pe$event) & ticks <= max(pe$event)]
+    axis(1, at = ticks)
+    time_at_ticks <- stats::approx(pe$event, pe$time, xout = ticks, rule = 2)$y
+    axis(3, at = ticks, labels = round(time_at_ticks, 1))
+    mtext("Time", side = 3, line = 2.2, cex = 0.8)
+  }
+
+  abline(h = rs$median_rel_rank, lty = 2, col = 1, lwd = 1.5)
+
+  # smoothed trend of the relative rank over events, to reveal periods where
+  # recall was systematically better/worse (same approach as .plot_recall_window)
+  ord   <- order(pe$event)
+  x_ord <- pe$event[ord]
+  y_ord <- pe$rel_rank[ord]
+
+  has_trend <- FALSE
+  if (length(y_ord) >= 4L) {
+    k <- max(3L, min(length(y_ord) - 1L, round(length(y_ord) * 0.1)))
+    if (k %% 2 == 0) k <- k + 1L   # runmed requires an odd bandwidth
+
+    y_med <- tryCatch(stats::runmed(y_ord, k = k), error = function(e) NULL)
+    if (!is.null(y_med)) {
+      sm <- tryCatch(stats::smooth.spline(x_ord, y_med), error = function(e) NULL)
+      if (!is.null(sm)) lines(sm$x, sm$y, col = "firebrick", lwd = 4)
+      else              lines(x_ord, y_med, col = "firebrick", lwd = 4)  # fallback if spline fails
+      has_trend <- TRUE
+    }
+  }
+
+  legend("bottomright",
+         legend = c("Rank", "Median rank",
+                    if (has_trend) "Smoothed trend"),
+         lty    = c(NA,  2,   if (has_trend) 1),
+         pch    = c(16,  NA,  if (has_trend) NA),
+         col    = c(grDevices::rgb(0, 0, 0, 0.35), 1,
+                    if (has_trend) "firebrick"),
+         lwd    = c(NA,  1.5, if (has_trend) 2))
+  mtext(sprintf("Recall (median rank = %.3f)", rs$median_rel_rank),
+        side = 3, line = if (has_time) 3.3 else (if (is.null(label)) 1 else 2), cex = 1.2)
   if (!is.null(label))
-    mtext(label, side = 3, line = 1, cex = 1)
+    mtext(label, side = 3, line = if (has_time) 4.3 else 1, cex = 1)
 }
 
 # ── prob ratio plot helper ────────────────────────────────────────────────────
@@ -211,7 +244,7 @@ plot.diagnostics <- function(x,
                ylim = ylim_p,
                col  = grDevices::rgb(128, 128, 128, 200, maxColorValue = 255))
           tryCatch(
-            lines(smooth.spline(x = t_p, y = y_p, w = w_p, cv = FALSE), lwd = 3.5, col = 2),
+            lines(suppressWarnings(smooth.spline(x = t_p, y = y_p, w = w_p, cv = FALSE)), lwd = 3.5, col = 2),
             error = function(e) NULL
           )
           abline(h = 0, col = "black", lwd = 3, lty = 2)
@@ -379,7 +412,7 @@ plot.diagnostics <- function(x,
                  ylim = ylim_p,
                  col  = grDevices::rgb(128, 128, 128, 200, maxColorValue = 255))
             tryCatch(
-              lines(smooth.spline(x = t_p_i, y = y_p, w = w_p, cv = FALSE), lwd = 3.5, col = 2),
+              lines(suppressWarnings(smooth.spline(x = t_p_i, y = y_p, w = w_p, cv = FALSE)), lwd = 3.5, col = 2),
               error = function(e) NULL
             )
             abline(h = 0, col = "black", lwd = 3, lty = 2)
