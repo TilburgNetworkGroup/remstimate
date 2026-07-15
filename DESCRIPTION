@@ -77,7 +77,7 @@ Suggests:
     nnet,
     remdata
 Remotes:
-    TilburgNetworkGroup/remstats
+    TilburgNetworkGroup/remstats,
     jomulder/shrinkem
 LinkingTo:
     Rcpp,
