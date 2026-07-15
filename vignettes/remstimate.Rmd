@@ -18,12 +18,16 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteIndexEntry{Modeling relational event networks with remstimate}
   %\VignetteEncoding{UTF-8}
+
+---
+
+`remstimate` is part of the `remverse` ecosystem for relational event modeling; if you want the full toolchain, see the `remverse` package.
+
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(dpi = 72) # set global knitr options
 ```
-
 
 The aim of the function `remstimate()` is to find the set of model parameters that optimizes either: (1) the likelihood function given the observed data or (2) the posterior probability of the parameters given the prior information on their distribution and the likelihood of the data. Furthermore, the likelihood function may differ depending on the modeling framework used, be it tie-oriented or actor-oriented:
 

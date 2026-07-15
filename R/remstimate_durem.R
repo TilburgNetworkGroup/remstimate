@@ -13,16 +13,24 @@
 # ── clogit helper ─────────────────────────────────────────────────────────
 #
 # 'survival' is only a Suggested dependency, so it is never attached to the
-# search path. When coxph()/clogit() build the model frame, the strata()
-# special in our formula is looked up as a function in the formula's
-# environment and its parents - which is this package's namespace, where
-# 'strata' is not imported. That produces:
+# search path. survival::clogit() is implemented by rewriting the problem as a
+# bare coxph() call with a Surv(...) response and a strata() term, then
+# eval()'ing that call in the caller's frame / the formula's environment. With
+# survival unattached, none of those bare names resolve, so clogit fails on
+# whichever it reaches first:
 #   Error in strata(time_index) : could not find function "strata"
+#   Error in coxph(...)          : could not find function "coxph"
 #
-# Fix: give the formula an environment that carries survival::strata, so the
-# special resolves during model.frame evaluation. We keep the bare name
-# strata() (rather than survival::strata()) in the formula so coxph's specials
-# detection (which matches on the unqualified name) still works.
+# Whether it fails is platform-dependent: it only works when some other package
+# (coxme, lme4, ...) happened to attach 'survival' first, which is why R-hub
+# Windows passed but macOS / clean CRAN checks fail.
+#
+# Fix: bind the survival functions clogit relies on in this frame, and point the
+# formula's environment here, so every bare name resolves during both clogit's
+# own eval() and coxph's model.frame() - on every platform, without attaching
+# survival. The bare names (not survival::) are kept in the formula so coxph's
+# "specials" detection, which matches on the unqualified symbol, still
+# recognises strata().
 #
 #' @keywords internal
 .durem_clogit <- function(formula_obj, df) {
@@ -30,11 +38,13 @@
     stop("Package 'survival' is required for ordinal (clogit) duration models. ",
          "Install it with install.packages('survival').", call. = FALSE)
 
-  fenv         <- new.env(parent = environment(formula_obj))
-  fenv$strata  <- survival::strata
-  environment(formula_obj) <- fenv
+  coxph  <- survival::coxph
+  Surv   <- survival::Surv
+  strata <- survival::strata
+  clogit <- survival::clogit
+  environment(formula_obj) <- environment()
 
-  survival::clogit(formula_obj, data = df)
+  clogit(formula_obj, data = df)
 }
 
 
