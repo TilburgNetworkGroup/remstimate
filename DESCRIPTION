@@ -72,12 +72,13 @@ Suggests:
     lme4,
     glmmTMB,
     flexmix,
-    shrinkem (>= 0.3.0),
+    shrinkem (>= 0.4.0),
     MASS,
     nnet,
     remdata
 Remotes:
     TilburgNetworkGroup/remstats
+    jomulder/shrinkem
 LinkingTo:
     Rcpp,
     RcppArmadillo,
