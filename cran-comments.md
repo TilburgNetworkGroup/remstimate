@@ -1,12 +1,12 @@
 # remstimate 3.0.0
-Date: 2026-04-30
+Date: 2026-07-16
 
 # Updates
-Change of functionality of remstimate() and diagnostics()
+Change of functionality of remstimate() and diagnostics(). extended wrappers.
 
 ## Coordinated submission
-This is a coordinated submission together with remify (4.0.0) and 
-remstats (4.0.0). These packages are interdependent and need to be 
+This is a coordinated submission together with remify (4.1.0) and 
+remstats (4.1.0). These packages are interdependent and need to be 
 processed in order: remify first, then remstats, then remstimate.
  
 ## Test environments 

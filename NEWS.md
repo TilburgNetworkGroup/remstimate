@@ -1,3 +1,10 @@
+# remstimate 3.1.0
+
+* Durem functionality.
+* Change functionality of remstimate arguments, compatibility with flexmix and
+  other packages.
+* Extended wrappers.
+
 # remstimate 3.0.0
 
 * Version for remverse.
