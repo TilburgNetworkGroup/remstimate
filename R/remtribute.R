@@ -85,31 +85,48 @@
 #' @examples
 #' \donttest{
 #' # ── Example 1: Tie model + pre-computed stats ──
-#' reh <- remify::remify(edgelist = dat$edgelist, model = "tie",
-#'                       event_type = "type",
-#'                       event_attributes = "type")
-#' stats <- remstats::tomstats(reh,
-#'   tie_effects = ~ inertia() + reciprocity())
-#' fit_dyad <- remstimate(reh, stats)
-#' fit_type <- remtribute(reh, stats = stats, attribute = "type",
-#'                        attribute_type = "nominal")
+#' if (requireNamespace("remdata", quietly = TRUE)) {
+#'   data(hypertext, package = "remdata")
+#'   # numeric attribute
+#'   reh_text <- remify::remify(hypertext[1:1000,], model = "tie",
+#'     directed = FALSE, riskset = "active",
+#'     event_attributes = "duration")
+#'   remstats_text <- remstats::remstats(reh_text,
+#'     tie_effects = ~ inertia(scaling = "std") + totaldegreeDyad(scaling = "std"),
+#'     first = 50)
+#'   # fit model for event rate
+#'   remstimate_tie <- remstimate(reh_text, remstats_text)
+#'   # fit model for event attribute
+#'   fit_attr <- remtribute(reh_text, stats = remstats_text, attribute = "duration",
+#'    attribute_type = "numeric")
 #'
-#' # ── Example 2: Actor model + effects formula ──
-#' reh_act <- remify::remify(edgelist = dat$edgelist, model = "actor",
-#'                           directed = TRUE,
-#'                           event_attributes = "type")
-#' stats_act <- remstats::remstats(reh_act,
-#'   sender_effects = ~ outdegreeSender(),
-#'   receiver_effects = ~ inertia())
-#' fit_act <- remstimate(reh_act, stats_act)
+#'   # nominal attribute
+#'   hypertext$long <- hypertext$duration>20
+#'   reh_text <- remify::remify(hypertext[1:1000,], model = "tie", directed = FALSE,
+#'     riskset = "active", event_attributes = "long")
+#'   remstats_text <- remstats::remstats(reh_text,
+#'     tie_effects = ~ inertia(scaling = "std") +
+#'     totaldegreeDyad(scaling = "std"),
+#'     first = 50)
+#'   remstimate_text <- remstimate(reh_text, remstats_text)
+#'   summary(remstimate_text)
+#'   fit_attr <- remtribute(reh_text, stats = remstats_text, attribute = "long",
+#'     attribute_type = "nominal")
 #'
-#' # Use effects formula — no need for a separate tie-model reh
-#' fit_type <- remtribute(reh_act, effects = ~ inertia() + reciprocity(),
-#'                        attribute = "type",
-#'                        attribute_type = "nominal")
-#' summary(fit_type)
+#'   # ── Example 2: Actor model + effects formula ──
+#'   reh_act <- remify::remify(edgelist = hypertext[1:1000,], model = "actor",
+#'                           event_attributes = "duration")
+#'   stats_act <- remstats::remstats(reh_act, sender_effects = ~ outdegreeSender(),
+#'     receiver_effects = ~ inertia())
+#'   fit_act <- remstimate(reh_act, stats_act)
+#'
+#'   # Use effects formula — no need for a separate tie-model reh
+#'   fit_type <- remtribute(reh_act, effects = ~ inertia() + reciprocity(),
+#'     attribute = "duration",
+#'     attribute_type = "numeric")
+#'   summary(fit_type)
 #' }
-#'
+#' }
 #' @export
 remtribute <- function(reh,
                         stats = NULL,
@@ -178,10 +195,71 @@ remtribute <- function(reh,
     reh_for_dyads <- reh
   }
 
-  # ── 2. Extract outcome vector ───────────────────────────────────────────
-  y <- reh$edgelist[[attribute]]
-  M <- length(y)
+  # ── 2. Raw outcome vector (per event, in edgelist order) ────────────────
+  y_full <- reh$edgelist[[attribute]]
 
+  # ── 3. Get observed dyad indices (per stats time-point row) ─────────────
+  riskset <- if (!is.null(reh_for_dyads$meta)) {
+    reh_for_dyads$meta$riskset_source %||% reh_for_dyads$meta$riskset
+  } else {
+    attr(reh_for_dyads, "riskset")
+  }
+  reduced_riskset <- grepl("^active", riskset) || identical(riskset, "manual")
+
+  if (!is.null(reh_for_dyads$ids)) {
+    dyad_ids <- if (reduced_riskset) reh_for_dyads$ids$dyad_active
+                else reh_for_dyads$ids$dyad
+  } else {
+    dyad_ids <- if (reduced_riskset)
+      (attr(reh_for_dyads, "dyadIDactive") %||% attr(reh_for_dyads, "dyadID"))
+    else attr(reh_for_dyads, "dyadID")
+  }
+
+  # `dyad_ids` holds the observed dyad(s) for each time-point row of `stats`.
+  # With method = "pt" and simultaneous events it is a *list* (a vector of
+  # dyads per row); with one event per time point it is an atomic vector.
+  # Normalise to a list so the per-event expansion is uniform, then flatten
+  # to one entry per event together with the stats row each event maps to.
+  dyad_list   <- if (is.list(dyad_ids)) lapply(dyad_ids, as.integer)
+                 else as.list(as.integer(dyad_ids))
+  n_rows_full <- length(dyad_list)                 # rows over the FULL history
+  n_events    <- sum(lengths(dyad_list))
+
+  if (length(y_full) != n_events)
+    stop("Cannot align attribute '", attribute, "' (", length(y_full),
+         " edgelist rows) with the observed dyad sequence (", n_events,
+         " events). 'stats' and 'reh' appear to describe different event ",
+         "histories - rebuild both from the same 'reh'.", call. = FALSE)
+
+  row_of_event  <- rep.int(seq_len(n_rows_full), lengths(dyad_list))
+  dyad_of_event <- unlist(dyad_list, use.names = FALSE)
+
+  # ── 3b. Restrict to the window that `stats` was computed on ─────────────
+  # `stats` is already sliced to its window (dim(stats)[1] rows). The subset
+  # attribute gives the start/stop *row* indices into the full history, so we
+  # keep events whose row falls inside it and re-base the row index to 1.
+  subset_attr <- attr(stats, "subset")
+  start_stop  <- if (!is.null(subset_attr)) as.integer(unlist(subset_attr))
+                 else c(1L, n_rows_full)
+
+  keep          <- row_of_event >= start_stop[1] & row_of_event <= start_stop[2]
+  stats_row     <- row_of_event[keep] - start_stop[1] + 1L
+  dyad_of_event <- dyad_of_event[keep]
+  y             <- y_full[keep]
+  M             <- length(y)
+
+  if (M == 0L)
+    stop("No events fall inside the stats window (subset = ",
+         paste(start_stop, collapse = ":"), ").", call. = FALSE)
+
+  # Guard against stats/riskset dyad-dimension mismatch before indexing, so a
+  # bad riskset fails here rather than with a cryptic subscript error.
+  if (any(dyad_of_event > dim(stats)[2], na.rm = TRUE))
+    stop("Observed dyad id exceeds the number of dyad columns in 'stats' (",
+         dim(stats)[2], "). The remify and remstats risksets differ - ",
+         "rebuild both from the same 'reh'.", call. = FALSE)
+
+  # ── 3c. Coerce/validate outcome now that it is windowed ─────────────────
   if (attribute_type == "nominal") {
     y <- as.factor(y)
     if (nlevels(y) < 2L)
@@ -198,54 +276,30 @@ remtribute <- function(reh,
       stop("All values in '", attribute, "' are NA.", call. = FALSE)
   }
 
-  # ── 3. Get observed dyad indices ────────────────────────────────────────
-  riskset <- if (!is.null(reh_for_dyads$meta)) {
-    reh_for_dyads$meta$riskset_source %||% reh_for_dyads$meta$riskset
-  } else {
-    attr(reh_for_dyads, "riskset")
-  }
-
-  if (!is.null(reh_for_dyads$ids)) {
-    if (grepl("^active", riskset) || identical(riskset, "manual"))
-      dyad_ids <- as.vector(reh_for_dyads$ids$dyad_active)
-    else
-      dyad_ids <- as.vector(reh_for_dyads$ids$dyad)
-  } else {
-    if (grepl("^active", riskset) || identical(riskset, "manual"))
-      dyad_ids <- as.vector(attr(reh_for_dyads, "dyadIDactive") %||% attr(reh_for_dyads, "dyadID"))
-    else
-      dyad_ids <- as.vector(attr(reh_for_dyads, "dyadID"))
-  }
-
-  # Handle subset (use same events as stats)
-  subset_attr <- attr(stats, "subset")
-  if (!is.null(subset_attr)) {
-    start_stop <- as.integer(unlist(subset_attr))
-    idx <- start_stop[1]:start_stop[2]
-    y <- y[idx]
-    dyad_ids <- dyad_ids[idx]
-    M <- length(y)
-  }
-
-  # ── 4. Subset stats to observed dyads ───────────────────────────────────
-  # stats is M x D x p; extract stats[m, dyad_ids[m], ] for each m
+  # ── 4. Build the design matrix: stats[row, dyad, ] per event ────────────
   stat_names <- dimnames(stats)[[3]]
   if (is.null(stat_names))
     stop("'stats' has no dimname labels on third dimension.", call. = FALSE)
   p <- length(stat_names)
 
   X <- matrix(NA_real_, nrow = M, ncol = p)
-  for (m in seq_len(M)) {
-    X[m, ] <- stats[m, dyad_ids[m], ]
+  for (i in seq_len(M)) {
+    X[i, ] <- stats[stats_row[i], dyad_of_event[i], ]
   }
   colnames(X) <- stat_names
 
-  # Remove constant columns (e.g., baseline) — they cause issues in
-  # multinomial/ordinal models since the intercept is already estimated
+  # Remove constant columns: they are collinear with the intercept that the
+  # backend already estimates. `baseline` is constant *by construction* (it is
+  # the REM intercept, equal to 1 for every dyad), so drop it silently; only
+  # report other statistics that turned out constant, since that is unexpected
+  # and usually signals a degenerate effect at the observed dyads.
   const_cols <- apply(X, 2, function(col) length(unique(col)) == 1L)
   if (any(const_cols)) {
-    message("Dropping constant statistic(s): ",
-            paste(stat_names[const_cols], collapse = ", "))
+    is_baseline    <- tolower(stat_names) == "baseline"
+    report_dropped <- const_cols & !is_baseline
+    if (any(report_dropped))
+      message("Dropping constant statistic(s): ",
+              paste(stat_names[report_dropped], collapse = ", "))
     X <- X[, !const_cols, drop = FALSE]
     stat_names <- stat_names[!const_cols]
     p <- length(stat_names)

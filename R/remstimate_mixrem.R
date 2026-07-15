@@ -1,4 +1,4 @@
-# MIXREM backend — eindige mengsels via flexmix::flexmix
+# MIXREM backend - eindige mengsels via flexmix::flexmix
 #
 # remstimate(reh, stats, method = "MIXREM",
 #            random = ~ (1 + inertia | dyad), k = 2)
@@ -89,7 +89,7 @@
   kansen   <- kansen[volgorde]
   colnames(coef_mat) <- paste0("Component.", seq_len(k))
 
-  # drop ordinal time-stratum dummies — report substantive statistics only
+  # drop ordinal time-stratum dummies - report substantive statistics only
   keep     <- intersect(stat_names, rownames(coef_mat))
   coef_mat <- coef_mat[keep, , drop = FALSE]
 
@@ -138,7 +138,7 @@ bic_table.remstimate_mixrem_list <- function(x, ...) {
 
 #' @export
 print.remstimate_mixrem <- function(x, ...) {
-  cat("REM —", attr(x, "model"), "model — MIXREM [flexmix, k =", x$k, "]\n\n")
+  cat("REM -", attr(x, "model"), "model - MIXREM [flexmix, k =", x$k, "]\n\n")
   cat("Mixing proportions:\n"); print(round(x$prior_probs, 4))
   cat("\nCoefficients per component:\n"); print(round(x$coefficients, 4))
   cat("\nlogLik:", round(as.numeric(x$loglik), 4), " BIC:", round(x$bic, 2), "\n")
@@ -159,9 +159,22 @@ coef.remstimate_mixrem     <- function(object, ...) object$coefficients
 #' @export
 logLik.remstimate_mixrem   <- function(object, ...) object$loglik
 
+# MIXREM diagnostics. A finite mixture is the discrete analogue of the GLMM
+# random effects: instead of continuous dyad/actor BLUPs, dyads/actors are
+# clustered into components that share the same parameters. So diagnostics are
+# built the same way as the GLMM random-effect-aware recall - a within-event
+# ranking under a component-aware linear predictor - and routed through
+# plot.diagnostics:
+#   $recall              posterior-weighted recall (the cluster-aware analogue of
+#                        GLMM's $recall_ranef)          -> plot.diagnostics which 3 / 6
+#   $recall_by_type      per event type (typed events)  -> which 8
+#   $recall_by_component per mixture component           -> which 9
+# There is no single global linear predictor for a mixture, so the Schoenfeld
+# residuals (which 2) and waiting-time Q-Q (which 1) are not produced; those
+# panels are simply absent and plot.diagnostics skips them.
 #' @export
 #' @method diagnostics remstimate_mixrem
-diagnostics.remstimate_mixrem <- function(object, reh = NULL, stats = NULL,
+diagnostics.remstimate_mixrem <- function(object, reh, stats = NULL,
                                            top_pct = 0.05, ...) {
   model <- attr(object, "model")
   if (model == "actor") {
@@ -179,7 +192,6 @@ diagnostics.remstimate_mixrem <- function(object, reh = NULL, stats = NULL,
   fit        <- object$backend_fit
   K          <- ncol(coef_mat)
 
-  # Posterior-weighted linear predictor
   X <- as.matrix(df[, stat_names, drop = FALSE])
 
   # Subset coef_mat to stat_names rows (in case of extra rows like time FE)
@@ -189,95 +201,94 @@ diagnostics.remstimate_mixrem <- function(object, reh = NULL, stats = NULL,
     coef_rows <- stat_names[seq_len(min(nrow(coef_mat), length(stat_names)))]
   }
 
+  # Per-component linear predictors (baseline, where present, is one of the rows
+  # in coef_mat and is carried along; it cancels in the within-event softmax used
+  # by .recall_block, so it need not be split out here).
+  lp_component <- lapply(seq_len(K), function(k) {
+    bk <- coef_mat[coef_rows, k]
+    as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
+  })
+
+  # Posterior-weighted linear predictor for the joint recall
   if (!is.null(fit) && K > 1L) {
     post <- tryCatch(flexmix::posterior(fit), error = function(e) NULL)
-    if (!is.null(post)) {
-      # LP per component, then posterior-weighted average
-      lp_k <- lapply(seq_len(K), function(k) {
-        bk <- coef_mat[coef_rows, k]
-        as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
-      })
-      lp <- rowSums(vapply(seq_len(K), function(k) post[, k] * lp_k[[k]],
-                           numeric(nrow(X))))
-    } else {
-      # Fallback: use first (largest) component
-      bk <- coef_mat[coef_rows, 1L]
-      lp <- as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
-    }
+    lp <- if (!is.null(post))
+      rowSums(vapply(seq_len(K), function(k) post[, k] * lp_component[[k]],
+                     numeric(nrow(X))))
+    else lp_component[[1L]]           # fallback: largest component
   } else {
-    # Single component
-    bk <- if (is.matrix(coef_mat)) coef_mat[coef_rows, 1L] else coef_mat[coef_rows]
-    lp <- as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
+    lp <- lp_component[[1L]]
   }
 
-  out <- .diagnostics_recall(lp, df, top_pct)
+  # Add a dense 'event' index (over the time groups) so each recall table plots
+  # like every other one via .plot_recall (which keys the x-axis on 'event').
+  .add_event <- function(rc) {
+    if (!is.null(rc) && !is.null(rc$per_event))
+      rc$per_event$event <-
+        match(rc$per_event$time, sort(unique(rc$per_event$time)))
+    rc
+  }
 
-  # Per-component recall
+  out <- .diagnostics_recall(lp, df, top_pct)          # $recall (+ $recall_by_type)
+  out$recall <- .add_event(out$recall)
+  if (!is.null(out$recall_by_type))
+    out$recall_by_type <- lapply(out$recall_by_type, .add_event)
+
+  # Per-component recall (only meaningful for a genuine mixture)
   if (K > 1L) {
-    out$recall_by_component <- list()
-    for (k in seq_len(K)) {
-      bk <- coef_mat[coef_rows, k]
-      lp_k <- as.numeric(X[, coef_rows, drop = FALSE] %*% bk)
-      out$recall_by_component[[paste0("Component.", k)]] <-
-        .recall_block(lp_k, which(df$obs == 1L), df$time_index, top_pct)
-    }
+    obs_idx <- which(df$obs == 1L)
+    out$recall_by_component <- setNames(lapply(seq_len(K), function(k)
+      .add_event(.recall_block(lp_component[[k]], obs_idx, df$time, top_pct))),
+      paste0("Component.", seq_len(K)))
   }
 
-  class(out) <- c("diagnostics_mixrem", "diagnostics_remstimate",
-                   "diagnostics", "remstimate")
+  out$prior_probs    <- object$prior_probs
+  out$k              <- K
+  out$.reh.processed <- denormalize_reh(reh)
+  class(out) <- c("diagnostics_mixrem", "diagnostics", "remstimate")
   out
 }
 
 #' @export
 #' @method print diagnostics_mixrem
 print.diagnostics_mixrem <- function(x, ...) {
-  cat("Diagnostics for Relational Event Model (MIXREM)\n")
-  cat(strrep("-", 50), "\n")
+  reh <- x$.reh.processed
+  cat("Diagnostics - Mixture REM (k =", x$k, ")\n")
+  if (!is.null(reh)) cat(sprintf("Actors: %d  Events: %d\n", reh$N, reh$M))
+
+  if (!is.null(x$prior_probs)) {
+    cat("\nMixing proportions:\n")
+    pp <- setNames(round(x$prior_probs, 4),
+                   paste0("Component.", seq_along(x$prior_probs)))
+    print(pp)
+  }
+
+  .line <- function(lbl, rc) {
+    rs <- rc$summary
+    cat(sprintf("  %-14s  mean rank = %.3f  |  prob ratio = %.2f  |  top %g%% = %.1f%%\n",
+                lbl, rs$mean_rel_rank, rs$mean_prob_ratio,
+                rs$top_pct * 100, rs$top_pct_prop * 100))
+  }
 
   if (!is.null(x$recall)) {
     cat("\nRecall (posterior-weighted):\n")
-    .print_recall_summary(x$recall, "Joint")
-  }
-  if (!is.null(x$recall_by_type)) {
-    cat("\nRecall by type:\n")
-    for (tp in names(x$recall_by_type))
-      .print_recall_summary(x$recall_by_type[[tp]], paste0("  ", tp))
+    .line("Joint", x$recall)
   }
   if (!is.null(x$recall_by_component)) {
     cat("\nRecall by component:\n")
-    for (k in names(x$recall_by_component))
-      .print_recall_summary(x$recall_by_component[[k]], paste0("  ", k))
+    for (nm in names(x$recall_by_component)) .line(nm, x$recall_by_component[[nm]])
+  }
+  if (!is.null(x$recall_by_type)) {
+    cat("\nRecall by type:\n")
+    for (tp in names(x$recall_by_type)) .line(tp, x$recall_by_type[[tp]])
   }
   invisible(x)
 }
 
-#' @export
-#' @method plot remstimate_mixrem
-plot.remstimate_mixrem <- function(x, reh = NULL, stats = NULL,
-                                    diagnostics_object = NULL,
-                                    which = 1L, ...) {
-  if (is.null(diagnostics_object))
-    diagnostics_object <- diagnostics(x, reh, stats)
-  if (is.null(diagnostics_object)) return(invisible(x))
-
-  if (which == 1L) {
-    .plot_recall_scatter(diagnostics_object$recall,
-                         "Recall: MIXREM (posterior-weighted)", ...)
-  } else if (which == 2L && !is.null(diagnostics_object$recall_by_component)) {
-    rbt <- diagnostics_object$recall_by_component
-    old_par <- graphics::par(mfrow = c(1, length(rbt)))
-    on.exit(graphics::par(old_par))
-    for (k in names(rbt))
-      .plot_recall_scatter(rbt[[k]], k, ...)
-  } else if (which == 3L && !is.null(diagnostics_object$recall_by_type)) {
-    rbt <- diagnostics_object$recall_by_type
-    old_par <- graphics::par(mfrow = c(1, length(rbt)))
-    on.exit(graphics::par(old_par))
-    for (tp in names(rbt))
-      .plot_recall_scatter(rbt[[tp]], paste("Type:", tp), ...)
-  } else if (which == 4L) {
-    .plot_probratio_scatter(diagnostics_object$recall,
-                             "Prob ratio: MIXREM (posterior-weighted)", ...)
-  }
-  invisible(x)
-}
+# MIXREM has no dedicated plot method: diagnostics() returns a
+# c("diagnostics_mixrem","diagnostics","remstimate") object, so plot() on a
+# remstimate_mixrem fit falls through to plot.remstimate, which computes
+# diagnostics() and delegates to plot.diagnostics. Recall is which = 3,
+# probability ratio which = 6, per-type recall which = 8 and per-component
+# recall which = 9. A plot.remstimate_mixrem here would be shadowed by load
+# order and silently diverge.

@@ -101,31 +101,48 @@ full observed dyad and requires dyad-level covariates.
 \examples{
 \donttest{
 # ── Example 1: Tie model + pre-computed stats ──
-reh <- remify::remify(edgelist = dat$edgelist, model = "tie",
-                      event_type = "type",
-                      event_attributes = "type")
-stats <- remstats::tomstats(reh,
-  tie_effects = ~ inertia() + reciprocity())
-fit_dyad <- remstimate(reh, stats)
-fit_type <- remtribute(reh, stats = stats, attribute = "type",
-                       attribute_type = "nominal")
+if (requireNamespace("remdata", quietly = TRUE)) {
+  data(hypertext, package = "remdata")
+  # numeric attribute
+  reh_text <- remify::remify(hypertext[1:1000,], model = "tie",
+    directed = FALSE, riskset = "active",
+    event_attributes = "duration")
+  remstats_text <- remstats::remstats(reh_text,
+    tie_effects = ~ inertia(scaling = "std") + totaldegreeDyad(scaling = "std"),
+    first = 50)
+  # fit model for event rate
+  remstimate_tie <- remstimate(reh_text, remstats_text)
+  # fit model for event attribute
+  fit_attr <- remtribute(reh_text, stats = remstats_text, attribute = "duration",
+   attribute_type = "numeric")
 
-# ── Example 2: Actor model + effects formula ──
-reh_act <- remify::remify(edgelist = dat$edgelist, model = "actor",
-                          directed = TRUE,
-                          event_attributes = "type")
-stats_act <- remstats::remstats(reh_act,
-  sender_effects = ~ outdegreeSender(),
-  receiver_effects = ~ inertia())
-fit_act <- remstimate(reh_act, stats_act)
+  # nominal attribute
+  hypertext$long <- hypertext$duration>20
+  reh_text <- remify::remify(hypertext[1:1000,], model = "tie", directed = FALSE,
+    riskset = "active", event_attributes = "long")
+  remstats_text <- remstats::remstats(reh_text,
+    tie_effects = ~ inertia(scaling = "std") +
+    totaldegreeDyad(scaling = "std"),
+    first = 50)
+  remstimate_text <- remstimate(reh_text, remstats_text)
+  summary(remstimate_text)
+  fit_attr <- remtribute(reh_text, stats = remstats_text, attribute = "long",
+    attribute_type = "nominal")
 
-# Use effects formula — no need for a separate tie-model reh
-fit_type <- remtribute(reh_act, effects = ~ inertia() + reciprocity(),
-                       attribute = "type",
-                       attribute_type = "nominal")
-summary(fit_type)
+  # ── Example 2: Actor model + effects formula ──
+  reh_act <- remify::remify(edgelist = hypertext[1:1000,], model = "actor",
+                          event_attributes = "duration")
+  stats_act <- remstats::remstats(reh_act, sender_effects = ~ outdegreeSender(),
+    receiver_effects = ~ inertia())
+  fit_act <- remstimate(reh_act, stats_act)
+
+  # Use effects formula — no need for a separate tie-model reh
+  fit_type <- remtribute(reh_act, effects = ~ inertia() + reciprocity(),
+    attribute = "duration",
+    attribute_type = "numeric")
+  summary(fit_type)
 }
-
+}
 }
 \references{
 Brandes, U., Lerner, J., & Snijders, T. A. B. (2009). Networks

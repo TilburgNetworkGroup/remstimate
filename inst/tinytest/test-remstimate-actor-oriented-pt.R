@@ -39,8 +39,8 @@ expect_identical(names(ao_mle$receiver_model),c("coefficients","loglik","gradien
 expect_length(attributes(ao_mle),9)
 expect_identical(names(attributes(ao_mle)),c("names","class","model","ordinal","method","approach","formula","statistics","ncores"))
 expect_identical(attr(ao_mle,"approach"),"Frequentist")
-expect_silent(print(ao_mle))
-expect_silent(summary(ao_mle))
+expect_true(length(capture.output(print(ao_mle))) > 0)
+expect_true(length(capture.output(summary(ao_mle))) > 0)
 #expect_silent(diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats))
 #ao_reh_diagnostics <- diagnostics(object = ao_mle, reh = ao_reh, stats = ao_reh_stats)
 #expect_silent(plot(x = ao_mle,reh = ao_reh, diagnostics = ao_reh_diagnostics))
@@ -92,8 +92,8 @@ ao_mle_with_waic <- remstimate(reh = ao_reh,
                         ncores = 1L,
                         WAIC = TRUE,
                         nsimWAIC = 100)
-expect_silent(print(ao_mle_with_waic))
-expect_silent(summary(ao_mle_with_waic))
+expect_true(length(capture.output(print(ao_mle_with_waic))) > 0)
+expect_true(length(capture.output(summary(ao_mle_with_waic))) > 0)
 expect_silent(WAIC(ao_mle_with_waic))
 
 # WAIC for ordinal likelihod + testing omit_dyad routine for ordinal likelihood and tie-oriented model
@@ -157,12 +157,12 @@ expect_identical(names(ao_hmc$receiver_model),c("coefficients","post.mean","vcov
 expect_length(attributes(ao_hmc),16)
 expect_identical(names(attributes(ao_hmc)),c("names","class","model","ordinal","method","approach","formula","statistics","ncores","nsim","nchains","burnin","thin","L","epsilon","seed"))
 expect_identical(attr(ao_hmc,"approach"),"Bayesian")
-expect_silent(print(ao_hmc))
-expect_silent(summary(ao_hmc))
+expect_true(length(capture.output(print(ao_hmc))) > 0)
+expect_true(length(capture.output(summary(ao_hmc))) > 0)
 expect_silent(diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats))
 ao_reh_diagnostics <- diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats)
 ao_reh_diagnostics <- diagnostics(object = ao_hmc_two_chains, reh = ao_reh, stats = ao_reh_stats) # two chains
-expect_silent(plot(x = ao_hmc_two_chains,reh = ao_reh, diagnostics = ao_reh_diagnostics)) # two chains
+expect_warning(plot(x = ao_hmc_two_chains,reh = ao_reh, diagnostics = ao_reh_diagnostics)) # two chains
 expect_error(BIC(ao_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)

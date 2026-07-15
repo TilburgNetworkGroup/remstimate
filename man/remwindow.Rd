@@ -67,3 +67,56 @@ below the required minimum width. In \strong{manual mode}
 non-overlapping); the final window absorbs any remainder so no events are
 dropped.
 }
+\examples{
+# ---- MLE for basic tie model ----
+data(tie_data)
+reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+stats <- remstats::remstats(reh = reh,
+  tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+fit <- remstimate(reh, stats)
+summary(fit)
+
+\donttest{
+# ---- MLE for a model of events with a duration (tie-oriented only) ----
+# (the baboons dataset is provided by the 'remdata' package)
+if (requireNamespace("remdata", quietly = TRUE)) {
+  data(baboons_obs, package = "remdata")
+  reh_dur <- remify::remify(baboons_obs$edgelist[1:1000,], model = "tie",
+    directed = FALSE, duration = TRUE)
+  remstats_dur <- remstats::remstats(reh_dur,
+    start_effects = ~ inertia(scaling = "std") +
+      activeDegreeDyad(scaling = "std"),
+    end_effects = ~ totaldegreeDyad(scaling = "std"),
+    first = 50)
+  remstimate_dur <- remstimate(reh_dur, remstats_dur)
+  summary(remstimate_dur)
+  diagnos_dur <- diagnostics(remstimate_dur, reh_dur, remstats_dur)
+  plot(diagnos_dur)
+}
+
+# ---- Random effects (frequentist) ----
+fit_glmm <- remstimate(reh, stats,
+  random = ~ (1 | actor1) + (1 | actor2))
+
+# ---- Penalised (lasso) ----
+fit_lasso <- remstimate(reh, stats, penalty = list(alpha = 1))
+
+# ---- Penalised using Bayesian horseshoe (shrinkem) ----
+fit_horseshoe <- remstimate(reh, stats, penalty = list(prior = "horseshoe"))
+
+# ---- Mixture ----
+fit_mix <- remstimate(reh, stats,
+  mixture = list(k = 2, random = ~ (1 + inertia | dyad)))
+}
+
+}
+\references{
+Meijerink-Bosman, M., Leenders, R., & Mulder, J. (2022). Dynamic relational
+event modeling: Testing, exploring, and applying. PLoS One, 17(8).
+\url{https://doi.org/10.1371/journal.pone.0272309}
+
+Mulder, J., & Leenders, R. T. A. (2019). Modeling the evolution of interaction
+behavior in social networks: A dynamic relational event approach for real-time
+analysis. Chaos, Solitons & Fractals, 119, 73-85.
+\url{https://doi.org/10.1016/j.chaos.2018.11.027}
+}

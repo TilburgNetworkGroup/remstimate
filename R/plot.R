@@ -1,4 +1,4 @@
-# ── internal HDI helper ───────────────────────────────────────────────────────
+# - internal HDI helper -
 
 .hdi <- function(y) {
   interval     <- rep(NA, 2)
@@ -14,7 +14,7 @@
   c(lb[which_interval], ub[which_interval])
 }
 
-# ── recall plot helper ────────────────────────────────────────────────────────
+# - recall plot helper -
 
 .plot_recall <- function(rc, label = NULL) {
   pe <- rc$per_event
@@ -75,7 +75,7 @@
     mtext(label, side = 3, line = if (has_time) 4.3 else 1, cex = 1)
 }
 
-# ── prob ratio plot helper ────────────────────────────────────────────────────
+# - prob ratio plot helper -
 
 .plot_probratio <- function(rc, label = NULL) {
   pe  <- rc$per_event
@@ -100,7 +100,13 @@
     mtext(label, side = 3, line = 1, cex = 1)
 }
 
-# ── plot.diagnostics ──────────────────────────────────────────────────────────
+# Annotate a recall/prob-ratio label to flag that the ranking used the fitted
+# random effects (BLUPs). No-op for MLE/HMC diagnostics, where use_ranef is unset.
+.recall_label <- function(base, x) {
+  if (isTRUE(x$use_ranef)) paste0(base, " (incl. random effects)") else base
+}
+
+# - plot.diagnostics -
 
 #' @title Plot diagnostics of a \code{remstimate} object
 #' @description Produces diagnostic plots from an object returned by
@@ -138,7 +144,10 @@ plot.diagnostics <- function(x,
   reh      <- x$.reh.processed
   model    <- attr(reh, "model")
   selected <- which
-  which    <- rep(FALSE, 6)
+  # plots 7 (random-effect normality Q-Q), 8 (per-type recall, typed events) and
+  # 9 (per-component recall, MIXREM) are backend extras; widen the flag vector so
+  # they are representable alongside the 1-6 MLE/HMC plots.
+  which    <- rep(FALSE, max(9L, max(selected)))
   which[selected] <- TRUE
 
   if (!is.null(object) && !inherits(object, "remstimate"))
@@ -168,7 +177,7 @@ plot.diagnostics <- function(x,
     if (!is.null(sub_title)) mtext(sub_title, side = 3, line = 1, cex = 0.9)
   }
 
-  # ── tie-oriented ─────────────────────────────────────────────────────────────
+  # - tie-oriented -
   if (model == "tie") {
     has_resid  <- !is.null(x$residuals)
     avail_diag <- if (has_resid) colnames(x$residuals$smoothing_weights) else character(0)
@@ -187,8 +196,10 @@ plot.diagnostics <- function(x,
     }
     effects_to_check <- effects
 
-    # (1) waiting times vs. theoretical Exp(1)
-    if (which[1L] && !attr(reh, "ordinal")) {
+    # (1) waiting times vs. theoretical Exp(1). Requires fitted rates, which are
+    # absent for recall-only backends (e.g. MIXREM has no single global rate), so
+    # the panel is skipped when x$rates is NULL.
+    if (which[1L] && !attr(reh, "ordinal") && !is.null(x$rates)) {
       sum_rates   <- lapply(x$rates, sum)
       observed    <- sort(reh$intereventTime * unlist(sum_rates))
       theoretical <- stats::qexp(p = seq_len(reh$M) / reh$M, rate = 1)
@@ -253,16 +264,40 @@ plot.diagnostics <- function(x,
       }
     }
 
-    # (3) recall: scatter of relative ranks
+    # (3) recall: scatter of relative ranks (random-effect-aware when available)
     if (which[3L] && !is.null(x$recall)) {
        par(mfrow = c(1,1))
-      .plot_recall(x$recall, label = "Tie model")
+      .plot_recall(x$recall_ranef %||% x$recall, label = .recall_label("Tie model", x))
     }
 
     # (6) probability ratio
     if (which[6L] && !is.null(x$recall)) {
       par(mfrow = c(1,1))
-      .plot_probratio(x$recall, label = "Tie model")
+      .plot_probratio(x$recall_ranef %||% x$recall, label = .recall_label("Tie model", x))
+    }
+
+    # (8) per-type recall (typed events, ext = TRUE): one panel per event type
+    if (which[8L] && !is.null(x$recall_by_type) && length(x$recall_by_type)) {
+      rbt <- x$recall_by_type
+      par(mfrow = .mfrow_for(length(rbt)))
+      for (tp in names(rbt))
+        .plot_recall(rbt[[tp]], label = .recall_label(paste("Type:", tp), x))
+    }
+
+    # (9) per-component recall (MIXREM): one recall panel per mixture component.
+    # The mixture is the discrete analogue of the GLMM random effects - each
+    # component is a cluster of dyads/actors sharing the same parameters - so its
+    # recall is shown the same way as the per-type recall above.
+    if (which[9L] && !is.null(x$recall_by_component) && length(x$recall_by_component)) {
+      rbc <- x$recall_by_component
+      pp  <- x$prior_probs
+      par(mfrow = .mfrow_for(length(rbc)))
+      for (j in seq_along(rbc)) {
+        nm  <- names(rbc)[j]
+        lbl <- if (!is.null(pp) && j <= length(pp))
+          sprintf("%s (\u03c0=%.2f)", nm, pp[j]) else nm
+        .plot_recall(rbc[[j]], label = lbl)
+      }
     }
 
     # (4) posterior density (HMC)
@@ -314,7 +349,7 @@ plot.diagnostics <- function(x,
       }
     }
 
-    # ── actor-oriented ───────────────────────────────────────────────────────────
+    # - actor-oriented -
   } else if (model == "actor") {
     effects_ls  <- list(sender_model = sender_effects, receiver_model = receiver_effects)
     which_model <- c("sender_model", "receiver_model")
@@ -348,8 +383,9 @@ plot.diagnostics <- function(x,
       }
       effects_to_check <- effects
 
-      # (1) waiting times — sender model only
-      if (which[1L] && !attr(reh, "ordinal") && i == 1L) {
+      # (1) waiting times -- sender model only (skipped when rates are absent,
+      # e.g. recall-only backends such as MIXREM)
+      if (which[1L] && !attr(reh, "ordinal") && i == 1L && !is.null(sub$rates)) {
         sum_rates   <- lapply(sub$rates, sum)
         observed    <- sort(reh$intereventTime * unlist(sum_rates))
         theoretical <- stats::qexp(p = seq_len(reh$M) / reh$M, rate = 1)
@@ -422,16 +458,24 @@ plot.diagnostics <- function(x,
         }
       }
 
-      # (3) recall
+      # (3) recall (random-effect-aware when available)
       if (which[3L] && !is.null(sub$recall)) {
         par(mfrow = c(1,1))
-        .plot_recall(sub$recall, label = title_model[i])
+        .plot_recall(sub$recall_ranef %||% sub$recall, label = .recall_label(title_model[i], sub))
       }
 
       # (6) probability ratio
       if (which[6L] && !is.null(sub$recall)) {
         par(mfrow = c(1,1))
-        .plot_probratio(sub$recall, label = title_model[i])
+        .plot_probratio(sub$recall_ranef %||% sub$recall, label = .recall_label(title_model[i], sub))
+      }
+
+      # (8) per-type recall (typed events, ext = TRUE)
+      if (which[8L] && !is.null(sub$recall_by_type) && length(sub$recall_by_type)) {
+        rbt <- sub$recall_by_type
+        par(mfrow = .mfrow_for(length(rbt)))
+        for (tp in names(rbt))
+          .plot_recall(rbt[[tp]], label = .recall_label(paste0(title_model[i], " | Type: ", tp), sub))
       }
 
       # (4) posterior density (HMC)
@@ -489,10 +533,41 @@ plot.diagnostics <- function(x,
     }
   }
 
+  # (7) random-effect normality Q-Q (GLMM only; model-agnostic).
+  # x$ranef is a named list per sub-model ('fit' for tie, 'sender_model' /
+  # 'receiver_model' for actor); each holds the engine's native ranef object
+  # (a list of grouping factors). One Q-Q panel per grouping factor.
+  if (which[7L] && !is.null(x$ranef)) {
+    panels <- list()
+    for (nm in names(x$ranef)) {
+      re <- x$ranef[[nm]]
+      if (is.null(re)) next
+      for (g in names(re)) {
+        v <- suppressWarnings(as.numeric(unlist(re[[g]], use.names = FALSE)))
+        v <- v[is.finite(v)]
+        if (length(v) < 2L) next
+        lbl <- if (length(x$ranef) > 1L) paste0(nm, ": ", g) else g
+        panels[[lbl]] <- v
+      }
+    }
+    if (length(panels)) {
+      pages <- split(seq_along(panels), ceiling(seq_along(panels) / n_per_page))
+      for (pg in pages) {
+        par(mfrow = .mfrow_for(length(pg)))
+        for (p in pg) {
+          stats::qqnorm(panels[[p]], main = "", pch = 16, cex = 0.8)
+          stats::qqline(panels[[p]], col = 2, lwd = 2)
+          mtext(paste("Random effects -", names(panels)[p]),
+                side = 3, line = 1, cex = 1.1)
+        }
+      }
+    }
+  }
+
   invisible(x)
 }
 
-# ── plot.remstimate (backward-compatible wrapper) ─────────────────────────────
+# - plot.remstimate (backward-compatible wrapper) -
 
 #' @title Plot method for \code{remstimate} objects
 #' @description Backward-compatible wrapper that computes \code{diagnostics()}
@@ -541,130 +616,23 @@ plot.remstimate <- function(x,
 
 
 
-# plot methoden voor GLMM, GLMNET en MIXREM
-# plots 1-5: to plot.remstimate (via diagnostics)
-# plot 6:    backend (ranef Q-Q / regularization / mixture recall, etc)
+# plot methods for GLMNET and MIXREM
+# which 1-8: shared plot.diagnostics interface (recall = 3, prob-ratio = 6,
+#            per-type = 8); which 9: backend extra (GLMNET regularisation path /
+#            MIXREM per-component recall).
+#
+# NB: GLMM has no dedicated plot method. plot() on a remstimate_glmm object
+# falls through to plot.remstimate, which computes diagnostics() and delegates
+# to plot.diagnostics. The random-effect Q-Q (plot which = 7) and recall
+# (incl. random effects) are rendered there, so the interface is identical to
+# MLE / HMC. A second plot.remstimate_glmm here would be shadowed by load order.
 
-#' @export
-#' @method plot remstimate_glmm
-plot.remstimate_glmm <- function(x, reh, diagnostics = NULL,
-                                 which = 1:3, effects = NULL,
-                                 sender_effects = NULL, receiver_effects = NULL,
-                                 ...) {
-  basis_which <- which[which <= 5L]
-  if (length(basis_which)) {
-    x_basis <- x; class(x_basis) <- "remstimate"
-    plot.remstimate(x_basis, reh, diagnostics = diagnostics,
-                    which = basis_which, effects = effects,
-                    sender_effects = sender_effects,
-                    receiver_effects = receiver_effects, ...)
-  }
-
-  if (6L %in% which) {
-    engine <- attr(x, "engine")
-    fits   <- if (inherits(x$backend_fit, "merMod") ||
-                  inherits(x$backend_fit, "glmmTMB"))
-      list(tie = x$backend_fit)
-    else Filter(Negate(is.null), x$backend_fit)
-
-    op <- par(mfrow = c(1L, length(fits)), no.readonly = TRUE)
-    on.exit(par(op), add = TRUE)
-
-    for (nm in names(fits)) {
-      re <- tryCatch(
-        if (engine == "lme4")    lme4::ranef(fits[[nm]])
-        else glmmTMB::ranef(fits[[nm]])$cond,
-        error = function(e) NULL
-      )
-      if (is.null(re)) next
-      for (groep in names(re)) {
-        waarden <- unlist(re[[groep]])
-        qqnorm(waarden, main = "", pch = 16, cex = 0.8)
-        qqline(waarden, col = 2, lwd = 2)
-        mtext(paste("Random effects —", groep), side = 3, line = 1, cex = 1.1)
-        if (nm != "tie") mtext(nm, side = 3, line = 0, cex = 0.85)
-      }
-    }
-  }
-  invisible(x)
-}
-
-#' @export
-#' @method plot remstimate_glmnet
-plot.remstimate_glmnet <- function(x, reh, diagnostics = NULL,
-                                   which = 1:3, effects = NULL,
-                                   sender_effects = NULL, receiver_effects = NULL,
-                                   ...) {
-  basis_which <- which[which <= 5L]
-  if (length(basis_which)) {
-    x_basis <- x; class(x_basis) <- "remstimate"
-    plot.remstimate(x_basis, reh, diagnostics = diagnostics,
-                    which = basis_which, effects = effects,
-                    sender_effects = sender_effects,
-                    receiver_effects = receiver_effects, ...)
-  }
-
-  if (6L %in% which) {
-    methode_lbl <- if (x$alpha == 1) "Lasso" else if (x$alpha == 0) "Ridge" else
-      sprintf("Elastic net (alpha=%g)", x$alpha)
-
-    cv_fits <- if (inherits(x$backend_fit, "cv.glmnet")) list(tie = x$backend_fit)
-    else Filter(Negate(is.null), x$backend_fit)
-
-    op <- par(mfrow = c(1L, length(cv_fits)), no.readonly = TRUE)
-    on.exit(par(op), add = TRUE)
-
-    for (nm in names(cv_fits)) {
-      plot(cv_fits[[nm]])
-      title(main = paste(methode_lbl, if (nm == "tie") "" else paste("-", nm)), line = 3)
-      abline(v = log(x$lambda_sel %||% cv_fits[[nm]]$lambda.1se),
-             col = "darkorange", lwd = 2, lty = 2)
-    }
-  }
-  invisible(x)
-}
-
-#' @export
-#' @method plot remstimate_mixrem
-plot.remstimate_mixrem <- function(x, reh, diagnostics = NULL, which = 3L, ...) {
-  if (is.null(diagnostics)) {
-    extra <- list(...)
-    if (!"stats" %in% names(extra)) stop("'stats' must be provided when diagnostics = NULL")
-    diagnostics <- diagnostics(object = x, reh = reh, stats = extra$stats)
-  }
-  if (!inherits(diagnostics, "diagnostics_mixrem"))
-    stop("'diagnostics' must be a diagnostics_mixrem object")
-
-  if (3L %in% which) {
-    if (attr(x, "model") == "tie") {
-      .mixrem_plot_recall(diagnostics, "Tie model")
-    } else {
-      for (deel in c("sender_model", "receiver_model")) {
-        sub <- diagnostics[[deel]]
-        if (is.null(sub)) next
-        lbl <- if (deel == "sender_model") "Rate model (sender)" else "Choice model (receiver)"
-        .mixrem_plot_recall(sub, lbl)
-      }
-    }
-  }
-  invisible(x)
-}
-
-.mixrem_plot_recall <- function(diag, titel) {
-  pc       <- diag$per_component
-  k        <- length(pc)
-  heeft_combined <- !is.null(diag$combined)
-  n_panelen <- k + if (heeft_combined) 1L else 0L
-  nc        <- min(n_panelen, 3L)
-  op        <- par(mfrow = c(ceiling(n_panelen / nc), nc), no.readonly = TRUE)
-  on.exit(par(op), add = TRUE)
-
-  kansen <- diag$prior_probs %||% rep(1/k, k)
-  for (j in seq_len(k))
-    .plot_recall(pc[[j]], label = sprintf("%s | Component %d (π=%.2f)", titel, j, kansen[j]))
-  if (heeft_combined)
-    .plot_recall(diag$combined, label = paste(titel, "| Combined"))
-}
+# NB: plot.remstimate_glmnet and plot.remstimate_mixrem live in their backend
+# files (remstimate_glmnet.R / remstimate_mixrem.R was removed - mixrem now falls
+# through to plot.remstimate). GLMNET keeps a thin method for the regularisation
+# path (which = 9); MIXREM has no dedicated plot method and dispatches to
+# plot.remstimate -> plot.diagnostics, where per-component recall is which = 9.
+# A second definition here would be shadowed by load order and silently diverge.
 
 #' @export
 #' @method plot remstimate_mixrem_list

@@ -15,23 +15,30 @@ dlcrem(reh, stats, k = 2L, nrep = 3L, ...)
 
 \item{nrep}{Number of random restarts (default 3).}
 
-\item{...}{Additional arguments passed to \code{remstimate}.}
+\item{...}{Additional arguments passed to \code{\link{remstimate}}.}
 }
 \value{
 A \code{remstimate_mixrem} object.
 }
 \description{
-Fits a mixture REM where dyads are assigned to K latent classes,
-each with class-specific coefficients.
+Fits a mixture REM where dyads are assigned to \code{k} latent classes,
+each with class-specific coefficients. Special case of
+\code{\link{remixture}} with a dyad-level random intercept
+(\code{~ (1 | dyad)}).
 }
 \examples{
-\donttest{
-# Tie-oriented frailty
-# EXAMPLES
-}
+data(tie_data)
+reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+stats <- remstats::remstats(reh = reh,
+  tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+fit_dlcrem <- dlcrem(reh, stats)
 
 }
 \references{
-Lakdawala, Leenders, and Mulder (2025). Not all bonds are created
-equal: Dyadic latent class models for relational event data. \emph{arXiv preprint (2501.04418)}.
+Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
+equal: Dyadic latent class models for relational event data.
+\emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+}
+\seealso{
+\code{\link{remixture}} for the general mixture interface.
 }

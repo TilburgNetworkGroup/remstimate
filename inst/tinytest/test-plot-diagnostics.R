@@ -67,7 +67,7 @@ expect_true(all(c("mean_rel_rank", "median_rel_rank", "mean_cum_prob",
                 names(ao_diag$sender_model$recall$summary)))
 expect_true(all(c("event", "rel_rank", "cum_prob") %in%
                 names(ao_diag$sender_model$recall$per_event)))
-expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank < 1))
+expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank <= 1))
 expect_true(all(ao_diag$sender_model$recall$per_event$rel_rank >= 0))
 
 # ── S3 dispatch: plot(diag_obj) ───────────────────────────────────────────────

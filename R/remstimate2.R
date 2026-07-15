@@ -25,49 +25,103 @@
 #'   \code{aomstats}, or \code{remstats_durem} object.
 #' @param approach  \code{"frequentist"} (default) or \code{"Bayesian"}.
 #' @param random    One-sided formula for random effects, e.g.
-#'   \code{~ (1 | actor1) + (1 | actor2)}.
-#' @param penalty   List with penalisation settings, e.g.
-#'   \code{list(alpha = 1)} for lasso. When provided, uses glmnet.
-#' @param mixture   List with mixture settings, e.g.
-#'   \code{list(k = 2, random = ~ (1 | dyad))}, which would fit the dyadic latent
-#'   class model (Lakdawala et al., 2026). When provided, uses flexmix.
-#' @param engine    Backend engine. For GLMM: \code{"lme4"} (default) or
-#'   \code{"glmmTMB"}. For penalised: \code{"glmnet"} or \code{"shrinkem"}.
-#'   Ordinal models automatically use \code{coxme}.
-#'   Set to \code{"auto"} (default) for automatic selection.
-#' @param prior     [\emph{Bayesian}] List with \code{mean} and \code{vcov};
-#'   defaults to standard normal (basic)
+#'   \code{~ (1 | actor1) + (1 | actor2)}. Fits a GLMM (lme4/glmmTMB, or
+#'   coxme for ordinal models).
+#' @param penalty   List of penalisation settings. Frequentist uses glmnet;
+#'   Bayesian uses shrinkem. Recognised elements:
+#'   \code{alpha} (elastic-net mixing, \code{1} = lasso (default),
+#'   \code{0} = ridge), \code{nfolds} (CV folds, default \code{10}),
+#'   \code{lambda_select} (\code{"1se"} (default) or \code{"min"}),
+#'   \code{unpenalized} / \code{penalized} (see below), and \code{prior}
+#'   (shrinkem prior, default \code{"horseshoe"}).
+#'   By default the intercept / baseline structure is left unpenalised: any
+#'   statistic that is an indicator (all values in \{0,1\}) is exempt, which
+#'   covers the overall \code{baseline}, the duration start/end process
+#'   intercepts (\code{baseline.start} / \code{baseline.end}) and fixed-effect
+#'   type dummies (e.g. \code{FEtype_*}); count and continuous effect statistics
+#'   are penalised. Adjust this default with two additive controls (both
+#'   character vectors of statistic names): \code{unpenalized} \emph{adds}
+#'   names to the exemption, and \code{penalized} \emph{removes} names from it,
+#'   i.e. forces them back into the penalty even though they are 0/1 indicators
+#'   (e.g. a p-shift dummy such as \code{psABAB.end} that is a genuine effect,
+#'   not an intercept). \code{penalized} takes precedence when a name is given
+#'   in both. Names must match the model statistics exactly (as printed by the
+#'   remstats object, e.g. \code{"psABAB.end"}, not \code{"psABAB"}); a name that
+#'   matches nothing is ignored with a warning.
+#' @param mixture   List of finite-mixture settings (flexmix). Recognised
+#'   elements: \code{k} (components, default \code{2}), \code{random}
+#'   (clustering formula, e.g. \code{~ (1 | dyad)}), \code{concomitant}
+#'   (optional concomitant formula), \code{nrep} (random restarts, default
+#'   \code{3}). E.g. \code{list(k = 2, random = ~ (1 | dyad))} fits the dyadic
+#'   latent class model (Lakdawala et al., 2026).
+#' @param engine    GLMM backend: \code{"glmmTMB"} or \code{"lme4"}; ordinal
+#'   models automatically use \code{coxme}. The default \code{"auto"} selects
+#'   \code{"glmmTMB"} when installed (more robust on the stacked tie-oriented
+#'   design), otherwise falls back to \code{"lme4"}.
+#' @param bayes     List of Bayesian (C++ HMC) controls for basic tie/actor
+#'   models. Recognised elements: \code{nsim} (post-burnin iterations, default
+#'   \code{2000}), \code{nchains} (default \code{2}), \code{burnin} (default
+#'   \code{1000}), \code{thin} (default \code{1}), \code{init} (initial values,
+#'   default MLE estimates), \code{L} (leapfrog steps, default \code{50}),
+#'   \code{epsilon} (leapfrog step size, default \code{0.002}), \code{prior}
+#'   (list with \code{mean} and \code{vcov}), and \code{nsimWAIC} (WAIC draws,
+#'   default \code{100}).
 #' @param seed      Random seed.
 #' @param ncores    Number of threads (C++ backends). Default \code{1L}.
-#' @param nsim      [\emph{Bayesian}] MCMC iterations per chain after burnin.
-#'   Default \code{2000L}.
-#' @param nchains   [\emph{Bayesian}] Number of chains. Default \code{4L}.
-#' @param burnin    [\emph{Bayesian}] Burn-in iterations. Default \code{1000L}.
-#' @param thin      [\emph{Bayesian}] Thinning interval. Default \code{1L}.
-#' @param init      [\emph{C++ HMC}] Initial parameter values; defaults to
-#'   MLE estimates.
-#' @param L         [\emph{C++ HMC}] Leapfrog steps. Default \code{50L}.
-#' @param epsilon   [\emph{C++ HMC}] Leapfrog step size. Default \code{0.002}.
 #' @param WAIC      Compute WAIC? Default \code{FALSE}.
-#' @param nsimWAIC  Number of posterior draws for WAIC. Default \code{100L}.
-#' @param alpha     [\emph{Penalised}] Elastic-net mixing: \code{1} = lasso
-#'   (default), \code{0} = ridge.
-#' @param nfolds    [\emph{Penalised}] CV folds. Default \code{10L}.
-#' @param lambda_select [\emph{Penalised}] Which lambda: \code{"1se"}
-#'   (default) or \code{"min"}.
-#' @param k         [\emph{Mixture}] Number of components. Default \code{2L}.
-#' @param concomitant [\emph{Mixture}] Optional concomitant formula.
-#' @param nrep      [\emph{Mixture}] Random restarts for flexmix. Default
-#'   \code{3L}.
 #' @param method    [\emph{Deprecated}] Legacy argument for backward
 #'   compatibility. Use \code{approach} instead. Accepts \code{"MLE"} or
 #'   \code{"HMC"} for basic models.
-#' @param ...       Further arguments passed to the backend.
+#' @param ...       Further arguments passed to the backend. The former
+#'   top-level knobs (\code{alpha}, \code{nfolds}, \code{lambda_select},
+#'   \code{k}, \code{concomitant}, \code{nrep}, \code{nsim}, \code{nchains},
+#'   \code{burnin}, \code{thin}, \code{init}, \code{L}, \code{epsilon},
+#'   \code{prior}, \code{nsimWAIC}) are \emph{deprecated} but still accepted
+#'   here and routed into \code{penalty} / \code{mixture} / \code{bayes}.
 #'
 #' @return A \code{remstimate} S3 object.
 #'
+#' @references
+#' Butts, C. T. (2008). A relational event framework for social action.
+#' \emph{Sociological Methodology}, 38(1), 155-200.
+#' \url{https://doi.org/10.1111/j.1467-9531.2008.00203.x}
+#'
+#' Stadtfeld, C., & Block, P. (2017). Interactions, actors, and time: Dynamic
+#' network actor models for relational events. \emph{Sociological Science}, 4,
+#' 318-352. \url{https://doi.org/10.15195/v4.a14}
+#'
+#' Juozaitiene, R., & Wit, E. C. (2024). Nodal heterogeneity can induce ghost
+#' triadic effects in relational event models. \emph{Psychometrika}, 89(1),
+#' 151-171. \url{https://doi.org/10.1007/s11336-024-09952-x}
+#'
+#' Mulder, J., & Hoff, P. D. (2024). A latent variable approach for modeling
+#' relational data with multiple receivers. \emph{Annals of Applied
+#' Statistics}. \url{https://doi.org/10.1214/24-AOAS1885}
+#'
+#' Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
+#' equal: Dyadic latent class models for relational event data.
+#' \emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+#'
+#' Tibshirani, R. (1996). Regression shrinkage and selection via the lasso.
+#' \emph{Journal of the Royal Statistical Society: Series B (Methodological)},
+#' 58(1), 267-288. \url{https://doi.org/10.1111/j.2517-6161.1996.tb02080.x}
+#'
+#' Karimova, D., Leenders, R., Meijerink-Bosman, M., & Mulder, J. (2023).
+#' Separating the wheat from the chaff: Bayesian regularization in dynamic
+#' social networks. \emph{Social Networks}, 74, 139-155.
+#' \url{https://doi.org/10.1016/j.socnet.2023.02.006}
+#'
+#' Karimova, D., van Erp, S., Leenders, R., & Mulder, J. (2025). Honey, I
+#' shrunk the irrelevant effects! Simple and flexible approximate Bayesian
+#' regularization. \emph{Journal of Mathematical Psychology}, 126, 102925.
+#' \url{https://doi.org/10.1016/j.jmp.2025.102925}
+#'
+#' Lakdawala, R., Leenders, R., Ejbye-Ernst, P., & Mulder, J. (2026).
+#' Modelling interaction duration in relational event models.
+#' \emph{arXiv preprint}. \url{https://doi.org/10.48550/arXiv.2602.21000}
+#'
 #' @examples
-#' # ---- Basic MLE ----
+#' # ---- MLE for basic tie model ----
 #' data(tie_data)
 #' reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
 #' stats <- remstats::remstats(reh = reh,
@@ -76,8 +130,22 @@
 #' summary(fit)
 #'
 #' \donttest{
-#' # ---- Bayesian (C++ HMC) ----
-#' fit_bayes <- remstimate(reh, stats, approach = "Bayesian")
+#' # ---- MLE for a model of events with a duration (tie-oriented only) ----
+#' # (the baboons dataset is provided by the 'remdata' package)
+#' if (requireNamespace("remdata", quietly = TRUE)) {
+#'   data(baboons_obs, package = "remdata")
+#'   reh_dur <- remify::remify(baboons_obs$edgelist[1:1000,], model = "tie",
+#'     directed = FALSE, duration = TRUE)
+#'   remstats_dur <- remstats::remstats(reh_dur,
+#'     start_effects = ~ inertia(scaling = "std") +
+#'       activeDegreeDyad(scaling = "std"),
+#'     end_effects = ~ totaldegreeDyad(scaling = "std"),
+#'     first = 50)
+#'   remstimate_dur <- remstimate(reh_dur, remstats_dur)
+#'   summary(remstimate_dur)
+#'   diagnos_dur <- diagnostics(remstimate_dur, reh_dur, remstats_dur)
+#'   plot(diagnos_dur)
+#' }
 #'
 #' # ---- Random effects (frequentist) ----
 #' fit_glmm <- remstimate(reh, stats,
@@ -86,7 +154,7 @@
 #' # ---- Penalised (lasso) ----
 #' fit_lasso <- remstimate(reh, stats, penalty = list(alpha = 1))
 #'
-#' #' # ---- Penalised using Bayesian horseshoe (shrinkem) ----
+#' # ---- Penalised using Bayesian horseshoe (shrinkem) ----
 #' fit_horseshoe <- remstimate(reh, stats, penalty = list(prior = "horseshoe"))
 #'
 #' # ---- Mixture ----
@@ -97,57 +165,47 @@
 #' @export
 remstimate <- function(reh,
                        stats,
-                       approach  = c("frequentist", "Bayesian"),
-                       # Model structure
-                       random    = NULL,
-                       penalty   = NULL,
-                       mixture   = NULL,
-                       # Engine
-                       engine    = "auto",
+                       approach = c("frequentist", "Bayesian"),
+                       # Model structure (each list owns its own knobs)
+                       random   = NULL,   # GLMM  : one-sided formula
+                       penalty  = NULL,   # glmnet/shrinkem: list(alpha, nfolds, lambda_select, prior)
+                       mixture  = NULL,   # flexmix: list(k, random, concomitant, nrep)
+                       engine   = "auto",
+                       # Bayesian (C++ HMC) controls, e.g.
+                       #   list(nsim, nchains, burnin, thin, init, L, epsilon, prior, nsimWAIC)
+                       bayes    = list(),
                        # Shared
-                       prior     = NULL,
-                       seed      = NULL,
-                       ncores    = 1L,
-                       # Bayesian
-                       nsim      = 2000L,
-                       nchains   = 2L,
-                       burnin    = 1000L,
-                       thin      = 1L,
-                       # C++ HMC legacy
-                       init      = NULL,
-                       L         = 50L,
-                       epsilon   = 0.002,
-                       # WAIC
-                       WAIC      = FALSE,
-                       nsimWAIC  = 100L,
-                       # Penalised
-                       alpha         = 1,
-                       nfolds        = 10L,
-                       lambda_select = c("1se", "min"),
-                       # Mixture
-                       k           = 2L,
-                       concomitant = NULL,
-                       nrep        = 3L,
-                       # Backward compat
-                       method    = NULL,
+                       seed     = NULL,
+                       ncores   = 1L,
+                       WAIC     = FALSE,
+                       method   = NULL,   # deprecated: "MLE" / "HMC"
                        ...) {
 
-  # ── Backward compatibility: method = "MLE" / "HMC" ────────────────────────
+  # ── Deprecated top-level knobs (nsim, alpha, k, nfolds, …) are still accepted
+  #    via ... and routed into the penalty/mixture lists or the 'bayes' bundle,
+  #    so pre-existing code keeps working. Consumed names are stripped before
+  #    the remaining ... are forwarded to the backends. ─────────────────────────
+  dots <- list(...)
+  .consumed <- c("alpha", "nfolds", "lambda_select", "unpenalized", "penalized",
+                 "k", "concomitant", "nrep",
+                 "nsim", "nchains", "burnin", "thin", "init", "L", "epsilon",
+                 "prior", "nsimWAIC")
+  extra <- dots[setdiff(names(dots), .consumed)]
+  dep   <- function(nm) dots[[nm]]
+
+  # ── Backward compatibility: method = "MLE" / "HMC" ─────────────────────────
   if (!is.null(method)) {
     method <- toupper(method)
-    if (method %in% c("MLE")) {
-      approach <- "frequentist"
-    } else if (method == "HMC") {
-      approach <- "Bayesian"
-    } else {
-      stop("'method' is deprecated. ",
-           "Use 'approach' with 'random', 'penalty', or 'mixture'.",
-           call. = FALSE)
-    }
+    if (method == "MLE")      approach <- "frequentist"
+    else if (method == "HMC") approach <- "Bayesian"
+    else stop("'method' is deprecated. ",
+              "Use 'approach' with 'random', 'penalty', or 'mixture'.",
+              call. = FALSE)
   }
 
-  approach <- match.arg(approach,choices = c("frequentist","Bayesian"))
-  is_durem <- inherits(reh, "remify_durem") & inherits(stats, "remstats_durem")
+  approach <- match.arg(approach, choices = c("frequentist", "Bayesian"))
+  is_durem <- inherits(reh, "remify_durem") && inherits(stats, "remstats_durem")
+  is_sampled <- inherits(stats, "tomstats_sampled")
 
   # ── Validate structure arguments ───────────────────────────────────────────
   has_random  <- !is.null(random)
@@ -156,19 +214,19 @@ remstimate <- function(reh,
 
   if (has_mixture && (has_random || has_penalty))
     stop("'mixture' cannot be combined with 'random' or 'penalty'.", call. = FALSE)
-  if (has_random && has_penalty && approach == "frequentist")
-    stop("Combine 'random' and 'penalty' only with approach = 'Bayesian'.", call. = FALSE)
+  if (has_random && has_penalty)
+    stop("Combining 'random' and 'penalty' is not supported.", call. = FALSE)
 
-  # ── WAIC validation ────────────────────────────────────────────────────────
+  # ── WAIC / nsimWAIC / ncores validation ────────────────────────────────────
   if (!is.logical(WAIC) || length(WAIC) != 1)
     stop("'WAIC' must be a single logical value (TRUE or FALSE).")
+  nsimWAIC <- bayes$nsimWAIC %||% dep("nsimWAIC") %||% 100L
   if (!is.numeric(nsimWAIC) || length(nsimWAIC) != 1 || nsimWAIC < 1) {
     warning("'nsimWAIC' must be a positive integer. Using default value of 100.")
     nsimWAIC <- 100L
   }
   nsimWAIC <- as.integer(nsimWAIC)
 
-  # ── ncores ─────────────────────────────────────────────────────────────────
   if (!is.numeric(ncores) || ncores < 1L) {
     warning("'ncores' must be a positive integer. Using default value of 1.")
     ncores <- 1L
@@ -177,43 +235,55 @@ remstimate <- function(reh,
 
   # ── Mixture dispatch ───────────────────────────────────────────────────────
   if (has_mixture) {
-    mix_random <- mixture$random
-    mix_k      <- mixture$k %||% k
-    return(.remstimate_mixrem(reh, stats, random = mix_random, k = mix_k,
-                              concomitant = concomitant, nrep = nrep, ...))
+    if(is_sampled){
+      stop("sampled tomstats are not supported for mixture models")
+    }
+    return(do.call(.remstimate_mixrem, c(list(
+      reh, stats,
+      random      = mixture$random,
+      k           = mixture$k %||% dep("k") %||% 2L,
+      concomitant = mixture$concomitant %||% dep("concomitant"),
+      nrep        = mixture$nrep %||% dep("nrep") %||% 3L), extra)))
   }
 
-  # ── Penalised dispatch ──
+  # ── Penalised dispatch ─────────────────────────────────────────────────────
+  #   Bayesian  -> shrinkem shrinkage prior (penalty$prior)
+  #   Frequentist -> glmnet (penalty$alpha / nfolds / lambda_select)
   if (has_penalty) {
     if (approach == "Bayesian") {
-      if (has_random) {
-        stop("Bayesian penalized models with random effects are not available ",
-             "in this version. Use approach = 'frequentist', or drop 'random' ",
-             "for Bayesian regularization via shrinkem.", call. = FALSE)
-      } else {
-        type <- penalty$prior %||% "horseshoe"
-        return(.remstimate_shrinkem(reh, stats, type = type,
-                                    ncores = ncores, seed = seed, ...))
-      }
-    } else {
-      pen_alpha <- penalty$alpha %||% alpha
-      return(.remstimate_glmnet(reh, stats, alpha = pen_alpha, nfolds = nfolds,
-                                lambda_select = match.arg(lambda_select), ...))
+      return(do.call(.remstimate_shrinkem, c(list(
+        reh, stats,
+        type        = penalty$prior %||% "horseshoe",
+        unpenalized = penalty$unpenalized %||% dep("unpenalized"),
+        penalized   = penalty$penalized   %||% dep("penalized"),
+        ncores = ncores, seed = seed), extra)))
     }
+    return(do.call(.remstimate_glmnet, c(list(
+      reh, stats,
+      alpha         = penalty$alpha %||% dep("alpha") %||% 1,
+      nfolds        = penalty$nfolds %||% dep("nfolds") %||% 10L,
+      lambda_select = penalty$lambda_select %||% dep("lambda_select") %||% "1se",
+      unpenalized   = penalty$unpenalized %||% dep("unpenalized"),
+      penalized     = penalty$penalized   %||% dep("penalized")),
+      extra)))
   }
 
-  # ── Random effects dispatch ──
+  # ── Random effects dispatch (GLMM) ─────────────────────────────────────────
   if (has_random) {
-    if (approach == "Bayesian") {
+    if(is_sampled){
+      stop("sampled tomstats are not supported for random effects models")
+    }
+    if (approach == "Bayesian")
       stop("Bayesian random-effects models are not available in this version. ",
            "Use approach = 'frequentist' (GLMM via lme4/glmmTMB).", call. = FALSE)
-    }
-    eng <- if (engine == "auto") "lme4" else engine
-    return(.remstimate_glmm(reh, stats, random = random, engine = eng, ...))
+    eng <- if (identical(engine, "auto")) {
+      if (requireNamespace("glmmTMB", quietly = TRUE)) "glmmTMB" else "lme4"
+    } else engine
+    return(do.call(.remstimate_glmm, c(list(
+      reh, stats, random = random, engine = eng), extra)))
   }
 
-  # ── Basic model: no structure modifiers ────────────────────────────────────
-  # ── Stacked / duration → GLM pipeline ──
+  # ── Basic model: duration / pre-stacked → GLM pipeline ─────────────────────
   if (is_durem || inherits(stats, "remstats_stacked")) {
     if (approach == "Bayesian")
       stop("Bayesian estimation is not available for duration or pre-stacked ",
@@ -225,20 +295,23 @@ remstimate <- function(reh,
     return(.remstimate_glm(stacked))   # tie / durem
   }
 
-  # Basic tie/actor → C++ backends (backward compatible)
+  # ── Basic tie/actor → C++ backends ─────────────────────────────────────────
   if (approach == "Bayesian") {
-    return(.remstimate_hmc_cpp(
+    return(do.call(.remstimate_hmc_cpp, c(list(
       reh = reh, stats = stats, ncores = ncores,
-      nsim = nsim, nchains = nchains, burnin = burnin, thin = thin,
-      init = init, L = L, epsilon = epsilon, prior = prior,
-      seed = seed, WAIC = WAIC, nsimWAIC = nsimWAIC, ...
-    ))
-  } else {
-    return(.remstimate_mle_cpp(
-      reh = reh, stats = stats, ncores = ncores,
-      WAIC = WAIC, nsimWAIC = nsimWAIC, ...
-    ))
+      nsim    = bayes$nsim    %||% dep("nsim")    %||% 2000L,
+      nchains = bayes$nchains %||% dep("nchains") %||% 2L,
+      burnin  = bayes$burnin  %||% dep("burnin")  %||% 1000L,
+      thin    = bayes$thin    %||% dep("thin")    %||% 1L,
+      init    = bayes$init    %||% dep("init"),
+      L       = bayes$L       %||% dep("L")       %||% 50L,
+      epsilon = bayes$epsilon %||% dep("epsilon") %||% 0.002,
+      prior   = bayes$prior   %||% dep("prior"),
+      seed    = seed, WAIC = WAIC, nsimWAIC = nsimWAIC), extra)))
   }
+  return(do.call(.remstimate_mle_cpp, c(list(
+    reh = reh, stats = stats, ncores = ncores,
+    WAIC = WAIC, nsimWAIC = nsimWAIC), extra)))
 }
 
 # ══════════════════════════════════════════════════════════════════════════════

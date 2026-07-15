@@ -5,15 +5,13 @@
 # is time-varying (dyads toggle between start-risk and end-risk).
 #
 # Backends:
-#   .remstimate_glm         — Poisson GLM (interval) or clogit (ordinal)
-#   .remstimate_durem_brms  — Bayesian via brms (interval only; HMC on the stacked Poisson)
+#   .remstimate_glm         - Poisson GLM (interval) or clogit (ordinal)
 #
 # Called from remstimate() when reh inherits "remify_durem".
 
 
 # ── Poisson GLM / clogit backend (MLE) ────────────────────────────────────
 
-#' @importFrom survival strata clogit coxph
 #' @keywords internal
 .remstimate_glm <- function(stacked) {
 
@@ -26,7 +24,7 @@
   df$.samp_off <- if ("weight" %in% names(df)) log(df$weight) else 0
 
     if (length(stat_names) == 0L)
-        stop("No statistics found — check start_effects / end_effects.",
+        stop("No statistics found - check start_effects / end_effects.",
              call. = FALSE)
 
     if (ordinal) {
@@ -298,6 +296,145 @@ logLik.remstimate_durem <- function(object, ...) {
 
 # ── diagnostics ─────────────────────────────────────────────────────────────
 
+# Shared durem recall/surprise computation. Given a linear predictor `lp`
+# aligned to the rows of the stacked frame `df`, the start/end statistic names,
+# and the remify object, build the joint / start / end recall tables, their
+# surprises and offender tables, and the per-type breakdowns. Used by both the
+# MLE path (lp = X %*% coef) and the GLMM path (lp = predict(fit), incl. BLUPs),
+# so the two never drift apart.
+.durem_recall_tables <- function(lp, df, reh, sn_start, sn_end,
+                                 top_pct = 0.05, surprise_threshold = 0.2) {
+    out <- list()
+
+    obs_idx   <- which(df$obs == 1L)
+    event_ids <- df$time_index
+    df$eidx   <- reh$edgelist_dual$.eidx[df$time_index]
+
+    # Identify start vs end rows by nonzero start/end stats. Intersect with the
+    # columns actually present: a degenerate start/end statistic may have been
+    # dropped from the (GLMM) design by .drop_constant_stats.
+    sn_start <- intersect(sn_start, colnames(df))
+    sn_end   <- intersect(sn_end,   colnames(df))
+    is_start <- rep(FALSE, nrow(df))
+    is_end   <- rep(FALSE, nrow(df))
+    if (length(sn_start) > 0L)
+        is_start <- rowSums(abs(df[, sn_start, drop = FALSE])) > 0
+    if (length(sn_end) > 0L)
+        is_end <- rowSums(abs(df[, sn_end, drop = FALSE])) > 0
+
+    # ── Joint recall: all competing dyads ────────────────────────────────
+    out$recall_joint <- .recall_block(lp, obs_idx, event_ids, top_pct, ids = df$eidx)
+
+    # ── Start recall: observed starts ranked among start-risk dyads ──────
+    start_obs <- intersect(obs_idx, which(is_start))
+    if (length(start_obs) > 0L) {
+        start_events <- unique(event_ids[start_obs])
+        start_mask   <- which(is_start & event_ids %in% start_events)
+        out$recall_start <- .recall_block(
+            lp[start_mask], match(start_obs, start_mask),
+            event_ids[start_mask], top_pct, ids = df$eidx[start_mask]
+        )
+    }
+
+    # ── End recall: observed ends ranked among end-risk dyads ────────────
+    # min_D_t = 2: single-candidate end epochs carry no diagnostic signal.
+    end_obs <- intersect(obs_idx, which(is_end))
+    if (length(end_obs) > 0L) {
+      end_events <- unique(event_ids[end_obs])
+      end_mask   <- which(is_end & event_ids %in% end_events)
+      out$recall_end <- .recall_block(
+        lp[end_mask], match(end_obs, end_mask),
+        event_ids[end_mask], top_pct, ids = df$eidx[end_mask],
+        min_D_t = 2
+      )
+    }
+
+    # ── Surprises: most poorly-predicted observed events ─────────────────
+    out$surprises_joint <- .surprises_from_recall(out$recall_joint, surprise_threshold)
+    out$surprises_start <- .surprises_from_recall(out$recall_start, surprise_threshold)
+    out$surprises_end   <- .surprises_from_recall(out$recall_end,   surprise_threshold)
+
+    out$surprise_offenders_joint <- .offender_table(
+      ids_surprises = .durem_dyad_labels(reh, out$surprises_joint$eidx),
+      ids_all       = .durem_dyad_labels(reh, out$recall_joint$per_event$eidx)
+    )
+    if (!is.null(out$recall_start))
+      out$surprise_offenders_start <- .offender_table(
+        ids_surprises = .durem_dyad_labels(reh, out$surprises_start$eidx),
+        ids_all       = .durem_dyad_labels(reh, out$recall_start$per_event$eidx)
+      )
+    if (!is.null(out$recall_end))
+      out$surprise_offenders_end <- .offender_table(
+        ids_surprises = .durem_dyad_labels(reh, out$surprises_end$eidx),
+        ids_all       = .durem_dyad_labels(reh, out$recall_end$per_event$eidx)
+      )
+    out$surprise_threshold <- surprise_threshold
+
+    # ── Per-type recall (ext=TRUE) ──────────────────────────────────────
+    if ("type" %in% names(df) && !all(is.na(df$type))) {
+        types <- sort(unique(df$type[!is.na(df$type)]))
+        if (length(types) > 1L) {
+            out$recall_by_type <- list()
+            for (tp in types) {
+                tp_mask <- which(df$type == tp)
+                tp_obs  <- intersect(obs_idx, tp_mask)
+                if (length(tp_obs) == 0L) next
+                out$recall_by_type[[tp]] <- .recall_block(
+                    lp[tp_mask], match(tp_obs, tp_mask),
+                    event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask]
+                )
+            }
+
+            if (length(start_obs) > 0L) {
+                out$recall_start_by_type <- list()
+                for (tp in types) {
+                    tp_start <- which(is_start & df$type == tp)
+                    tp_obs_s <- intersect(obs_idx, tp_start)
+                    if (length(tp_obs_s) == 0L) next
+                    tp_events <- unique(event_ids[tp_obs_s])
+                    tp_mask   <- which(is_start & df$type == tp &
+                                         event_ids %in% tp_events)
+                    out$recall_start_by_type[[tp]] <- .recall_block(
+                        lp[tp_mask], match(tp_obs_s, tp_mask),
+                        event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask]
+                    )
+                }
+            }
+
+            if (length(end_obs) > 0L) {
+              out$recall_end_by_type <- list()
+              for (tp in types) {
+                tp_end   <- which(is_end & df$type == tp)
+                tp_obs_e <- intersect(obs_idx, tp_end)
+                if (length(tp_obs_e) == 0L) next
+                tp_events <- unique(event_ids[tp_obs_e])
+                tp_mask   <- which(is_end & df$type == tp &
+                                     event_ids %in% tp_events)
+                out$recall_end_by_type[[tp]] <- .recall_block(
+                  lp[tp_mask], match(tp_obs_e, tp_mask),
+                  event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask],
+                  min_D_t = 2
+                )
+              }
+            }
+
+            surprise_lists <- list(
+              surprises_by_type       = out$recall_by_type,
+              surprises_start_by_type = out$recall_start_by_type,
+              surprises_end_by_type   = out$recall_end_by_type
+            )
+            for (nm in names(surprise_lists)) {
+              rc_list <- surprise_lists[[nm]]
+              if (is.null(rc_list) || length(rc_list) == 0L) next
+              out[[nm]] <- lapply(rc_list, .surprises_from_recall,
+                                  threshold = surprise_threshold)
+            }
+        }
+    }
+
+    out
+}
+
 #' @export
 #' @method diagnostics remstimate_durem
 diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05,
@@ -342,140 +479,17 @@ diagnostics.remstimate_durem <- function(object, reh, stats, top_pct = 0.05,
     if (!is.null(stacked)) {
         df         <- stacked$remstats_stack
         stat_names <- stacked$stat_names
-        sn_start   <- stacked$stat_names_start
-        sn_end     <- stacked$stat_names_end
         coefs      <- object$coefficients
 
         X  <- as.matrix(df[, stat_names, drop = FALSE])
         lp <- as.numeric(X %*% coefs[stat_names])
 
-        obs_idx   <- which(df$obs == 1L)
-        event_ids <- df$time_index
-        df$eidx   <- reh$edgelist_dual$.eidx[df$time_index]
-
-        # Identify start vs end rows by nonzero start/end stats.
-        # Start rows have baseline.start = 1 (or at least one start stat != 0)
-        # and all end stats == 0; vice versa for end rows.
-        is_start <- rep(FALSE, nrow(df))
-        is_end   <- rep(FALSE, nrow(df))
-        if (!is.null(sn_start) && length(sn_start) > 0L)
-            is_start <- rowSums(abs(df[, sn_start, drop = FALSE])) > 0
-        if (!is.null(sn_end) && length(sn_end) > 0L)
-            is_end <- rowSums(abs(df[, sn_end, drop = FALSE])) > 0
-
-        # ── Joint recall: all competing dyads ────────────────────────────────
-        out$recall_joint <- .recall_block(lp, obs_idx, event_ids, top_pct, ids = df$eidx)
-
-        # ── Start recall: observed starts ranked among start-risk dyads ──────
-        start_obs <- intersect(obs_idx, which(is_start))
-        if (length(start_obs) > 0L) {
-            # Only keep start-risk rows for the events that have an observed start
-            start_events <- unique(event_ids[start_obs])
-            start_mask   <- which(is_start & event_ids %in% start_events)
-            out$recall_start <- .recall_block(
-                lp[start_mask], match(start_obs, start_mask),
-                event_ids[start_mask], top_pct, ids = df$eidx[start_mask]
-            )
-        }
-
-        # ── End recall: observed ends ranked among end-risk dyads ────────────
-        # min_D_t = 2: excludes decision epochs where only one dyad was
-        # eligible to end. With D_t = 1 the softmax is trivially 1 regardless
-        # of the fit, so rel_rank/obs_prob/log_loss carry no information there.
-        end_obs <- intersect(obs_idx, which(is_end))
-        if (length(end_obs) > 0L) {
-          end_events <- unique(event_ids[end_obs])
-          end_mask   <- which(is_end & event_ids %in% end_events)
-          out$recall_end <- .recall_block(
-            lp[end_mask], match(end_obs, end_mask),
-            event_ids[end_mask], top_pct, ids = df$eidx[end_mask],
-            min_D_t = 2
-          )
-        }
-        # ── Surprises: most poorly-predicted observed events ─────────────────
-        out$surprises_joint <- .surprises_from_recall(out$recall_joint, surprise_threshold)
-        out$surprises_start <- .surprises_from_recall(out$recall_start, surprise_threshold)
-        out$surprises_end   <- .surprises_from_recall(out$recall_end,   surprise_threshold)
-
-        out$surprise_offenders_joint <- .offender_table(
-          ids_surprises = .durem_dyad_labels(reh, out$surprises_joint$eidx),
-          ids_all       = .durem_dyad_labels(reh, out$recall_joint$per_event$eidx)
-        )
-        if (!is.null(out$recall_start))
-          out$surprise_offenders_start <- .offender_table(
-            ids_surprises = .durem_dyad_labels(reh, out$surprises_start$eidx),
-            ids_all       = .durem_dyad_labels(reh, out$recall_start$per_event$eidx)
-          )
-        if (!is.null(out$recall_end))
-          out$surprise_offenders_end <- .offender_table(
-            ids_surprises = .durem_dyad_labels(reh, out$surprises_end$eidx),
-            ids_all       = .durem_dyad_labels(reh, out$recall_end$per_event$eidx)
-          )
-        out$surprise_threshold <- surprise_threshold
-
-        # ── Per-type recall (ext=TRUE) ──────────────────────────────────────
-        if ("type" %in% names(df) && !all(is.na(df$type))) {
-            types <- sort(unique(df$type[!is.na(df$type)]))
-            if (length(types) > 1L) {
-                out$recall_by_type <- list()
-                for (tp in types) {
-                    tp_mask <- which(df$type == tp)
-                    tp_obs  <- intersect(obs_idx, tp_mask)
-                    if (length(tp_obs) == 0L) next
-                    out$recall_by_type[[tp]] <- .recall_block(
-                        lp[tp_mask], match(tp_obs, tp_mask),
-                        event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask]
-                    )
-                }
-
-                # Per-type × start/end
-                if (length(start_obs) > 0L) {
-                    out$recall_start_by_type <- list()
-                    for (tp in types) {
-                        tp_start <- which(is_start & df$type == tp)
-                        tp_obs_s <- intersect(obs_idx, tp_start)
-                        if (length(tp_obs_s) == 0L) next
-                        tp_events <- unique(event_ids[tp_obs_s])
-                        tp_mask   <- which(is_start & df$type == tp &
-                                             event_ids %in% tp_events)
-                        out$recall_start_by_type[[tp]] <- .recall_block(
-                            lp[tp_mask], match(tp_obs_s, tp_mask),
-                            event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask]
-                        )
-                    }
-                }
-
-                if (length(end_obs) > 0L) {
-                  out$recall_end_by_type <- list()
-                  for (tp in types) {
-                    tp_end   <- which(is_end & df$type == tp)
-                    tp_obs_e <- intersect(obs_idx, tp_end)
-                    if (length(tp_obs_e) == 0L) next
-                    tp_events <- unique(event_ids[tp_obs_e])
-                    tp_mask   <- which(is_end & df$type == tp &
-                                         event_ids %in% tp_events)
-                    out$recall_end_by_type[[tp]] <- .recall_block(
-                      lp[tp_mask], match(tp_obs_e, tp_mask),
-                      event_ids[tp_mask], top_pct, ids = df$eidx[tp_mask],
-                      min_D_t = 2
-                    )
-                  }
-                }
-
-                # ── Surprises per type ────────────────────────────────────────
-                surprise_lists <- list(
-                  surprises_by_type       = out$recall_by_type,
-                  surprises_start_by_type = out$recall_start_by_type,
-                  surprises_end_by_type   = out$recall_end_by_type
-                )
-                for (nm in names(surprise_lists)) {
-                  rc_list <- surprise_lists[[nm]]
-                  if (is.null(rc_list) || length(rc_list) == 0L) next
-                  out[[nm]] <- lapply(rc_list, .surprises_from_recall,
-                                      threshold = surprise_threshold)
-                }
-            }
-        }
+        out <- c(out, .durem_recall_tables(
+            lp, df, reh,
+            sn_start = stacked$stat_names_start,
+            sn_end   = stacked$stat_names_end,
+            top_pct  = top_pct,
+            surprise_threshold = surprise_threshold))
     }
 
     out$.reh.processed <- reh
@@ -529,37 +543,17 @@ print.diagnostics_durem <- function(x, ...) {
 # ── plot ────────────────────────────────────────────────────────────────────
 
 #' @export
-#' @method plot remstimate_durem
-plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
-                                  diagnostics_object = NULL,
-                                  which = 1L, ...) {
-
-    if (is.null(diagnostics_object) && !is.null(reh) && !is.null(stats))
-        diagnostics_object <- diagnostics(x, reh, stats)
-
-    if (is.null(diagnostics_object)) {
-        # Fallback: coefficient CI plot
-        coefs <- x$coefficients
-        se    <- x$se
-        if (is.null(se)) {
-            graphics::barplot(coefs, main = "Coefficients", las = 2)
-            return(invisible(x))
-        }
-        ci_lo <- coefs - 1.96 * se
-        ci_hi <- coefs + 1.96 * se
-        ord   <- seq_along(coefs)
-        graphics::plot(ord, coefs, ylim = range(c(ci_lo, ci_hi)),
-                       xaxt = "n", xlab = "", ylab = "Estimate",
-                       main = "Coefficients with 95% CI", pch = 19)
-        graphics::segments(ord, ci_lo, ord, ci_hi)
-        graphics::abline(h = 0, lty = 2, col = "grey")
-        graphics::axis(1, at = ord, labels = names(coefs), las = 2)
-        return(invisible(x))
-    }
+#' @method plot diagnostics_durem
+plot.diagnostics_durem <- function(x, which = 1L, ...) {
+    # x is the durem diagnostics object (recall_joint / recall_start /
+    # recall_end / *_by_type / deviance_residuals). Plotting straight from the
+    # diagnostics object mirrors plot.diagnostics for tie/actor, so plot(diag)
+    # works uniformly across model types.
+    diagnostics_object <- x
 
     if (which == 1L) {
         # Joint recall
-        .plot_recall_scatter(diagnostics_object$recall_joint, "Recall: joint (all competing dyads)")
+        .plot_recall_scatter(diagnostics_object$recall_joint, "Recall: start and end events combined")
     } else if (which == 2L) {
         # Deviance residuals
         if (!is.null(diagnostics_object$deviance_residuals)) {
@@ -629,7 +623,70 @@ plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
         .plot_probratio_scatter(diagnostics_object$recall_joint, "Joint")
         if (has_start) .plot_probratio_scatter(diagnostics_object$recall_start, "Start")
         if (has_end)   .plot_probratio_scatter(diagnostics_object$recall_end, "End")
+    } else if (which == 11L) {
+        # Random-effect normality Q-Q (GLMM duration models only)
+        re_list <- diagnostics_object$ranef
+        if (!is.null(re_list)) {
+            panels <- list()
+            for (nm in names(re_list)) {
+                re <- re_list[[nm]]
+                if (is.null(re)) next
+                for (g in names(re)) {
+                    v <- suppressWarnings(as.numeric(unlist(re[[g]], use.names = FALSE)))
+                    v <- v[is.finite(v)]
+                    if (length(v) < 2L) next
+                    lbl <- if (length(re_list) > 1L) paste0(nm, ": ", g) else g
+                    panels[[lbl]] <- v
+                }
+            }
+            if (length(panels)) {
+                nc      <- min(length(panels), 3L)
+                old_par <- graphics::par(mfrow = c(ceiling(length(panels) / nc), nc))
+                on.exit(graphics::par(old_par))
+                for (p in seq_along(panels)) {
+                    stats::qqnorm(panels[[p]], main = "", pch = 16, cex = 0.8)
+                    stats::qqline(panels[[p]], col = 2, lwd = 2)
+                    graphics::mtext(paste("Random effects -", names(panels)[p]),
+                                    side = 3, line = 1, cex = 1.1)
+                }
+            }
+        }
     }
 
+    invisible(x)
+}
+
+#' @export
+#' @method plot remstimate_durem
+plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
+                                  diagnostics_object = NULL,
+                                  which = 1L, ...) {
+
+    if (is.null(diagnostics_object) && !is.null(reh) && !is.null(stats))
+        diagnostics_object <- diagnostics(x, reh, stats)
+
+    if (is.null(diagnostics_object)) {
+        # Fallback: coefficient CI plot
+        coefs <- x$coefficients
+        se    <- x$se
+        if (is.null(se)) {
+            graphics::barplot(coefs, main = "Coefficients", las = 2)
+            return(invisible(x))
+        }
+        ci_lo <- coefs - 1.96 * se
+        ci_hi <- coefs + 1.96 * se
+        ord   <- seq_along(coefs)
+        graphics::plot(ord, coefs, ylim = range(c(ci_lo, ci_hi)),
+                       xaxt = "n", xlab = "", ylab = "Estimate",
+                       main = "Coefficients with 95% CI", pch = 19)
+        graphics::segments(ord, ci_lo, ord, ci_hi)
+        graphics::abline(h = 0, lty = 2, col = "grey")
+        graphics::axis(1, at = ord, labels = names(coefs), las = 2)
+        return(invisible(x))
+    }
+
+    # Delegate to plot.diagnostics_durem so plot(fit, ...) and plot(diagnostics)
+    # share one code path.
+    plot.diagnostics_durem(diagnostics_object, which = which, ...)
     invisible(x)
 }

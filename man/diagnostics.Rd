@@ -36,7 +36,7 @@ Every recall table (\code{$recall$per_event} for tie/actor,
   \item{event}{Row position within the analyzed subset (tie/actor only).}
   \item{edgelist_id_row}{The corresponding row index into \code{reh$edgelist_id}
     (\code{event} resolved to the full, untrimmed object), computed as
-    \code{start_stop[1] - 1 + event}.
+    \code{start_stop[1] - 1 + event}.}
   \item{sub_index}{Which simultaneous observation at that \code{event} this row
     is, when multiple events share a time point.}
   \item{obs_id}{The observed outcome as an ID. Tie model: the observed dyad ID.
@@ -48,9 +48,15 @@ Every recall table (\code{$recall$per_event} for tie/actor,
     (and, for the actor receiver submodel, the paired sender), added for
     readability -- not present on the raw \code{$recall} tables.}
   \item{rel_rank}{\code{1 - rank/D_t}: 1 = observed outcome ranked most likely
-    of all risk-set alternatives; 0 = ranked last (maximally surprising).}
-  \item{cum_prob}{Cumulative predicted probability of everything ranked
-    at-or-above the observed outcome.}
+    of all risk-set alternatives; 0 = ranked last (maximally surprising).
+    \code{rank} is the average rank, so outcomes tied in predicted
+    probability share the mean of their ranks; a model that cannot
+    discriminate (all probabilities equal) scores \code{rel_rank} at chance
+    (~0.5), rather than being inflated toward 1 by the arbitrary storage order
+    of the risk set.}
+  \item{cum_prob}{Cumulative predicted probability of everything strictly more
+    likely than the observed outcome, plus the observed outcome's own
+    probability (ties are not double-counted).}
   \item{obs_prob}{Predicted probability assigned to the observed outcome.}
   \item{prob_ratio}{\code{obs_prob * D_t}: ratio vs. uniform/random guessing.
     Near 1 means the model had no real signal for this outcome (e.g. a
@@ -62,7 +68,6 @@ Every recall table (\code{$recall$per_event} for tie/actor,
     decision. For durem end-process recall, epochs with \code{D_t = 1} are
     excluded by default, since a single-candidate softmax is always exactly
     1 regardless of model fit and carries no diagnostic information.}
-}
 }
 \code{$surprise_offenders} (tie, actor sender/receiver) and
 \code{$surprise_offenders_dyad} (actor receiver only) tabulate, per dyad or

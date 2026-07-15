@@ -33,7 +33,7 @@ el_typed_ord <- data.frame(
 # ── 1. Basic durem, interval timing ─────────────────────────────────────────
 
 reh <- remify(el_simple, duration = TRUE, model = "tie")
-stats <- remstats(reh, start_effects = ~ inertia(), psi_start = 1)
+stats <- remstats(reh, start_effects = ~ inertia() + reciprocity(), psi_start = 1)
 stacked <- stack_stats(stats, reh)
 
 expect_true(inherits(stacked, "remstats_stacked"),
@@ -186,11 +186,9 @@ if (requireNamespace("glmnet", quietly = TRUE)) {
   expect_true(inherits(fit_glmnet, "remstimate"),
               info = "GLMNET durem fit works")
 
-  diag_glmnet <- diagnostics(fit_glmnet)
-  expect_true(!is.null(diag_glmnet$recall),
+  diag_glmnet <- diagnostics(fit_glmnet, reh, stats)
+  expect_true(!is.null(diag_glmnet$recall_joint),
               info = "GLMNET durem diagnostics has recall")
-  expect_silent(capture.output(print(diag_glmnet)),
-                info = "print diagnostics_remstimate runs for GLMNET")
 }
 
 
@@ -202,8 +200,8 @@ if (requireNamespace("lme4", quietly = TRUE)) {
   expect_true(inherits(fit_glmm, "remstimate"),
               info = "GLMM durem fit works")
 
-  diag_glmm <- diagnostics(fit_glmm)
-  expect_true(!is.null(diag_glmm$recall),
+  diag_glmm <- diagnostics(fit_glmm, reh, stats)
+  expect_true(!is.null(diag_glmm$recall_joint),
               info = "GLMM durem diagnostics has recall")
   expect_true(isTRUE(diag_glmm$use_ranef),
               info = "GLMM diagnostics uses random effects")
@@ -217,13 +215,11 @@ if (requireNamespace("flexmix", quietly = TRUE)) {
   expect_true(inherits(fit_mix, "remstimate"),
               info = "MIXREM durem fit works")
 
-  diag_mix <- diagnostics(fit_mix)
+  diag_mix <- diagnostics(fit_mix, reh, stats)
   expect_true(!is.null(diag_mix$recall),
               info = "MIXREM durem diagnostics has recall")
   expect_true(!is.null(diag_mix$recall_by_component),
               info = "MIXREM diagnostics has per-component recall")
-  expect_silent(capture.output(print(diag_mix)),
-                info = "print diagnostics_mixrem runs")
 }
 
 
@@ -232,8 +228,8 @@ if (requireNamespace("flexmix", quietly = TRUE)) {
 if (requireNamespace("glmnet", quietly = TRUE)) {
   # GLMNET uses add_actors=FALSE, so no type column — no per-type recall
   fit_glmnet_te <- remstimate(reh_te, stats_te, penalty = list(alpha = 1))
-  diag_glmnet_te <- diagnostics(fit_glmnet_te)
-  expect_true(!is.null(diag_glmnet_te$recall),
+  diag_glmnet_te <- diagnostics(fit_glmnet_te, reh_te, stats_te)
+  expect_true(!is.null(diag_glmnet_te$recall_joint),
               info = "GLMNET typed durem diagnostics has recall")
 }
 

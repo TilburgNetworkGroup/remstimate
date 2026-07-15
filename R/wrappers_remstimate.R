@@ -9,116 +9,227 @@
   }
 }
 
+#' Finite-mixture REM (latent classes)
+#'
+#' Fits a finite-mixture relational event model: events are assigned to
+#' \code{k} latent classes, each with class-specific coefficients, via
+#' \pkg{flexmix}. This is the general mixture interface; \code{\link{dlcrem}}
+#' is the dyadic-latent-class special case.
+#'
+#' @param reh A \code{remify} object.
+#' @param stats A \code{remstats} object.
+#' @param random Clustering formula, e.g. \code{~ (1 | dyad)} or
+#'   \code{~ (1 + inertia | dyad)}.
+#' @param k Number of latent classes (default 2).
+#' @param concomitant Optional concomitant formula for class probabilities.
+#' @param nrep Number of random restarts (default 3).
+#' @param ... Additional arguments passed to \code{\link{remstimate}}.
+#' @return A \code{remstimate_mixrem} object.
+#' @seealso \code{\link{dlcrem}}, \code{\link{remstimate}}.
+
+#' @references
+#' Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
+#' equal: Dyadic latent class models for relational event data.
+#' \emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+#'
+#' @examples
+#' \donttest{
+#' library(remstimate)
+#' data(tie_data)
+#' reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+#' stats <- remstats::remstats(reh = reh,
+#'   tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+#'
+#' # two-component mixture, dyads as clustering unit
+#' fit2 <- remstimate(reh, stats,
+#'                    mixture = list(random = ~ (1 + inertia | dyad), k = 2))
+#' fit2
+#'
+#' # coefficients: rows = effects, columns = components
+#' fit2$coefficients
+#' fit2$prior_probs
+#'
+#' # which dyads ended up in which component?
+#' flexmix::clusters(fit2$backend_fit)
+#'
+#' # try k = 2:4 and compare via BIC
+#' fits <- remstimate(reh, stats,
+#'                    mixture = list(random = ~ (1 + inertia | dyad), k = 2:4))
+#' bic_table(fits)
+#' plot(fits)   # prints BIC table
+#'
+#' # pick the best k and inspect
+#' best <- fits[[ paste0("k", bic_table(fits)$k[1]) ]]
+#' best
+#'
+#' # diagnostics: per-component recall + combined
+#' diag2 <- diagnostics(fit2, reh, stats)
+#' diag2
+#' plot(fit2, reh, stats = stats)
+#' }
+#'
+#' @export
+remixture <- function(reh, stats, random, k = 2L, concomitant = NULL,
+                      nrep = 3L, ...) {
+  remstimate(reh, stats,
+             mixture = list(k = k, random = random,
+                            concomitant = concomitant, nrep = nrep), ...)
+}
+
 #' Dyadic Latent Class REM
 #'
-#' Fits a mixture REM where dyads are assigned to K latent classes,
-#' each with class-specific coefficients.
+#' Fits a mixture REM where dyads are assigned to \code{k} latent classes,
+#' each with class-specific coefficients. Special case of
+#' \code{\link{remixture}} with a dyad-level random intercept
+#' (\code{~ (1 | dyad)}).
 #'
 #' @param reh A \code{remify} object.
 #' @param stats A \code{remstats} object.
 #' @param k Number of latent classes (default 2).
 #' @param nrep Number of random restarts (default 3).
-#' @param ... Additional arguments passed to \code{remstimate}.
+#' @param ... Additional arguments passed to \code{\link{remstimate}}.
 #' @return A \code{remstimate_mixrem} object.
-#' @references Lakdawala, Leenders, and Mulder (2025). Not all bonds are created
-#' equal: Dyadic latent class models for relational event data. \emph{arXiv preprint (2501.04418)}.
+#' @references
+#' Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
+#' equal: Dyadic latent class models for relational event data.
+#' \emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+#' @seealso \code{\link{remixture}} for the general mixture interface.
+#'
 #' @examples
-#' \donttest{
-#' # Tie-oriented frailty
-#' # EXAMPLES
-#' }
+#' data(tie_data)
+#' reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+#' stats <- remstats::remstats(reh = reh,
+#'   tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+#' fit_dlcrem <- dlcrem(reh, stats)
 #'
 #' @export
 dlcrem <- function(reh, stats, k = 2L, nrep = 3L, ...) {
-  random <- stats::as.formula(
-    paste0("~ (1 | dyad)")
-  )
-  remstimate(reh, stats, mixture = list(k = k, random = random), nrep = nrep, ...)
+  remixture(reh, stats, random = ~ (1 | dyad), k = k, nrep = nrep, ...)
 }
 
 
-#' Frailty REM
+#' Frailty REM (actor / dyad random intercepts)
 #'
-#' Fits a relational event model with actor-level random intercepts (frailty)
-#' to account for unobserved heterogeneity in actor activity and
-#' attractiveness. This is a convenience wrapper around
-#' \code{\link{remstimate}} with \code{method = "GLMM"} and a default
-#' random-effects formula.
+#' Convenience wrapper around \code{\link{remstimate}} that fits a GLMM with the
+#' default \emph{frailty} structure: random intercepts capturing unobserved
+#' heterogeneity in actor activity and attractiveness. \code{remfrailty} only
+#' builds this default structure; for custom random-effects (random slopes,
+#' dyad-level intercepts, etc.) call \code{\link{remstimate}(..., random = ...)}
+#' directly.
 #'
-#' For \strong{tie-oriented models}, each actor receives a random intercept
-#' for sending (\code{actor1}) and receiving (\code{actor2}), i.e.
-#' \code{(1 | actor1) + (1 | actor2)}. In directed
-#' models these capture sender activity and receiver attractiveness; in
-#' undirected models both reflect general sociability.
+#' For \strong{directed tie-oriented models}, each actor receives a random
+#' intercept for sending (\code{actor1}) and receiving (\code{actor2}), i.e.
+#' \code{(1 | actor1) + (1 | actor2)}, capturing sender activity and receiver
+#' attractiveness. Actor-level frailty is \strong{not} identified for undirected
+#' tie models (\code{actor1}/\code{actor2} are an arbitrary dyad ordering, not
+#' sender/receiver), so for undirected data \code{remfrailty()} falls back to
+#' symmetric dyad-level frailty \code{(1 | dyad)} and emits a message. (An
+#' explicit \code{remstimate(..., random = ~ (1 | actor1) + (1 | actor2))} on
+#' undirected data still errors.)
 #'
 #' For \strong{actor-oriented models}, the sender rate model receives
 #' \code{(1 | actor1)} and the receiver choice model receives
 #' \code{(1 | actor2)}.
 #'
-#' For \strong{duration models} (\code{remify_durem}), random intercepts
-#' are crossed with the \code{process} indicator (start vs end), giving
-#' each actor separate frailty terms for event initiation and termination.
-#'
-#' When \code{extend_riskset_by_type = TRUE} (only possible for a tie-oriented
-#' model), random intercepts are further
-#' crossed with the event \code{type}, allowing actor heterogeneity to vary
-#' across event types.
+#' For \strong{duration models} (\code{remify_durem}), random intercepts are
+#' crossed with the \code{process} indicator (start vs end). When
+#' \code{extend_riskset_by_type = TRUE} (tie-oriented only), they are further
+#' crossed with the event \code{type}.
 #'
 #' For interval timing, estimation uses \code{lme4} or \code{glmmTMB}
 #' (Poisson GLMM). For ordinal timing or actor-oriented receiver choice
-#' models, \code{coxme} is used automatically (conditional logit with
-#' random effects).
-#'
-#' Users who need non-default random-effects structures (e.g., random
-#' slopes, dyad-level intercepts) should call
-#' \code{\link{remstimate}(..., method = "GLMM", random = ...)} directly.
+#' models, \code{coxme} is used automatically.
 #'
 #' @param reh A \code{remify} or \code{remify_durem} object.
 #' @param stats A \code{remstats} object (\code{tomstats}, \code{aomstats},
 #'   or \code{remstats_durem}).
-#' @param approach Either \code{frequentist} or \code{Bayesian} estimation,
-#' is supported.
-#' @param engine For \code{frequentist}, the backend for interval models:
-#' \code{"lme4"} (default) or
-#'   \code{"glmmTMB"}. Ignored for ordinal models, which always use
-#'   \code{coxme}. Bayesian frailty is not offered this version
+#' @param approach Either \code{"frequentist"} or \code{"Bayesian"}. Bayesian
+#'   frailty is not offered in this version.
+#' @param engine For \code{frequentist}, the interval-model backend:
+#'   \code{"glmmTMB"} or \code{"lme4"}. The default \code{"auto"} uses
+#'   \code{glmmTMB} when installed, otherwise \code{lme4}. Ignored for ordinal
+#'   models, which always use \code{coxme}.
 #' @param ... Additional arguments passed to \code{\link{remstimate}}.
 #'
 #' @return A \code{remstimate_glmm} object. See \code{\link{remstimate}}
 #'   for details on the return structure.
 #'
-#' @seealso \code{\link{remstimate}} for the general estimation interface,
-#'   \code{\link{dlcrem}} for dyadic latent class models.
+#' @seealso \code{\link{remstimate}} for the general estimation interface (and
+#'   for custom random-effects structures via \code{random = ...}),
+#'   \code{\link{remixture}} / \code{\link{dlcrem}} for mixture models.
+#'
+#' @references
+#' Juozaitiene, R., & Wit, E. C. (2024). Nodal heterogeneity can induce ghost
+#' triadic effects in relational event models. \emph{Psychometrika}, 89(1),
+#' 151-171. \url{https://doi.org/10.1007/s11336-024-09952-x}
+#'
+#' Mulder, J., & Hoff, P. D. (2024). A latent variable approach for modeling
+#' relational data with multiple receivers. \emph{Annals of Applied
+#' Statistics}. \url{https://doi.org/10.1214/24-AOAS1885}
 #'
 #' @examples
-#' \donttest{
+#' # GLMM fits stack the full case-control design and call lme4, which is slow
+#' # on realistic data, so the examples are shown (via \dontrun) not executed.
+#' \dontrun{
 #' # Tie-oriented frailty
-#' reh <- remify::remify(tie_data$edgelist, model = "tie")
-#' stats <- remstats::remstats(reh, tie_effects = ~ inertia() + reciprocity())
-#' fit <- frailty_rem(reh, stats)
-#' summary(fit)
-#' lme4::ranef(fit$backend_fit)
+#' \donttest{
+#' library(remstimate)
+#'
+#' data(tie_data)
+#' reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+#' stats <- remstats::remstats(reh = reh,
+#'   tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+#'
+#' # sender frailty
+#' fit_s <- remstimate(reh, stats, random = ~ (1 | actor1))
+#' fit_s
+#'
+#' # sender + receiver frailty
+#' fit_sr <- remstimate(reh, stats,
+#'                      random = ~ (1 | actor1) + (1 | actor2))
+#' fit_sr
+#'
+#' # inspect random effects (accessor matches the engine used, glmmTMB by default)
+#' glmmTMB::ranef(fit_sr$backend_fit)
+#' glmmTMB::VarCorr(fit_sr$backend_fit)
+#'
+#' # diagnostics and recall
+#' # recall uses the random effects (BLUPs); Schoenfeld residuals and the
+#' # waiting-time Q-Q are on the fixed effects, as for MLE.
+#' diag_sr <- diagnostics(fit_sr, reh, stats)
+#' diag_sr
+#' plot(diag_sr, which = 1:3)
+#'
+#' # plot 7: random-effects normality Q-Q
+#' plot(fit_sr, reh, stats = stats, which = 7)
+#'
+#' # glmmTMB engine (faster for large data, supports more complex structures)
+#' fit_tmb <- remstimate(reh, stats,
+#'                       random = ~ (1 | actor1), engine = "glmmTMB")
+#' }
 #'
 #' # Actor-oriented frailty
 #' reh_ao <- remify::remify(tie_data$edgelist, model = "actor")
 #' stats_ao <- remstats::remstats(reh_ao,
 #'   sender_effects = ~ 1 + indegreeSender(),
 #'   receiver_effects = ~ inertia())
-#' fit_ao <- frailty_rem(reh_ao, stats_ao)
-#'
-#' # Duration model frailty
-#' reh_dur <- remify::remify(edgelist, duration = TRUE)
-#' stats_dur <- remstats::remstats(reh_dur,
-#'   start_effects = ~ inertia(), end_effects = ~ inertia())
-#' fit_dur <- frailty_rem(reh_dur, stats_dur)
+#' fit_ao <- remfrailty(reh_ao, stats_ao)
+#' summary(fit_ao)
 #' }
 #'
 #' @export
-frailty_rem <- function(reh, stats, approach = c("frequentist","Bayesian"),
-                        engine = "lme4", ...) {
+remfrailty <- function(reh, stats, approach = c("frequentist", "Bayesian"),
+                       engine = "auto", ...) {
+  approach    <- match.arg(approach)
   is_durem    <- inherits(reh, "remify_durem")
   is_actor    <- inherits(stats, "aomstats")
   ext_by_type <- isTRUE(reh$meta$with_type_riskset)
+
+  # Actor-level (sender/receiver) frailty is only identified for directed tie
+  # models; for undirected data actor1/actor2 are an arbitrary dyad ordering, so
+  # remfrailty falls back to symmetric dyad-level frailty (constructed below).
+  directed <- if (!is.null(reh$meta)) isTRUE(reh$meta$directed)
+              else isTRUE(attr(reh, "directed"))
 
   # Split start/end random intercepts only when BOTH processes are in the
   # stack. A start-only or end-only model has a single process level, so
@@ -134,14 +245,99 @@ frailty_rem <- function(reh, stats, approach = c("frequentist","Bayesian"),
   } else {
     proc_tag <- if (is_durem && split_process) ":process" else ""
     type_tag <- if (ext_by_type) ":type" else ""
-    random <- stats::as.formula(sprintf(
-      "~ (1 | actor1%s%s) + (1 | actor2%s%s)",
-      proc_tag, type_tag, proc_tag, type_tag
-    ))
+    if (directed) {
+      random <- stats::as.formula(sprintf(
+        "~ (1 | actor1%s%s) + (1 | actor2%s%s)",
+        proc_tag, type_tag, proc_tag, type_tag
+      ))
+    } else {
+      # Undirected: actor-level (sender/receiver) frailty is not identified;
+      # default to symmetric dyad-level frailty.
+      random <- stats::as.formula(sprintf("~ (1 | dyad%s%s)", proc_tag, type_tag))
+      message("Undirected tie model: actor-level frailty is not identified; ",
+              "using dyad-level frailty '~ (1 | dyad", proc_tag, type_tag, ")'.")
+    }
   }
 
   remstimate(reh, stats, approach = approach, random = random,
              engine = engine, ...)
+}
+
+#' @rdname remfrailty
+#' @export
+frailty_rem <- function(reh, stats, ...) {
+  .Deprecated("remfrailty")
+  remfrailty(reh, stats, ...)
+}
+
+
+#' Penalized REM (lasso / ridge / elastic net; horseshoe when Bayesian)
+#'
+#' Convenience wrapper around \code{\link{remstimate}} for regularised
+#' estimation. Frequentist fits use \pkg{glmnet}; Bayesian fits use
+#' \pkg{shrinkem} shrinkage priors. The baseline / intercept is never
+#' penalised (glmnet keeps it as its unpenalised intercept; shrinkem flags it
+#' via \code{unpenalized}).
+#'
+#' @param reh A \code{remify} or \code{remify_durem} object.
+#' @param stats A \code{remstats} object.
+#' @param approach \code{"frequentist"} (glmnet) or \code{"Bayesian"}
+#'   (shrinkem).
+#' @param alpha Elastic-net mixing for the frequentist fit: \code{1} = lasso
+#'   (default), \code{0} = ridge.
+#' @param prior Shrinkage prior for the Bayesian fit (default
+#'   \code{"horseshoe"}).
+#' @param nfolds Cross-validation folds (frequentist). Default \code{10}.
+#' @param lambda_select Which lambda (frequentist): \code{"1se"} (default) or
+#'   \code{"min"}.
+#' @param ... Additional arguments passed to \code{\link{remstimate}}.
+#'
+#' @return A \code{remstimate_glmnet} (frequentist) or
+#'   \code{remstimate_shrinkem} (Bayesian) object.
+#'
+#' @seealso \code{\link{remstimate}}.
+#'
+#' @references
+#' Karimova, D., Leenders, R., Meijerink-Bosman, M., & Mulder, J. (2023).
+#' Separating the wheat from the chaff: Bayesian regularization in dynamic
+#' social networks. \emph{Social Networks}, 74, 139-155.
+#' \url{https://doi.org/10.1016/j.socnet.2023.02.006}
+#'
+#' Karimova, D., van Erp, S., Leenders, R., & Mulder, J. (2025). Honey, I
+#' shrunk the irrelevant effects! Simple and flexible approximate Bayesian
+#' regularization. \emph{Journal of Mathematical Psychology}, 126, 102925.
+#' \url{https://doi.org/10.1016/j.jmp.2025.102925}
+#'
+#' Tibshirani, R. (1996). Regression shrinkage and selection via the lasso.
+#' \emph{Journal of the Royal Statistical Society: Series B (Methodological)},
+#' 58(1), 267-288. \url{https://doi.org/10.1111/j.2517-6161.1996.tb02080.x}
+#'
+#' @examples
+#' # ---- MLE for basic tie model ----
+#' data(tie_data)
+#' reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+#' stats <- remstats::remstats(reh = reh,
+#'   tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+#'
+#' # ---- Penalised (lasso) ----
+#' fit_lasso <- remstimate(reh, stats, penalty = list(alpha = 1))
+#'
+#' # ---- Penalised using Bayesian horseshoe (shrinkem) ----
+#' fit_horseshoe <- remstimate(reh, stats, penalty = list(prior = "horseshoe"))
+#'
+#' @export
+rempenalty <- function(reh, stats, approach = c("frequentist", "Bayesian"),
+                       alpha = 1, prior = "horseshoe",
+                       nfolds = 10L, lambda_select = c("1se", "min"), ...) {
+  approach      <- match.arg(approach)
+  lambda_select <- match.arg(lambda_select)
+
+  penalty <- if (approach == "Bayesian")
+    list(prior = prior)
+  else
+    list(alpha = alpha, nfolds = nfolds, lambda_select = lambda_select)
+
+  remstimate(reh, stats, approach = approach, penalty = penalty, ...)
 }
 
 
@@ -228,6 +424,60 @@ frailty_rem <- function(reh, stats, approach = c("frequentist","Bayesian"),
 #'
 #' @return A \code{remstimate_window} object: \code{list(fits, windows, call,
 #'   type, mode, n.windows)}.
+#'
+#' @references
+#' Meijerink-Bosman, M., Leenders, R., & Mulder, J. (2022). Dynamic relational
+#' event modeling: Testing, exploring, and applying. PLoS One, 17(8).
+#' \url{https://doi.org/10.1371/journal.pone.0272309}
+#'
+#' Mulder, J., & Leenders, R. T. A. (2019). Modeling the evolution of interaction
+#' behavior in social networks: A dynamic relational event approach for real-time
+#' analysis. Chaos, Solitons & Fractals, 119, 73-85.
+#' \url{https://doi.org/10.1016/j.chaos.2018.11.027}
+#'
+#' @examples
+#' # ---- MLE for basic tie model ----
+#' data(tie_data)
+#' reh <- remify::remify(edgelist = tie_data$edgelist, model = "tie")
+#' stats <- remstats::remstats(reh = reh,
+#'   tie_effects = ~ 1 + remstats::inertia() + remstats::reciprocity())
+#' fit <- remstimate(reh, stats)
+#' summary(fit)
+#'
+#' \donttest{
+#' # ---- MLE for a model of events with a duration (tie-oriented only) ----
+#' # (the baboons dataset is provided by the 'remdata' package)
+#' if (requireNamespace("remdata", quietly = TRUE)) {
+#'   data(baboons_obs, package = "remdata")
+#'   reh_dur <- remify::remify(baboons_obs$edgelist[1:1000,], model = "tie",
+#'     directed = FALSE, duration = TRUE)
+#'   remstats_dur <- remstats::remstats(reh_dur,
+#'     start_effects = ~ inertia(scaling = "std") +
+#'       activeDegreeDyad(scaling = "std"),
+#'     end_effects = ~ totaldegreeDyad(scaling = "std"),
+#'     first = 50)
+#'   remstimate_dur <- remstimate(reh_dur, remstats_dur)
+#'   summary(remstimate_dur)
+#'   diagnos_dur <- diagnostics(remstimate_dur, reh_dur, remstats_dur)
+#'   plot(diagnos_dur)
+#' }
+#'
+#' # ---- Random effects (frequentist) ----
+#' fit_glmm <- remstimate(reh, stats,
+#'   random = ~ (1 | actor1) + (1 | actor2))
+#'
+#' # ---- Penalised (lasso) ----
+#' fit_lasso <- remstimate(reh, stats, penalty = list(alpha = 1))
+#'
+#' # ---- Penalised using Bayesian horseshoe (shrinkem) ----
+#' fit_horseshoe <- remstimate(reh, stats, penalty = list(prior = "horseshoe"))
+#'
+#' # ---- Mixture ----
+#' fit_mix <- remstimate(reh, stats,
+#'   mixture = list(k = 2, random = ~ (1 + inertia | dyad)))
+#' }
+#'
+
 #' @export
 remwindow <- function(reh, stats,
                       n.windows        = 5L,
@@ -642,4 +892,35 @@ print.summary.remstimate_window <- function(x, digits = 3, ...) {
   invisible(x)
 }
 
+
+
+#' Compare BIC across a list of MIXREM fits
+#'
+#' @param x   A \code{remstimate_mixrem_list} returned when \code{k} is a
+#'   vector in \code{remstimate(..., method = "MIXREM")}.
+#' @param ... Unused.
+#'
+#' @return A data frame with columns \code{k}, \code{BIC}, and
+#'   \code{delta_BIC}, sorted by ascending BIC.
+#'
+#' @examples
+#' \donttest{
+#' library(remstimate)
+#' data(history, package = "remstats")
+#' data(info,    package = "remstats")
+#' colnames(history)[colnames(history) == "setting"] <- "type"
+#'
+#' reh   <- remify::remify(edgelist = history[1:100, ], model = "tie",
+#'                          riskset = "active")
+#' stats <- remstats::tomstats(~ inertia(consider_type = FALSE), reh = reh,
+#'                              attr_actors = info)
+#'
+#' fits <- remstimate(reh, stats,
+#'                    mixture = list(random = ~ (1 + inertia | dyad), k = 2:5))
+#' bic_table(fits)
+#' }
+#'
+#' @name bic_table
+#' @export
+bic_table
 
