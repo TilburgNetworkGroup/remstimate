@@ -10,6 +10,34 @@
 # Called from remstimate() when reh inherits "remify_durem".
 
 
+# ── clogit helper ─────────────────────────────────────────────────────────
+#
+# 'survival' is only a Suggested dependency, so it is never attached to the
+# search path. When coxph()/clogit() build the model frame, the strata()
+# special in our formula is looked up as a function in the formula's
+# environment and its parents - which is this package's namespace, where
+# 'strata' is not imported. That produces:
+#   Error in strata(time_index) : could not find function "strata"
+#
+# Fix: give the formula an environment that carries survival::strata, so the
+# special resolves during model.frame evaluation. We keep the bare name
+# strata() (rather than survival::strata()) in the formula so coxph's specials
+# detection (which matches on the unqualified name) still works.
+#
+#' @keywords internal
+.durem_clogit <- function(formula_obj, df) {
+  if (!requireNamespace("survival", quietly = TRUE))
+    stop("Package 'survival' is required for ordinal (clogit) duration models. ",
+         "Install it with install.packages('survival').", call. = FALSE)
+
+  fenv         <- new.env(parent = environment(formula_obj))
+  fenv$strata  <- survival::strata
+  environment(formula_obj) <- fenv
+
+  survival::clogit(formula_obj, data = df)
+}
+
+
 # ── Poisson GLM / clogit backend (MLE) ────────────────────────────────────
 
 #' @keywords internal
@@ -29,17 +57,13 @@
 
     if (ordinal) {
         # ── Ordinal: conditional logistic regression ──────────────────────
-        if (!requireNamespace("survival", quietly = TRUE))
-            stop("Package 'survival' is required for ordinal duration models. ",
-                 "Install it with install.packages('survival').", call. = FALSE)
-
         formula_obj <- stats::as.formula(paste0(
           "obs ~ ",
           paste(stat_names, collapse = " + "),
           " + strata(time_index) + offset(.samp_off)"
         ))
 
-        fit <- survival::clogit(formula_obj, data = df)
+        fit <- .durem_clogit(formula_obj, df)
 
         coefs      <- stats::coef(fit)
         loglik_val <- as.numeric(fit$loglik[2L])
@@ -145,7 +169,7 @@
   P <- length(sn)
   if (ordinal) {
     f <- stats::as.formula(paste0("obs ~ ", paste(sn, collapse=" + "), " + strata(time_index)"))
-    fit <- survival::clogit(f, data = df)
+    fit <- .durem_clogit(f, df)
     .stacked_block_out(fit, fit$loglik[2L], fit$loglik[1L], P, E, "clogit")
   } else {
     f   <- stats::as.formula(paste0("obs ~ -1 + offset(log_interevent) + ", paste(sn, collapse=" + ")))
@@ -161,7 +185,7 @@
 .fit_choice_block <- function(df, sn, E) {            # always clogit
   P <- length(sn)
   f <- stats::as.formula(paste0("obs ~ ", paste(sn, collapse=" + "), " + strata(time_index)"))
-  fit <- survival::clogit(f, data = df)
+  fit <- .durem_clogit(f, df)
   .stacked_block_out(fit, fit$loglik[2L], fit$loglik[1L], P, E, "clogit")
 }
 
