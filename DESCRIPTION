@@ -75,10 +75,7 @@ Suggests:
     shrinkem (>= 0.4.0),
     MASS,
     nnet,
-    remdata
-Remotes:
-    TilburgNetworkGroup/remstats,
-    jomulder/shrinkem
+    remdata (>= 0.2.1)
 LinkingTo:
     Rcpp,
     RcppArmadillo,
