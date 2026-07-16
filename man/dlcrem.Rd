@@ -37,7 +37,7 @@ fit_dlcrem <- dlcrem(reh, stats)
 \references{
 Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
 equal: Dyadic latent class models for relational event data.
-\emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+\emph{Social Networks}. \doi{10.1016/j.socnet.2026.06.006}
 }
 \seealso{
 \code{\link{remixture}} for the general mixture interface.

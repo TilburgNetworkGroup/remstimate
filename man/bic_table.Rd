@@ -3,6 +3,9 @@
 \name{bic_table}
 \alias{bic_table}
 \title{Compare BIC across a list of MIXREM fits}
+\usage{
+bic_table(x, ...)
+}
 \arguments{
 \item{x}{A \code{remstimate_mixrem_list} returned when \code{k} is a
 vector in \code{remstimate(..., method = "MIXREM")}.}

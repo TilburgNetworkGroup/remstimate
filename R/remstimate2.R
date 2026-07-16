@@ -84,41 +84,41 @@
 #' @references
 #' Butts, C. T. (2008). A relational event framework for social action.
 #' \emph{Sociological Methodology}, 38(1), 155-200.
-#' \url{https://doi.org/10.1111/j.1467-9531.2008.00203.x}
+#' \doi{10.1111/j.1467-9531.2008.00203.x}
 #'
 #' Stadtfeld, C., & Block, P. (2017). Interactions, actors, and time: Dynamic
 #' network actor models for relational events. \emph{Sociological Science}, 4,
-#' 318-352. \url{https://doi.org/10.15195/v4.a14}
+#' 318-352. \doi{10.15195/v4.a14}
 #'
 #' Juozaitiene, R., & Wit, E. C. (2024). Nodal heterogeneity can induce ghost
 #' triadic effects in relational event models. \emph{Psychometrika}, 89(1),
-#' 151-171. \url{https://doi.org/10.1007/s11336-024-09952-x}
+#' 151-171. \doi{10.1007/s11336-024-09952-x}
 #'
 #' Mulder, J., & Hoff, P. D. (2024). A latent variable approach for modeling
 #' relational data with multiple receivers. \emph{Annals of Applied
-#' Statistics}. \url{https://doi.org/10.1214/24-AOAS1885}
+#' Statistics}. \doi{10.1214/24-AOAS1885}
 #'
 #' Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
 #' equal: Dyadic latent class models for relational event data.
-#' \emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+#' \emph{Social Networks}. \doi{10.1016/j.socnet.2026.06.006}
 #'
 #' Tibshirani, R. (1996). Regression shrinkage and selection via the lasso.
 #' \emph{Journal of the Royal Statistical Society: Series B (Methodological)},
-#' 58(1), 267-288. \url{https://doi.org/10.1111/j.2517-6161.1996.tb02080.x}
+#' 58(1), 267-288. \doi{10.1111/j.2517-6161.1996.tb02080.x}
 #'
 #' Karimova, D., Leenders, R., Meijerink-Bosman, M., & Mulder, J. (2023).
 #' Separating the wheat from the chaff: Bayesian regularization in dynamic
 #' social networks. \emph{Social Networks}, 74, 139-155.
-#' \url{https://doi.org/10.1016/j.socnet.2023.02.006}
+#' \doi{10.1016/j.socnet.2023.02.006}
 #'
 #' Karimova, D., van Erp, S., Leenders, R., & Mulder, J. (2025). Honey, I
 #' shrunk the irrelevant effects! Simple and flexible approximate Bayesian
 #' regularization. \emph{Journal of Mathematical Psychology}, 126, 102925.
-#' \url{https://doi.org/10.1016/j.jmp.2025.102925}
+#' \doi{10.1016/j.jmp.2025.102925}
 #'
 #' Lakdawala, R., Leenders, R., Ejbye-Ernst, P., & Mulder, J. (2026).
 #' Modelling interaction duration in relational event models.
-#' \emph{arXiv preprint}. \url{https://doi.org/10.48550/arXiv.2602.21000}
+#' \emph{arXiv preprint}. \doi{10.48550/arXiv.2602.21000}
 #'
 #' @examples
 #' # ---- MLE for basic tie model ----

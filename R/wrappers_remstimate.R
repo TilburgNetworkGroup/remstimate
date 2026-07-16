@@ -30,7 +30,7 @@
 #' @references
 #' Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
 #' equal: Dyadic latent class models for relational event data.
-#' \emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+#' \emph{Social Networks}. \doi{10.1016/j.socnet.2026.06.006}
 #'
 #' @examples
 #' \donttest{
@@ -92,7 +92,7 @@ remixture <- function(reh, stats, random, k = 2L, concomitant = NULL,
 #' @references
 #' Lakdawala, R., Leenders, R., & Mulder, J. (2026). Not all bonds are created
 #' equal: Dyadic latent class models for relational event data.
-#' \emph{Social Networks}. \url{https://doi.org/10.1016/j.socnet.2026.06.006}
+#' \emph{Social Networks}. \doi{10.1016/j.socnet.2026.06.006}
 #' @seealso \code{\link{remixture}} for the general mixture interface.
 #'
 #' @examples
@@ -161,11 +161,11 @@ dlcrem <- function(reh, stats, k = 2L, nrep = 3L, ...) {
 #' @references
 #' Juozaitiene, R., & Wit, E. C. (2024). Nodal heterogeneity can induce ghost
 #' triadic effects in relational event models. \emph{Psychometrika}, 89(1),
-#' 151-171. \url{https://doi.org/10.1007/s11336-024-09952-x}
+#' 151-171. \doi{10.1007/s11336-024-09952-x}
 #'
 #' Mulder, J., & Hoff, P. D. (2024). A latent variable approach for modeling
 #' relational data with multiple receivers. \emph{Annals of Applied
-#' Statistics}. \url{https://doi.org/10.1214/24-AOAS1885}
+#' Statistics}. \doi{10.1214/24-AOAS1885}
 #'
 #' @examples
 #' # GLMM fits stack the full case-control design and call lme4, which is slow
@@ -301,16 +301,16 @@ frailty_rem <- function(reh, stats, ...) {
 #' Karimova, D., Leenders, R., Meijerink-Bosman, M., & Mulder, J. (2023).
 #' Separating the wheat from the chaff: Bayesian regularization in dynamic
 #' social networks. \emph{Social Networks}, 74, 139-155.
-#' \url{https://doi.org/10.1016/j.socnet.2023.02.006}
+#' \doi{10.1016/j.socnet.2023.02.006}
 #'
 #' Karimova, D., van Erp, S., Leenders, R., & Mulder, J. (2025). Honey, I
 #' shrunk the irrelevant effects! Simple and flexible approximate Bayesian
 #' regularization. \emph{Journal of Mathematical Psychology}, 126, 102925.
-#' \url{https://doi.org/10.1016/j.jmp.2025.102925}
+#' \doi{10.1016/j.jmp.2025.102925}
 #'
 #' Tibshirani, R. (1996). Regression shrinkage and selection via the lasso.
 #' \emph{Journal of the Royal Statistical Society: Series B (Methodological)},
-#' 58(1), 267-288. \url{https://doi.org/10.1111/j.2517-6161.1996.tb02080.x}
+#' 58(1), 267-288. \doi{10.1111/j.2517-6161.1996.tb02080.x}
 #'
 #' @examples
 #' # ---- MLE for basic tie model ----
@@ -428,12 +428,12 @@ rempenalty <- function(reh, stats, approach = c("frequentist", "Bayesian"),
 #' @references
 #' Meijerink-Bosman, M., Leenders, R., & Mulder, J. (2022). Dynamic relational
 #' event modeling: Testing, exploring, and applying. PLoS One, 17(8).
-#' \url{https://doi.org/10.1371/journal.pone.0272309}
+#' \doi{10.1371/journal.pone.0272309}
 #'
 #' Mulder, J., & Leenders, R. T. A. (2019). Modeling the evolution of interaction
 #' behavior in social networks: A dynamic relational event approach for real-time
 #' analysis. Chaos, Solitons & Fractals, 119, 73-85.
-#' \url{https://doi.org/10.1016/j.chaos.2018.11.027}
+#' \doi{10.1016/j.chaos.2018.11.027}
 #'
 #' @examples
 #' # ---- MLE for basic tie model ----
@@ -896,6 +896,7 @@ print.summary.remstimate_window <- function(x, digits = 3, ...) {
 
 #' Compare BIC across a list of MIXREM fits
 #'
+#' @usage bic_table(x, ...)
 #' @param x   A \code{remstimate_mixrem_list} returned when \code{k} is a
 #'   vector in \code{remstimate(..., method = "MIXREM")}.
 #' @param ... Unused.

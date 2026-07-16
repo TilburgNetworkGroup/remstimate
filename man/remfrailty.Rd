@@ -121,11 +121,11 @@ summary(fit_ao)
 \references{
 Juozaitiene, R., & Wit, E. C. (2024). Nodal heterogeneity can induce ghost
 triadic effects in relational event models. \emph{Psychometrika}, 89(1),
-151-171. \url{https://doi.org/10.1007/s11336-024-09952-x}
+151-171. \doi{10.1007/s11336-024-09952-x}
 
 Mulder, J., & Hoff, P. D. (2024). A latent variable approach for modeling
 relational data with multiple receivers. \emph{Annals of Applied
-Statistics}. \url{https://doi.org/10.1214/24-AOAS1885}
+Statistics}. \doi{10.1214/24-AOAS1885}
 }
 \seealso{
 \code{\link{remstimate}} for the general estimation interface (and

@@ -113,10 +113,10 @@ fit_mix <- remstimate(reh, stats,
 \references{
 Meijerink-Bosman, M., Leenders, R., & Mulder, J. (2022). Dynamic relational
 event modeling: Testing, exploring, and applying. PLoS One, 17(8).
-\url{https://doi.org/10.1371/journal.pone.0272309}
+\doi{10.1371/journal.pone.0272309}
 
 Mulder, J., & Leenders, R. T. A. (2019). Modeling the evolution of interaction
 behavior in social networks: A dynamic relational event approach for real-time
 analysis. Chaos, Solitons & Fractals, 119, 73-85.
-\url{https://doi.org/10.1016/j.chaos.2018.11.027}
+\doi{10.1016/j.chaos.2018.11.027}
 }

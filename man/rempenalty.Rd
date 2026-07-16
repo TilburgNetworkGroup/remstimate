@@ -65,16 +65,16 @@ fit_horseshoe <- remstimate(reh, stats, penalty = list(prior = "horseshoe"))
 Karimova, D., Leenders, R., Meijerink-Bosman, M., & Mulder, J. (2023).
 Separating the wheat from the chaff: Bayesian regularization in dynamic
 social networks. \emph{Social Networks}, 74, 139-155.
-\url{https://doi.org/10.1016/j.socnet.2023.02.006}
+\doi{10.1016/j.socnet.2023.02.006}
 
 Karimova, D., van Erp, S., Leenders, R., & Mulder, J. (2025). Honey, I
 shrunk the irrelevant effects! Simple and flexible approximate Bayesian
 regularization. \emph{Journal of Mathematical Psychology}, 126, 102925.
-\url{https://doi.org/10.1016/j.jmp.2025.102925}
+\doi{10.1016/j.jmp.2025.102925}
 
 Tibshirani, R. (1996). Regression shrinkage and selection via the lasso.
 \emph{Journal of the Royal Statistical Society: Series B (Methodological)},
-58(1), 267-288. \url{https://doi.org/10.1111/j.2517-6161.1996.tb02080.x}
+58(1), 267-288. \doi{10.1111/j.2517-6161.1996.tb02080.x}
 }
 \seealso{
 \code{\link{remstimate}}.
