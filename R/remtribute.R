@@ -84,7 +84,7 @@
 #'
 #' @examples
 #' \donttest{
-#' # ── Example 1: Tie model + pre-computed stats ──
+#' # --- Example 1: Tie model + pre-computed stats ---
 #' if (requireNamespace("remdata", quietly = TRUE)) {
 #'   data(hypertext, package = "remdata")
 #'   # numeric attribute
@@ -113,14 +113,14 @@
 #'   fit_attr <- remtribute(reh_text, stats = remstats_text, attribute = "long",
 #'     attribute_type = "nominal")
 #'
-#'   # ── Example 2: Actor model + effects formula ──
+#'   # --- Example 2: Actor model + effects formula ---
 #'   reh_act <- remify::remify(edgelist = hypertext[1:1000,], model = "actor",
 #'                           event_attributes = "duration")
 #'   stats_act <- remstats::remstats(reh_act, sender_effects = ~ outdegreeSender(),
 #'     receiver_effects = ~ inertia())
 #'   fit_act <- remstimate(reh_act, stats_act)
 #'
-#'   # Use effects formula — no need for a separate tie-model reh
+#'   # Use effects formula -- no need for a separate tie-model reh
 #'   fit_type <- remtribute(reh_act, effects = ~ inertia() + reciprocity(),
 #'     attribute = "duration",
 #'     attribute_type = "numeric")
