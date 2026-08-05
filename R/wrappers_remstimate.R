@@ -497,6 +497,16 @@ remwindow <- function(reh, stats,
     stop("remwindow() currently supports 'tomstats'/'tomstats_sampled' and ",
          "'aomstats' objects only.", call. = FALSE)
 
+  # A GAM fit has one coefficient per basis function, not per statistic, and the
+  # basis is rebuilt from the covariate values of each window - so stacking the
+  # per-window coefficient matrices would line up numbers that do not refer to
+  # the same function. Fail here rather than in coef.remstimate_window().
+  if (!is.null(list(...)$gam))
+    stop("remwindow() cannot window a GAM fit: a smooth has no single ",
+         "coefficient to follow across windows, and its basis is refitted per ",
+         "window. Fit the windows separately and compare the smooth shapes ",
+         "(plot(fit, reh, which = 9)) instead.", call. = FALSE)
+
   auto_mode <- is.null(window.width)
 
   if (auto_mode && !is.null(step.size.window))

@@ -208,21 +208,46 @@ print.remstimate<-function(x, ...){
 summary.remstimate<-function (object, ...)
 {
   if (inherits(object, "diagnostics")) return(summary.diagnostics(object, ...))
+  # Suppress chi-square test for GAMs: not suitable with estimated degrees of freedom (EDFs)
+  # per-smooth tests instead.
+  is_gam <- inherits(object, "remstimate_gam")
   # (codings are based on the structure of summary.lm() and summary.glm() from package 'stats')
   #if (!inherits(object, "remstimate"))
   #    warning("calling summary.remstimate(<fake-remstimate-object>) ...")
   summary_out <- list()
   if(attr(object, "approach") == "Frequentist"){ # Frequentist
     if(attr(object,"model") == "tie"){
-      coefsTab <- cbind(object$coefficients,
-                        object$se,
-                        object$coefficients/object$se,
-                        2*(1-stats::pnorm(abs(object$coefficients/object$se))),
-                        (stats::dnorm(0,mean=object$coefficients,sd=object$se) / stats::dnorm(0,mean=0,sd=object$se*sqrt(object$df.null)))/((stats::dnorm(0,mean=object$coefficients,sd=object$se) / stats::dnorm(0,mean=0,sd=object$se*sqrt(object$df.null)))+1)
+      cf <- object$coefficients
+      se <- object$se
+      # include smooth-wise information for GAMs
+      if (is_gam) {
+        npar <- object$backend_fit$nsdf %||% length(cf)
+        if (npar >= 1L) {
+          cf <- cf[seq_len(npar)]
+          se <- se[seq_len(npar)]
+        }
+      }
+      coefsTab <- cbind(cf,
+                        se,
+                        cf/se,
+                        2*(1-stats::pnorm(abs(cf/se))),
+                        (stats::dnorm(0,mean=cf,sd=se) / stats::dnorm(0,mean=0,sd=se*sqrt(object$df.null)))/((stats::dnorm(0,mean=cf,sd=se) / stats::dnorm(0,mean=0,sd=se*sqrt(object$df.null)))+1)
       )
       colnames(coefsTab) <- c("Estimate","Std. Err", "z value", "Pr(>|z|)", "Pr(=0)")
-      rownames(coefsTab) <- attr(object, "statistics")
+      # does not apply for GAMs
+      rownames(coefsTab) <- if (!is_gam &&
+                                length(attr(object, "statistics")) == nrow(coefsTab))
+        attr(object, "statistics") else names(cf)
       summary_out$coefsTab <- coefsTab
+
+      # include smooth-wise information for GAMs
+      if (is_gam) {
+        summary_out$smoothTab <- tryCatch({
+          stab <- summary(object$backend_fit)$s.table
+          if (is.null(stab) || !nrow(stab)) NULL else stab
+        }, error = function(e) NULL)
+        summary_out$df.parametric <- object$df.parametric
+      }
       keep <- match(c("formula","aic",
                       "contrasts", "df.residual","null.deviance","df.null",
                       "iter", "na.action"), names(object), 0L)
@@ -243,7 +268,8 @@ summary.remstimate<-function (object, ...)
                    BIC = object$BIC,
                    WAIC = object$WAIC,
                    epsilon = attr(object, "epsilon"),
-                   chiP = 1 - stats::pchisq(object$model.deviance, object$df.model))
+                   chiP = if (is_gam) NA_real_ else
+                     1 - stats::pchisq(object$model.deviance, object$df.model))
       summary_out <- do.call(c, list(keep, summary_out))
     }
     else if(attr(object,"model") == "actor"){
@@ -423,12 +449,26 @@ summary.remstimate<-function (object, ...)
       cat("\nPosterior Modes",second_line)
     }
     stats::printCoefmat(summary_out$coefsTab, P.values = TRUE, signif.stars = FALSE, ...)
+    # One row per smooth term
+    if (!is.null(summary_out$smoothTab)) {
+      cat("\nApproximate significance of smooth terms (nonlinear effects):\n\n")
+      stats::printCoefmat(summary_out$smoothTab, P.values = TRUE,
+                          signif.stars = FALSE, has.Pvalue = TRUE)
+      cat("\n")
+    }
     if(summary_out$approach == "Frequentist"){
       cat("Null deviance:", summary_out$null.deviance, "on", summary_out$df.null, "degrees of freedom\n")
       cat("Residual deviance:", summary_out$residual.deviance, "on", summary_out$df.residual, "degrees of freedom\n")
-      cat("Chi-square:", summary_out$model.deviance, "on", summary_out$df.model,
-          "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$model.deviance,
-                                                                      summary_out$df.model), "\n")
+      # No deviance chi-square for GAMs (due to estimated degrees of freedom)
+      if (!is_gam) {
+        cat("Chi-square:", summary_out$model.deviance, "on", summary_out$df.model,
+            "degrees of freedom, asymptotic p-value", 1 - stats::pchisq(summary_out$model.deviance,
+                                                                        summary_out$df.model), "\n")
+      } else {
+        edf_txt <- format(round(summary_out$df.model, 4))
+        cat("Effective degrees of freedom:", edf_txt,
+            "(penalised; no deviance chi-square test is reported for a GAM)\n")
+      }
       cat("AIC:", summary_out$AIC, "AICC:", summary_out$AICC, "BIC:", summary_out$BIC)
       if(!is.null(summary_out$WAIC)){
         cat(" WAIC:", summary_out$WAIC, "\n")

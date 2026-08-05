@@ -1,5 +1,18 @@
 # remstimate 3.1.0
 
+* GAM backend (`remstimate(..., gam = list(smooths = ...))`) for nonlinear
+  effects of statistics in tie-oriented models, via `mgcv`.
+* The GAM backend now supports ordinal timing, fitted with mgcv's stratified
+  `cox.ph` family (one stratum per risk set), which maximises exactly the
+  conditional-logit likelihood used by the MLE and the `clogit` / `coxme`
+  backends. Ordinal fits never use `bam()`, as it supports no general
+  families, and need no `baseline` statistic.
+* Shape constraints on smooth terms
+  (`gam = list(smooths = "inertia", constraints = "m+")`), fitted with
+  `mgcv::scasm()`. The codes are mgcv's own: `"m+"` / `"m-"` monotone
+  increasing / decreasing, `"c+"` / `"c-"` convex / concave, `"+"` positive,
+  combinable per smooth and given positionally or named after the smooths they
+  apply to. Available under both timing assumptions.
 * Durem functionality.
 * Change functionality of remstimate arguments, compatibility with flexmix and
   other packages.

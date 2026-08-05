@@ -208,6 +208,16 @@
   invisible(NULL)
 }
 
+# Stop if 'smooths' has a variable name that is not in statistics
+.check_smooths_names <- function(smooths, valid = character(0)) {
+  bad <- setdiff(smooths, valid)
+  if (length(bad))
+    stop("smooth name(s) not found among the model statistics: ",
+         paste(bad, collapse = ", "), ".\n  Available statistics: ",
+         paste(valid, collapse = ", "), ".", call. = FALSE)
+  invisible(NULL)
+}
+
 # Duration-model diagnostics for the point-estimate penalised backends (GLMNET,
 # SHRINKEM). A duration fit is stacked as a tie-like design but needs the
 # start/end recall structure rather than the tie Schoenfeld / waiting-time
@@ -381,7 +391,6 @@
   )
 }
 
-# Full recall: joint + per-type (if type column exists)
 .diagnostics_recall <- function(lp, df, top_pct = 0.05) {
   obs_idx   <- which(df$obs == 1L)
   event_ids <- df$time

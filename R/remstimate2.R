@@ -10,6 +10,7 @@
 #'     \item \code{random}: mixed-effects model (GLMM).
 #'     \item \code{penalty}: penalized relational event modeling (GLMNET or Bayesian via shrinkem).
 #'     \item \code{mixture}: finite mixture model (MIXREM / flexmix).
+#'     \item \code{gam}: nonlinear (smooth) effects of statistics via mgcv.
 #'   }
 #'
 #'   The estimation approach is set via \code{approach}:
@@ -54,6 +55,42 @@
 #'   (optional concomitant formula), \code{nrep} (random restarts, default
 #'   \code{3}). E.g. \code{list(k = 2, random = ~ (1 | dyad))} fits the dyadic
 #'   latent class model (Lakdawala et al., 2026).
+#' @param gam       List of smooth-term settings for \code{mgcv}, fitting
+#'   nonlinear effects of statistics. Recognised elements: \code{smooths}
+#'   (character vector of statistic names to enter the model as smooth
+#'   \code{s()} terms; every other statistic stays linear), \code{bs} (smoothing
+#'   basis, default \code{"tp"}), \code{k} (basis dimension; \code{NULL}
+#'   (default) which implies \code{mgcv}'s default), \code{pc} (point constraint: the smooth is
+#'   constrainedto \code{f(pc) = 0}, so \code{baseline} is the log-rate at that
+#'   value; default \code{0}, \code{NULL} is mgcv's sum-to-zero constraint),
+#'   \code{constraints} (shape constraints, see below), \code{select}
+#'   (\code{TRUE} adds a penalty on each smooth's null space so a
+#'   term can shrink to zero, default \code{FALSE}), \code{engine}
+#'   (\code{"gam"}, \code{"bam"}, \code{"scasm"}, or \code{"auto"} (default),
+#'   which uses \code{bam} above 100,000 stacked rows and \code{scasm} whenever
+#'   \code{constraints} is given) and \code{method} (smoothing-parameter
+#'   criterion; the default \code{NULL} uses restricted maximum likelihood under
+#'   each engine's own name, \code{"REML"} for \code{gam} and \code{"fREML"} for
+#'   \code{bam}).
+#'   \code{bs}, \code{k} and \code{pc} are each either length 1 (shared by every
+#'   smooth) or \code{length(smooths)} (one value per smooth, in order); any
+#'   other length is an error. E.g.
+#'   \code{list(smooths = "inertia", k = 5)} includes a 5-dimensional smooth
+#'   for inertia instead of constraining it to have a linear effect on the
+#'   log-event rate. Tie-oriented models only; case-control sampled statistics
+#'   are supported.
+#'   \code{constraints} constrains the smooth's shape using
+#'   \code{mgcv::scasm} (Wood, 2026). The constraint codes correspond to those available in \code{mgcv}:
+#'   unchanged: \code{"m+"} / \code{"m-"} monotone increasing / decreasing,
+#'   \code{"c+"} / \code{"c-"} convex / concave, \code{"+"} positive, and
+#'   \code{"none"} (or \code{NA}) unconstrained. Combine codes for one smooth
+#'   with a space (\code{"m+ c-"} = increasing and concave) or as a character
+#'   vector inside a list. Give \code{constraints} either positionally (length 1
+#'   for all smooths, or \code{length(smooths)} in order, as for \code{bs} /
+#'   \code{k} / \code{pc}) or named after the smooths it applies to, e.g.
+#'   \code{list(smooths = c("inertia", "reciprocity"),
+#'   constraints = c(inertia = "m+"))} makes the inertia effect monotone
+#'   increasing in the log-rate and leaves reciprocity unconstrained.
 #' @param engine    GLMM backend: \code{"glmmTMB"} or \code{"lme4"}; ordinal
 #'   models automatically use \code{coxme}. The default \code{"auto"} selects
 #'   \code{"glmmTMB"} when installed (more robust on the stacked tie-oriented
@@ -120,6 +157,14 @@
 #' Modelling interaction duration in relational event models.
 #' \emph{arXiv preprint}. \doi{10.48550/arXiv.2602.21000}
 #'
+#' Wood, S. N. (2026). Shape constrained additive smooth models.
+#' \emph{Statistical Modelling}. \doi{10.1177/1471082X261436505}
+#'
+#' Wood, S. N., & Fasiolo, M. (2017). A generalized Fellner-Schall method for
+#' smoothing parameter optimization with application to Tweedie location, scale
+#' and shape models. \emph{Biometrics}, 73(4), 1071-1081.
+#' \doi{10.1111/biom.12666}
+#'
 #' @examples
 #' # ---- MLE for basic tie model ----
 #' data(tie_data)
@@ -170,6 +215,7 @@ remstimate <- function(reh,
                        random   = NULL,   # GLMM  : one-sided formula
                        penalty  = NULL,   # glmnet/shrinkem: list(alpha, nfolds, lambda_select, prior)
                        mixture  = NULL,   # flexmix: list(k, random, concomitant, nrep)
+                       gam      = NULL,   # mgcv   : list(smooths, bs, k, select)
                        engine   = "auto",
                        # Bayesian (C++ HMC) controls, e.g.
                        #   list(nsim, nchains, burnin, thin, init, L, epsilon, prior, nsimWAIC)
@@ -211,11 +257,15 @@ remstimate <- function(reh,
   has_random  <- !is.null(random)
   has_penalty <- !is.null(penalty)
   has_mixture <- !is.null(mixture)
+  has_gam     <- !is.null(gam)
 
   if (has_mixture && (has_random || has_penalty))
     stop("'mixture' cannot be combined with 'random' or 'penalty'.", call. = FALSE)
   if (has_random && has_penalty)
     stop("Combining 'random' and 'penalty' is not supported.", call. = FALSE)
+  if (has_gam && (has_random || has_penalty || has_mixture))
+    stop("'gam' cannot be combined with 'random', 'penalty' or 'mixture'.",
+         call. = FALSE)
 
   # ── WAIC / nsimWAIC / ncores validation ────────────────────────────────────
   if (!is.logical(WAIC) || length(WAIC) != 1)
@@ -281,6 +331,31 @@ remstimate <- function(reh,
     } else engine
     return(do.call(.remstimate_glmm, c(list(
       reh, stats, random = random, engine = eng), extra)))
+  }
+
+  # ── Nonlinear (smooth) effects dispatch (GAM) ──────────────────────────────
+  #   Placed before the durem / pre-stacked branch: those stack into a
+  #   tie-like design that .remstimate_gam handles itself, so a 'gam' request
+  #   must win over the plain-GLM fallback below.
+  #   Sampled stats ARE supported: .mgcv_fit carries the case-control
+  #   correction as offset(log_interevent + samp_offset).
+  if (has_gam) {
+    if (approach == "Bayesian") {
+      stop("Bayesian estimation is not available for the GAM backend. ",
+           "Use approach = 'frequentist'.", call. = FALSE)
+    }
+    # NB: 'k' is read from the gam list, not from ... - a bare top-level k =
+    # is consumed as the mixture component count (see .consumed above).
+    return(do.call(.remstimate_gam, c(list(
+      reh, stats,
+      smooths     = gam$smooths,
+      bs          = gam$bs     %||% "tp",
+      k           = gam$k,
+      pc          = if ("pc" %in% names(gam)) gam$pc else 0,
+      constraints = gam$constraints,
+      select      = gam$select %||% FALSE,
+      method      = gam$method,
+      engine      = gam$engine %||% "auto"), extra)))
   }
 
   # ── Basic model: duration / pre-stacked → GLM pipeline ─────────────────────

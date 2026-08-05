@@ -69,6 +69,7 @@ Suggests:
     survival,
     coxme,
     glmnet,
+    mgcv (>= 1.9.0),
     lme4,
     glmmTMB,
     flexmix,
