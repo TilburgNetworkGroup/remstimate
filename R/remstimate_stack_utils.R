@@ -208,11 +208,14 @@
   invisible(NULL)
 }
 
-# Stop if 'smooths' has a variable name that is not in statistics
-.check_smooths_names <- function(smooths, valid = character(0)) {
+# Stop if 'smooths' / 'tve' has a variable name that is not in statistics.
+# 'arg' names the element of the 'gam' list the caller passed, so the message
+# points at what the user actually wrote.
+.check_smooths_names <- function(smooths, valid = character(0),
+                                 arg = "smooth") {
   bad <- setdiff(smooths, valid)
   if (length(bad))
-    stop("smooth name(s) not found among the model statistics: ",
+    stop(arg, " name(s) not found among the model statistics: ",
          paste(bad, collapse = ", "), ".\n  Available statistics: ",
          paste(valid, collapse = ", "), ".", call. = FALSE)
   invisible(NULL)

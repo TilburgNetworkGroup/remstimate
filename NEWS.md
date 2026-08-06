@@ -1,7 +1,12 @@
 # remstimate 3.1.0
 
-* GAM backend (`remstimate(..., gam = list(smooths = ...))`) for nonlinear
-  effects of statistics in tie-oriented models, via `mgcv`.
+* GAM backend for tie-oriented models, via `mgcv`, in two mutually exclusive
+  modes: nonlinear effects (`gam = list(smooths = ...)`, fitted as
+  `s(statistic)`) and time-varying effects (`gam = list(tve = ...)`, fitted as
+  `s(t, by = statistic)`, with a time-varying baseline controlled by
+  `baseline`). `tve` needs interval timing. A smoothed or time-varying
+  statistic has no single coefficient: it is drawn by `plot(which = 9)` and
+  tested as one term by `summary()`.
 * The GAM backend now supports ordinal timing, fitted with mgcv's stratified
   `cox.ph` family (one stratum per risk set), which maximises exactly the
   conditional-logit likelihood used by the MLE and the `clogit` / `coxme`

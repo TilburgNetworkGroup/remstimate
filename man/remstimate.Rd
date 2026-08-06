@@ -62,14 +62,15 @@ elements: \code{k} (components, default \code{2}), \code{random}
 \code{3}). E.g. \code{list(k = 2, random = ~ (1 | dyad))} fits the dyadic
 latent class model (Lakdawala et al., 2026).}
 
-\item{gam}{List of smooth-term settings for \code{mgcv}, fitting
-  nonlinear effects of statistics. Recognised elements: \code{smooths}
+\item{gam}{List of smooth-term settings for \code{mgcv}, fitting either
+  nonlinear effects (\code{smooths}) or time-varying effects (\code{tve}) of
+  statistics. Recognised elements: \code{smooths}
   (character vector of statistic names to enter the model as smooth
   \code{s()} terms; every other statistic stays linear), \code{bs} (smoothing
   basis, default \code{"tp"}), \code{k} (basis dimension; \code{NULL}
-  (default) leaves mgcv's default), \code{pc} (point constraint: the smooth is
-  anchored at \code{f(pc) = 0}, so \code{baseline} is the log-rate at that
-  value; default \code{0}, \code{NULL} restores mgcv's sum-to-zero centring),
+  (default) which implies \code{mgcv}'s default), \code{pc} (point constraint: the smooth is
+  constrainedto \code{f(pc) = 0}, so \code{baseline} is the log-rate at that
+  value; default \code{0}, \code{NULL} is mgcv's sum-to-zero constraint),
   \code{constraints} (shape constraints, see below), \code{select}
   (\code{TRUE} adds a penalty on each smooth's null space so a
   term can shrink to zero, default \code{FALSE}), \code{engine}
@@ -86,23 +87,8 @@ latent class model (Lakdawala et al., 2026).}
   for inertia instead of constraining it to have a linear effect on the
   log-event rate. Tie-oriented models only; case-control sampled statistics
   are supported.
-
-  Both timing assumptions are available. Interval timing is fitted as a
-  Poisson GAM with \code{offset(log(dt))}. Ordinal timing is fitted with
-  mgcv's \code{cox.ph} family on a layout with one stratum per risk set,
-  which maximises exactly the conditional-logit (stratified partial)
-  likelihood that the MLE and the \code{clogit}/\code{coxme} backends use.
-  Two ordinal specifics follow from that: no \code{baseline} statistic is
-  needed or allowed (each risk set has its own baseline hazard, which also
-  absorbs any statistic that is constant within a risk set - such statistics
-  are dropped with a warning), and \code{engine} is never \code{"bam"},
-  which supports no general families, so large ordinal designs are slower
-  than the equivalent interval fit.
-  Note that a bare top-level \code{k =} is consumed as the \code{mixture}
-  component count, so the basis dimension must be given inside this list.
-
-  \code{constraints} restricts the \emph{shape} of a smooth, fitted with
-  \code{mgcv::scasm} (Wood, 2026). The codes are mgcv's own, passed through
+  \code{constraints} constrains the smooth's shape using
+  \code{mgcv::scasm} (Wood, 2026). The constraint codes correspond to those available in \code{mgcv}:
   unchanged: \code{"m+"} / \code{"m-"} monotone increasing / decreasing,
   \code{"c+"} / \code{"c-"} convex / concave, \code{"+"} positive, and
   \code{"none"} (or \code{NA}) unconstrained. Combine codes for one smooth
@@ -113,17 +99,26 @@ latent class model (Lakdawala et al., 2026).}
   \code{list(smooths = c("inertia", "reciprocity"),
   constraints = c(inertia = "m+"))} makes the inertia effect monotone
   increasing in the log-rate and leaves reciprocity unconstrained.
-  A constrained smooth is always built on mgcv's \code{"sc"} basis (the only
-  one that carries a constraint), so \code{bs} is ignored for it unless set
-  to \code{"sc"}; any other explicit basis is an error, since \code{gam} and
-  \code{bam} would return a silently unconstrained fit. A \code{"+"}
-  constraint already fixes the level of the smooth and drops \code{pc}.
-  Constraints work under both timing assumptions, are slower than an
-  unconstrained fit, and leave \code{method} inapplicable, as \code{scasm}
-  selects smoothing parameters by the extended Fellner-Schall method only.
-  A constraint the data run flatly against holds the fit on the edge of the
-  feasible set, where mgcv cannot compute a covariance matrix; that is
-  reported as an error naming the smooth.}
+
+  \code{tve} (character vector of statistic names) fits \emph{time-varying}
+  effects instead: the named statistics enter as \code{s(t, by = statistic)},
+  so their coefficient becomes a smooth function \eqn{\beta(t)} of the event
+  time rather than a constant. \code{tve} and \code{smooths} are mutually
+  exclusive: A model either relaxes the linearity of an effect itself or its
+  effect over time, not both - and \code{tve} requires interval timing,
+  since an ordinal \code{remify} object replaces the event times by their
+  ranks. A time-varying statistic has no single coefficient and does not
+  appear in the coefficient table: its whole effect is the curve, drawn by
+  \code{plot(which = 9)} and tested as one term by \code{summary()}.
+  \code{baseline} controls the time-varying baseline
+  \eqn{b_0 + f_0(t)}: \code{TRUE} (the default) adds \code{s(t)} with
+  \code{mgcv}'s basis dimension, a number sets that dimension, and
+  \code{FALSE} keeps a constant baseline. \code{bs} and \code{k} follow the
+  same length-1-or-\code{length(tve)} contract as for \code{smooths} (the
+  baseline smooth takes the first entry of \code{bs}, and its basis dimension
+  from \code{baseline}); \code{pc} and \code{constraints} are an error for
+  time-varying effects. Use \code{select = TRUE} to allow effects to shrink back to
+  zero.}
 
 \item{engine}{GLMM backend: \code{"glmmTMB"} or \code{"lme4"}; ordinal
 models automatically use \code{coxme}. The default \code{"auto"} selects

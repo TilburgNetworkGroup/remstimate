@@ -247,6 +247,7 @@ summary.remstimate<-function (object, ...)
           if (is.null(stab) || !nrow(stab)) NULL else stab
         }, error = function(e) NULL)
         summary_out$df.parametric <- object$df.parametric
+        summary_out$gam_type      <- attr(object, "gam_type")
       }
       keep <- match(c("formula","aic",
                       "contrasts", "df.residual","null.deviance","df.null",
@@ -451,7 +452,10 @@ summary.remstimate<-function (object, ...)
     stats::printCoefmat(summary_out$coefsTab, P.values = TRUE, signif.stars = FALSE, ...)
     # One row per smooth term
     if (!is.null(summary_out$smoothTab)) {
-      cat("\nApproximate significance of smooth terms (nonlinear effects):\n\n")
+      cat(if (identical(summary_out$gam_type, "tve"))
+            "\nApproximate significance of time-varying effects:\n\n"
+          else
+            "\nApproximate significance of smooth terms (nonlinear effects):\n\n")
       stats::printCoefmat(summary_out$smoothTab, P.values = TRUE,
                           signif.stars = FALSE, has.Pvalue = TRUE)
       cat("\n")
