@@ -222,7 +222,7 @@
   # SHRINKEM does not store the stacked design; rebuild it (identical to the one
   # the MLE used). GLMNET stores it as a data.frame and is reused as-is.
   if (is.null(df) || !is.data.frame(df))
-    df <- .remstimate_make_stack(reh, stats, add_actors = FALSE)$df
+    df <- .remstimate_make_stack(reh, stats, add_actors = TRUE)$df
   if (is.null(df) || !is.data.frame(df))
     stop("Duration diagnostics are only available for tie-oriented duration models.",
          call. = FALSE)
@@ -420,8 +420,8 @@
     low_pct <- if (n_pe > 0) round(100 * n_sur / n_pe, 1) else NA
     low_str <- sprintf(" | lowest %g%% = %s%%", threshold * 100, low_pct)
   }
-  cat(sprintf("  %-10s: mean rank = %.3f | prob ratio = %.2f | top %g%% = %s%%%s\n",
-              label, rs$mean_rel_rank, rs$mean_prob_ratio,
+  cat(sprintf("  %-10s: mean rank = %.3f | median rank = %.3f | prob ratio = %.2f | top %g%% = %s%%%s\n",
+              label, rs$mean_rel_rank, rs$median_rel_rank, rs$mean_prob_ratio,
               rs$top_pct * 100, pct, low_str))
 }
 

@@ -342,19 +342,33 @@ logLik.remstimate_durem <- function(object, ...) {
 
     obs_idx   <- which(df$obs == 1L)
     event_ids <- df$time_index
-    df$eidx   <- reh$edgelist_dual$.eidx[df$time_index]
+    # Per-row dyad identity comes straight from the stacked design (resolved
+    # per-process in stack_stats: `incl` for starts, `rs_end` for ends). The old
+    # reh$edgelist_dual$.eidx[df$time_index] round-trip indexed by epoch ordinal,
+    # which is shared by every observed event in a multi-event epoch (~1/3 of
+    # events), so it mislabelled them and inflated per-dyad end/joint counts.
+    # .recall_block picks ids[obs] per observed row, so a per-row label vector
+    # attributes every event correctly.
+    if (is.null(df$actor1) || is.null(df$actor2))
+        stop("stacked design lacks actor1/actor2 columns; ",
+             "re-stack with add_actors = TRUE.", call. = FALSE)
+    df$eidx   <- paste(df$actor1, "->", df$actor2)
 
     # Identify start vs end rows by nonzero start/end stats. Intersect with the
     # columns actually present: a degenerate start/end statistic may have been
     # dropped from the (GLMM) design by .drop_constant_stats.
     sn_start <- intersect(sn_start, colnames(df))
     sn_end   <- intersect(sn_end,   colnames(df))
-    is_start <- rep(FALSE, nrow(df))
-    is_end   <- rep(FALSE, nrow(df))
-    if (length(sn_start) > 0L)
-        is_start <- rowSums(abs(df[, sn_start, drop = FALSE])) > 0
-    if (length(sn_end) > 0L)
-        is_end <- rowSums(abs(df[, sn_end, drop = FALSE])) > 0
+    # Start/end membership is exact in the `process` column set by stack_stats;
+    # prefer it over inferring the process from nonzero stats (which is fragile
+    # if the baseline/start/end intercept is ever dropped from the design).
+    if (!is.null(df$process)) {
+        is_start <- df$process == "start"
+        is_end   <- df$process == "end"
+    } else {
+        is_start <- if (length(sn_start) > 0L) rowSums(abs(df[, sn_start, drop = FALSE])) > 0 else rep(FALSE, nrow(df))
+        is_end   <- if (length(sn_end)   > 0L) rowSums(abs(df[, sn_end,   drop = FALSE])) > 0 else rep(FALSE, nrow(df))
+    }
 
     # ── Joint recall: all competing dyads ────────────────────────────────
     out$recall_joint <- .recall_block(lp, obs_idx, event_ids, top_pct, ids = df$eidx)
@@ -388,19 +402,21 @@ logLik.remstimate_durem <- function(object, ...) {
     out$surprises_start <- .surprises_from_recall(out$recall_start, surprise_threshold)
     out$surprises_end   <- .surprises_from_recall(out$recall_end,   surprise_threshold)
 
+    # `eidx` now carries the "actor1 -> actor2" label directly (see above), so
+    # feed it straight to .offender_table -- no .durem_dyad_labels round-trip.
     out$surprise_offenders_joint <- .offender_table(
-      ids_surprises = .durem_dyad_labels(reh, out$surprises_joint$eidx),
-      ids_all       = .durem_dyad_labels(reh, out$recall_joint$per_event$eidx)
+      ids_surprises = out$surprises_joint$eidx,
+      ids_all       = out$recall_joint$per_event$eidx
     )
     if (!is.null(out$recall_start))
       out$surprise_offenders_start <- .offender_table(
-        ids_surprises = .durem_dyad_labels(reh, out$surprises_start$eidx),
-        ids_all       = .durem_dyad_labels(reh, out$recall_start$per_event$eidx)
+        ids_surprises = out$surprises_start$eidx,
+        ids_all       = out$recall_start$per_event$eidx
       )
     if (!is.null(out$recall_end))
       out$surprise_offenders_end <- .offender_table(
-        ids_surprises = .durem_dyad_labels(reh, out$surprises_end$eidx),
-        ids_all       = .durem_dyad_labels(reh, out$recall_end$per_event$eidx)
+        ids_surprises = out$surprises_end$eidx,
+        ids_all       = out$recall_end$per_event$eidx
       )
     out$surprise_threshold <- surprise_threshold
 
@@ -574,11 +590,75 @@ print.diagnostics_durem <- function(x, ...) {
 }
 
 
+# ── summary.diagnostics_durem ────────────────────────────────────────────────
+# print.diagnostics_durem gives the one-line-per-recall overview; summary() adds
+# the full per-recall table (mean AND median rank, cum prob, prob ratio, log
+# loss, top-pct) for joint/start/end, mirroring summary.diagnostics for the
+# tie/actor models. Without this method summary(diag_durem) fell through to
+# summary.diagnostics, which looks for $recall / $residuals in the tie layout the
+# durem object does not use, and printed almost nothing.
+
+#' @export
+#' @method summary diagnostics_durem
+summary.diagnostics_durem <- function(object, ...) {
+    reh <- object$.reh.processed
+
+    cat("Diagnostics for a Relational Event Model (duration)\n")
+    cat(strrep("-", 50), "\n", sep = "")
+    if (!is.null(reh$N)) cat(sprintf("%-12s: %d\n", "Actors", reh$N))
+
+    if (!is.null(object$residual_summary)) {
+        cat("\nDeviance residuals:\n")
+        print(object$residual_summary, row.names = FALSE)
+    }
+
+    # one summary row per recall table
+    .row <- function(rc, label) {
+        if (is.null(rc)) return(NULL)
+        rs <- rc$summary
+        data.frame(
+            recall          = label,
+            n_events        = nrow(rc$per_event),
+            mean_rel_rank   = round(rs$mean_rel_rank,   4),
+            median_rel_rank = round(rs$median_rel_rank, 4),
+            mean_cum_prob   = round(rs$mean_cum_prob,   4),
+            mean_prob_ratio = round(rs$mean_prob_ratio, 4),
+            mean_log_loss   = round(rs$mean_log_loss,   4),
+            top_pct         = rs$top_pct,
+            top_pct_prop    = round(rs$top_pct_prop,    4),
+            row.names = NULL, stringsAsFactors = FALSE
+        )
+    }
+
+    rec <- do.call(rbind, list(
+        .row(object$recall_joint, "joint"),
+        .row(object$recall_start, "start"),
+        .row(object$recall_end,   "end")
+    ))
+    if (!is.null(rec)) {
+        cat("\nRecall:\n")
+        print(rec, row.names = FALSE)
+    }
+
+    # per-type (joint) recall, when the design carries multiple event types
+    if (!is.null(object$recall_by_type) && length(object$recall_by_type)) {
+        bt <- do.call(rbind, lapply(names(object$recall_by_type), function(tp)
+            .row(object$recall_by_type[[tp]], paste0("type:", tp))))
+        if (!is.null(bt)) {
+            cat("\nRecall by type (joint):\n")
+            print(bt, row.names = FALSE)
+        }
+    }
+
+    invisible(object)
+}
+
+
 # ── plot ────────────────────────────────────────────────────────────────────
 
 #' @export
 #' @method plot diagnostics_durem
-plot.diagnostics_durem <- function(x, which = 1L, ...) {
+plot.diagnostics_durem <- function(x, which = 5L, ...) {
     # x is the durem diagnostics object (recall_joint / recall_start /
     # recall_end / *_by_type / deviance_residuals). Plotting straight from the
     # diagnostics object mirrors plot.diagnostics for tie/actor, so plot(diag)
@@ -694,7 +774,7 @@ plot.diagnostics_durem <- function(x, which = 1L, ...) {
 #' @method plot remstimate_durem
 plot.remstimate_durem <- function(x, reh = NULL, stats = NULL,
                                   diagnostics_object = NULL,
-                                  which = 1L, ...) {
+                                  which = 5L, ...) {
 
     if (is.null(diagnostics_object) && !is.null(reh) && !is.null(stats))
         diagnostics_object <- diagnostics(x, reh, stats)

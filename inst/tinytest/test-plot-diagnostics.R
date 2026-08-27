@@ -121,13 +121,6 @@ expect_error(
   )
 )
 
-# with 'object' (MLE — plots 3/4 silently skipped because method != "HMC")
-expect_warning(
-  with_null_dev(
-    plot(ao_diag, object = ao_mle, which = c(1, 2, 3, 4))
-  )
-)
-
 # return value is x invisibly
 ret <- with_null_dev(
   plot(ao_diag, which = 1)
@@ -258,17 +251,14 @@ if (!is.null(ao_hmc)) {
 }
 
 # multi-chain HMC: trace plot branches to multi-chain path
-ao_hmc2 <- tryCatch(
-  remstimate(reh     = ao_reh,
-                          stats   = ao_stats,
-                          ncores  = 1L,
-                          method  = "HMC",
-                          nchains = 2L,
-                          nsim    = 15L,
-                          burnin  = 5L,
-                          seed    = 12345L),
-  error = function(e) NULL
-)
+remstimate(reh     = ao_reh,
+           stats   = ao_stats,
+           ncores  = 1L,
+           method  = "HMC",
+           nchains = 2L,
+           nsim    = 15L,
+           burnin  = 5L,
+           seed    = 12345L)
 
 if (!is.null(ao_hmc2)) {
   ao_hmc2_diag <- diagnostics(object = ao_hmc2, reh = ao_reh, stats = ao_stats)

@@ -19,7 +19,11 @@
 .plot_recall <- function(rc, label = NULL) {
   pe <- rc$per_event
   rs <- rc$summary
-  has_time <- !is.null(pe$time) && !all(is.na(pe$time))
+  # The secondary 'Time' axis interpolated event index -> pe$time via approx(),
+  # a rough mapping that mislabelled the top axis; dropped in favour of the
+  # event axis only. Kept as FALSE (rather than deleting the branch) so the
+  # event-only layout below is reused unchanged.
+  has_time <- FALSE
 
   old_par <- par(mar = if (has_time) c(4, 4, 5, 2) + 0.1 else c(5, 4, 4, 2) + 0.1)
   on.exit(par(old_par))
