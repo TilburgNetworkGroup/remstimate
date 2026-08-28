@@ -509,8 +509,38 @@ remstimate <- function(reh,
     remstimateList$loglik            <- -optimum_obj$value
     remstimateList$gradient          <- -optimum_obj$gradient
     remstimateList$hessian           <- optimum_obj$hessian
-    remstimateList$vcov              <- tryCatch(qr.solve(optimum_obj$hessian),
-                                                  error = function(e) matrix(NA, P, P))
+    # Variance of the sampled estimator.
+    #  ORDINAL : the sampled likelihood is an (unweighted) partial likelihood in
+    #            the sense of Borgan, Goldstein and Langholz (1995), so the
+    #            inverse observed information is the correct variance.
+    #  INTERVAL: the sampled likelihood is importance-weighted, and its observed
+    #            information estimates the information of the FULL-data
+    #            likelihood.  It therefore ignores the variability induced by
+    #            sampling the controls and understates the standard errors
+    #            (~14% at samp_num = 10).  Report the sandwich H^-1 J H^-1, with
+    #            J the outer product of the event-specific score contributions.
+    Hinv <- tryCatch(qr.solve(optimum_obj$hessian),
+                     error = function(e) matrix(NA_real_, P, P))
+    if (!ordinal && !anyNA(Hinv)) {
+      U <- .sampled_scores(remstimateList$coefficients, stats_arr, case_pos,
+                           samp_prob, intereventTime, ordinal = FALSE)
+      # HC1-type finite-sample correction: J is a sum of M rank-one terms whose
+      # scores sum to zero at the optimum, which biases it downward when the
+      # number of events is small relative to the number of parameters.
+      J <- tcrossprod(U) * (M_sub / max(M_sub - P, 1L))
+      V <- Hinv %*% J %*% Hinv
+      remstimateList$vcov      <- (V + t(V)) / 2
+      remstimateList$vcov_type <- "sandwich"
+      # Takeuchi's effective number of parameters. For the weighted (interval)
+      # sampled likelihood H != J, so the AIC penalty is 2 * tr(H^-1 J) rather
+      # than 2 * P; the two coincide when the likelihood is correctly specified
+      # and unweighted.
+      p_eff <- sum(diag(Hinv %*% J))
+    } else {
+      remstimateList$vcov      <- Hinv
+      remstimateList$vcov_type <- "model-based"
+      p_eff <- P
+    }
     remstimateList$se                <- sqrt(diag(remstimateList$vcov))
     names(remstimateList$se) <- rownames(remstimateList$vcov) <-
       colnames(remstimateList$vcov) <- variables_names
@@ -520,9 +550,21 @@ remstimate <- function(reh,
     remstimateList$df.null           <- M_sub
     remstimateList$df.model          <- P
     remstimateList$df.residual       <- M_sub - P
-    remstimateList$AIC               <- 2 * P - 2 * remstimateList$loglik
-    remstimateList$AICC              <- remstimateList$AIC + 2 * P * (P + 1) / max(M_sub - P - 1, 1)
-    remstimateList$BIC               <- P * log(M_sub) - 2 * remstimateList$loglik
+    # Information criteria under case-control sampling.
+    #  ORDINAL : the sampled likelihood is a genuine (unweighted) partial
+    #            likelihood, so the usual penalties apply. The values are
+    #            conditional on the drawn sample and should not be compared
+    #            across different samp_num, or against an unsampled fit.
+    #  INTERVAL: the sampled likelihood is a weighted pseudo-likelihood, for
+    #            which 2 * P is the wrong penalty. Use Takeuchi's 2 * tr(H^-1 J)
+    #            instead, and return NA for BIC, which has no defensible
+    #            effective sample size in this case.
+    remstimateList$p.effective       <- p_eff
+    remstimateList$AIC               <- 2 * p_eff - 2 * remstimateList$loglik
+    remstimateList$AICC              <- remstimateList$AIC +
+      2 * p_eff * (p_eff + 1) / max(M_sub - p_eff - 1, 1)
+    remstimateList$BIC               <- if (ordinal)
+      P * log(M_sub) - 2 * remstimateList$loglik else NA_real_
     remstimateList$converged         <- optimum_obj$converged
     remstimateList$iterations        <- optimum_obj$iterations
     remstimateList$sampled           <- TRUE
@@ -1022,6 +1064,34 @@ remstimate <- function(reh,
 # ══════════════════════════════════════════════════════════════════════════════
 # Internal helpers
 # ══════════════════════════════════════════════════════════════════════════════
+
+# Event-specific score contributions of the sampled tie-oriented likelihood.
+# Returns a [P x M] matrix whose m-th column is the score of event m, for use in
+# the sandwich variance under case-control sampling.  Mirrors the two branches of
+# remDerivativesSampled(): the interval score uses the importance weights, the
+# ordinal score does not (see src/remstimate_sampled_cpp.cpp for why).
+.sampled_scores <- function(pars, stats_arr, case_pos, samp_prob,
+                            interevent_time, ordinal = FALSE) {
+  S <- dim(stats_arr)[1]; P <- dim(stats_arr)[2]; M <- dim(stats_arr)[3]
+  U <- matrix(0.0, nrow = P, ncol = M)
+  for (m in seq_len(M)) {
+    cs <- as.integer(case_pos[[m]])
+    if (!length(cs)) next
+    Xm  <- matrix(stats_arr[, , m], nrow = S, ncol = P)
+    lam <- exp(as.vector(Xm %*% pars))
+    num <- colSums(Xm[cs, , drop = FALSE])
+    if (!ordinal) {
+      w      <- 1 / samp_prob[m, ]
+      w[!is.finite(w)] <- 0
+      w[cs]  <- 1
+      lw     <- lam * w
+      U[, m] <- num - interevent_time[m] * as.vector(crossprod(Xm, lw))
+    } else {
+      U[, m] <- num - as.vector(crossprod(Xm, lam)) / sum(lam)
+    }
+  }
+  U
+}
 
 # NULL-coalescing operator
 `%||%` <- function(a, b) if (!is.null(a)) a else b

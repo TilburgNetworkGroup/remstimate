@@ -7,7 +7,7 @@
 \method{plot}{diagnostics}(
   x,
   object = NULL,
-  which = c(1:3),
+  which = c(1:3, 10:12),
   effects = NULL,
   sender_effects = NULL,
   receiver_effects = NULL,
@@ -21,9 +21,13 @@
 \item{object}{optional \code{remstimate} fit. Required for plots 4--5
 (HMC posterior diagnostics); ignored otherwise.}
 
-\item{which}{integer vector of plots to produce. Default \code{1:3} covers
-waiting times, Schoenfeld residuals, and recall. Add \code{4} or \code{5}
-for HMC posterior density and trace plots.}
+\item{which}{integer vector of plots to produce. Default
+\code{c(1:3, 10:12)} covers waiting times, Schoenfeld residuals, recall,
+and the simulation-based goodness-of-fit check for actor frequencies as
+sender (\code{10}), as receiver (\code{11}) and for dyads (\code{12}).
+Plots \code{10}-\code{12} are skipped silently when the \code{diagnostics}
+object was built with \code{gof_R = 0}. Add \code{4} or \code{5} for HMC
+posterior density and trace plots.}
 
 \item{effects}{character vector of effect names to include (tie model).
 \code{NULL} uses all available effects.}

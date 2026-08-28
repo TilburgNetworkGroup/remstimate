@@ -74,6 +74,16 @@
 #'   \code{rel_rank <= surprise_threshold} are collected into \code{$surprises}
 #'   (default 0.20). Lower \code{rel_rank} means the observed outcome was ranked
 #'   further from the top of the predicted probabilities, i.e. more surprising.
+#' @param gof_R integer; number of replicates for the simulation-based
+#'   goodness-of-fit check (default \code{1000L}; set \code{0L} to skip it).
+#'   When \code{gof_R > 0}, replicate outcomes are drawn from the fitted per-event
+#'   probabilities -- holding the endogenous statistics fixed at their observed
+#'   values -- and aggregated into reference distributions for actor and dyad
+#'   frequencies, returned in \code{$gof} and shown by plots 10-12 of
+#'   \code{plot.diagnostics}. See the header of \code{R/gof.R} for what the
+#'   check does and does not test.
+#' @param gof_top_dyads integer; how many dyads to retain in the GOF dyad
+#'   table, ranked by observed plus expected count (default \code{30L}).
 #' @param ... further arguments to be passed to the 'diagnostics' method.
 #' @details
 #' Every recall table (\code{$recall$per_event} for tie/actor,
@@ -322,7 +332,8 @@ denormalize_reh <- function(reh) {
 #' @describeIn diagnostics diagnostics of a 'remstimate' object
 #' @method diagnostics remstimate
 #' @export
-diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, surprise_threshold = 0.2, ...) {
+diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, surprise_threshold = 0.2,
+                                   gof_R = 1000L, gof_top_dyads = 30L, ...) {
   prep <- .diagnostics_prepare(object, reh, stats)
   reh                <- prep$reh
   stats              <- prep$stats
@@ -379,6 +390,18 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, surprise_
       obs_ids  = obs_dyad_ids,
       top_pct  = top_pct
     )
+    # simulation-based GOF (opt-in): reuses the same pars/stats/riskset
+    if (gof_R > 0L) {
+      diagnostics$gof <- .gof_tie(
+        pars         = as.vector(object$coefficients)[select_vars],
+        baseline     = baseline_value,
+        stats_3d     = stats,
+        obs_dyad_ids = obs_dyad_ids,
+        reh          = reh,
+        R            = gof_R,
+        top_dyads    = gof_top_dyads
+      )
+    }
     if (!is.null(diagnostics$recall$per_event)) {
       if (stats_attr_method == "pt") {
         diagnostics$recall$per_event$edgelist_id_row <-
@@ -508,6 +531,35 @@ diagnostics.remstimate <- function(object, reh, stats, top_pct = 0.05, surprise_
         valid_ids = valid_ids_rc,
         top_pct   = top_pct
       )
+      # simulation-based GOF (opt-in). The sender is drawn from the rate model;
+      # the receiver is drawn conditional on the OBSERVED sender, because
+      # receiver_stats at event m are built for the sender that actually acted.
+      if (gof_R > 0L) {
+        if (is.null(diagnostics$gof)) diagnostics$gof <- list(R = gof_R)
+        if (senderRate[i]) {
+          diagnostics$gof$sender <- .gof_actor_sender(
+            pars      = as.vector(object[[which_model[i]]]$coefficients)[select_vars],
+            baseline  = baseline_value,
+            stats_3d  = stats[[which_stats[i]]],
+            obs_ids   = obs_ids_rc,
+            valid_ids = valid_ids_rc,
+            reh       = reh,
+            R         = gof_R
+          )
+        } else {
+          .rec <- .gof_actor_receiver(
+            pars      = as.vector(object[[which_model[i]]]$coefficients)[select_vars],
+            stats_3d  = stats[[which_stats[i]]],
+            obs_ids   = obs_ids_rc,
+            valid_ids = valid_ids_rc,
+            reh       = reh,
+            R         = gof_R,
+            top_dyads = gof_top_dyads
+          )
+          diagnostics$gof$receiver <- .rec$receiver
+          diagnostics$gof$dyad     <- .rec$dyad
+        }
+      }
       if (!is.null(diagnostics[[which_model[i]]]$recall$per_event)) {
         if (stats_attr_method == "pt") {
           diagnostics[[which_model[i]]]$recall$per_event$edgelist_id_row <-
@@ -803,6 +855,9 @@ print.diagnostics <- function(x, ...) {
     .print_submodel(x$sender_model,   "Sender rate model")
     .print_submodel(x$receiver_model, "Receiver choice model")
   }
+  # simulation-based GOF is stored at the top level for both models, so it is
+  # reported once, after the sub-model blocks
+  .gof_print_line(x$gof)
   invisible(x)
 }
 

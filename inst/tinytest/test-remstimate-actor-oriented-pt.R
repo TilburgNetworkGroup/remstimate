@@ -162,7 +162,7 @@ expect_true(length(capture.output(summary(ao_hmc))) > 0)
 expect_silent(diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats))
 ao_reh_diagnostics <- diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_reh_stats)
 ao_reh_diagnostics <- diagnostics(object = ao_hmc_two_chains, reh = ao_reh, stats = ao_reh_stats) # two chains
-expect_warning(plot(x = ao_hmc_two_chains,reh = ao_reh, diagnostics = ao_reh_diagnostics)) # two chains
+expect_silent(plot(x = ao_hmc_two_chains,reh = ao_reh, diagnostics = ao_reh_diagnostics)) # two chains
 expect_error(BIC(ao_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)

@@ -129,26 +129,41 @@
 }
 
 # rhs string for glmer / glmmTMB / flexmix formula
-# interval timing: Poisson with log_interevent + samp_offset
-# ordinal timing:  binomial, no time offset but sampling correction still applies
+# interval timing: Poisson with log_interevent + samp_offset. The importance
+#   weights are needed here: the exponential part of the likelihood requires the
+#   total rate over the FULL risk set, which a plain sum over samp_num dyads
+#   does not give.
+# ordinal timing:  conditional-logit form, NO sampling offset. Under uniform
+#   sampling the sampling probabilities are common to the case and the controls
+#   and cancel from the multinomial ratio; weighting instead turns the
+#   denominator into a ratio estimator and induces an O(1/samp_num) bias.
+#   Keep this in step with the ordinal branch of remDerivativesSampled().
 .remstimate_fixed_rhs <- function(stat_names, ordinal) {
   rhs <- paste(c("-1", stat_names), collapse = " + ")
   if (!ordinal)
     paste(rhs, "+ offset(log_interevent + samp_offset)")
   else
-    paste(rhs, "+ offset(samp_offset)")
+    rhs
 }
 
 # model matrix for glmnet
+# See .remstimate_fixed_rhs(): the sampling correction (offset and importance
+# weights) applies to the interval likelihood only; the ordinal case must be
+# left unweighted.
 .remstimate_model_matrix <- function(df, stat_names, ordinal) {
-  off <- df$samp_offset
-  if (!ordinal && !is.null(df$log_interevent))
-    off <- off + df$log_interevent
+  if (ordinal) {
+    off <- rep(0, nrow(df))
+    wts <- NULL
+  } else {
+    off <- df$samp_offset
+    if (!is.null(df$log_interevent)) off <- off + df$log_interevent
+    wts <- if ("weight" %in% names(df)) df$weight else NULL
+  }
   list(
     X       = as.matrix(df[, stat_names, drop = FALSE]),
     y       = df$obs,
     offset  = off,
-    weights = if ("weight" %in% names(df)) df$weight else NULL
+    weights = wts
   )
 }
 

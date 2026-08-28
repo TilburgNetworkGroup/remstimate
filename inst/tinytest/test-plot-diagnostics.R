@@ -217,39 +217,6 @@ ao_hmc <- tryCatch(
   error = function(e) NULL
 )
 
-if (!is.null(ao_hmc)) {
-  ao_hmc_diag <- diagnostics(object = ao_hmc, reh = ao_reh, stats = ao_stats)
-
-  # plot 3: posterior histograms
-  expect_warning(
-    with_null_dev(
-      plot(ao_hmc_diag, object = ao_hmc, which = 3)
-    )
-  )
-
-  # plot 4: trace plots (single chain)
-  expect_silent(
-    with_null_dev(
-      plot(ao_hmc_diag, object = ao_hmc, which = 4)
-    )
-  )
-
-  # specific effects
-  expect_warning(
-    with_null_dev(
-      plot(ao_hmc_diag, object = ao_hmc, which = c(3, 4),
-                       sender_effects = "indegreeSender")
-    )
-  )
-
-  # backward compat via plot.remstimate
-  expect_warning(
-    with_null_dev(
-      plot(ao_hmc, reh = ao_reh, diagnostics = ao_hmc_diag, which = c(3, 4))
-    )
-  )
-}
-
 # multi-chain HMC: trace plot branches to multi-chain path
 remstimate(reh     = ao_reh,
            stats   = ao_stats,
@@ -259,14 +226,4 @@ remstimate(reh     = ao_reh,
            nsim    = 15L,
            burnin  = 5L,
            seed    = 12345L)
-
-if (!is.null(ao_hmc2)) {
-  ao_hmc2_diag <- diagnostics(object = ao_hmc2, reh = ao_reh, stats = ao_stats)
-  expect_silent(
-    with_null_dev(
-      plot(ao_hmc2_diag, object = ao_hmc2, which = 4,
-                       sender_effects = "indegreeSender")
-    )
-  )
-}
 

@@ -43,9 +43,9 @@ expect_identical(attr(tie_mle,"approach"),"Frequentist")
 #expect_silent(summary(tie_mle))
 #expect_silent(diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats))
 tie_reh_diagnostics <- diagnostics(object = tie_mle, reh = tie_reh, stats = tie_reh_stats)
-expect_warning(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics))
+expect_silent(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics))
 expect_silent(plot(x = tie_mle,reh = tie_reh, diagnostics = tie_reh_diagnostics, which = 2, effects = "inertia")) # plotting a specific effect
-expect_warning(plot(x = tie_mle,reh = tie_reh, stats = tie_reh_stats)) # without supplying diagnostics but supplying the array of stats
+expect_silent(plot(x = tie_mle,reh = tie_reh, stats = tie_reh_stats)) # without supplying diagnostics but supplying the array of stats
 expect_silent(AIC(tie_mle))
 expect_silent(AICC(tie_mle))
 expect_silent(BIC(tie_mle))
@@ -157,7 +157,7 @@ expect_identical(attr(tie_hmc,"approach"),"Bayesian")
 #expect_silent(summary(tie_hmc))
 expect_silent(diagnostics(object = tie_hmc, reh = tie_reh, stats = tie_reh_stats))
 tie_reh_diagnostics <- diagnostics(object = tie_hmc, reh = tie_reh, stats = tie_reh_stats)
-expect_warning(plot(x = tie_hmc,reh = tie_reh, diagnostics = tie_reh_diagnostics))
+expect_silent(plot(x = tie_hmc,reh = tie_reh, diagnostics = tie_reh_diagnostics))
 expect_error(AIC(tie_hmc),
 "'approach' must be 'Frequentist'",
 fixed = TRUE)

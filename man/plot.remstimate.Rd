@@ -8,7 +8,7 @@
   x,
   reh,
   diagnostics = NULL,
-  which = c(1:5),
+  which = c(1:5, 10:12),
   effects = NULL,
   sender_effects = NULL,
   receiver_effects = NULL,
@@ -24,7 +24,7 @@
 \code{c("diagnostics","remstimate")}. If \code{NULL}, \code{stats} must be
 supplied via \code{...}.}
 
-\item{which}{integer vector selecting plots (default \code{1:4}).}
+\item{which}{integer vector selecting plots (default \code{c(1:5, 10:12)}).}
 
 \item{effects}{character vector of effects to plot (tie model).}
 

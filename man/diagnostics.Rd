@@ -7,7 +7,16 @@
 \usage{
 diagnostics(object, reh, stats, ...)
 
-\method{diagnostics}{remstimate}(object, reh, stats, top_pct = 0.05, surprise_threshold = 0.2, ...)
+\method{diagnostics}{remstimate}(
+  object,
+  reh,
+  stats,
+  top_pct = 0.05,
+  surprise_threshold = 0.2,
+  gof_R = 1000L,
+  gof_top_dyads = 30L,
+  ...
+)
 }
 \arguments{
 \item{object}{is a \code{remstimate} object.}
@@ -24,6 +33,18 @@ diagnostics(object, reh, stats, ...)
 \code{rel_rank <= surprise_threshold} are collected into \code{$surprises}
 (default 0.20). Lower \code{rel_rank} means the observed outcome was ranked
 further from the top of the predicted probabilities, i.e. more surprising.}
+
+\item{gof_R}{integer; number of replicates for the simulation-based
+goodness-of-fit check (default \code{1000L}; set \code{0L} to skip it).
+When \code{gof_R > 0}, replicate outcomes are drawn from the fitted per-event
+probabilities -- holding the endogenous statistics fixed at their observed
+values -- and aggregated into reference distributions for actor and dyad
+frequencies, returned in \code{$gof} and shown by plots 10-12 of
+\code{plot.diagnostics}. See the header of \code{R/gof.R} for what the
+check does and does not test.}
+
+\item{gof_top_dyads}{integer; how many dyads to retain in the GOF dyad
+table, ranked by observed plus expected count (default \code{30L}).}
 }
 \description{
 Compute the diagnostics of a \code{remstimate} object. Diagnostics are based on point estimates, also for Bayesian fit.

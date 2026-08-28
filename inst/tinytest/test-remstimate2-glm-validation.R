@@ -210,7 +210,11 @@ expect_equal(
 )
 
 # ---------------------------------------------------------------------------
-# SECTION 6: Sampled stats — remstimate vs weighted clogit (ordinal)
+# SECTION 6: Sampled stats — remstimate vs UNWEIGHTED clogit (ordinal)
+# Under uniform case-control sampling the ordinal sampled likelihood is Borgan's
+# sampled partial likelihood, i.e. a plain conditional logit over the sampled
+# risk sets. The importance weights must NOT be used here; see
+# .remstimate_fixed_rhs() and src/remstimate_sampled_cpp.cpp.
 # ---------------------------------------------------------------------------
 ts_samp_ord <- tomstats(effects_no_baseline, reh = reh_ord,
                                     attr_actors = info,
@@ -227,7 +231,6 @@ df_samp_ord <- stacked_samp_ord$remstats_stack
 fit_clogit_samp <- survival::clogit(
   obs ~ -1 + inertia + indegreeSender + outdegreeSender +
     survival::strata(time_index),
-  weights = weight,
   method = "approximate",
   data = df_samp_ord
 )
@@ -236,7 +239,7 @@ expect_equal(
   unname(est_samp_ord$coefficients),
   unname(coef(fit_clogit_samp)),
   tolerance = tol,
-  info = "sampled ordinal: remstimate MLE matches weighted clogit"
+  info = "sampled ordinal: remstimate MLE matches unweighted clogit"
 )
 
 

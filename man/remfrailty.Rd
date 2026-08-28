@@ -112,7 +112,7 @@ fit_tmb <- remstimate(reh, stats,
 reh_ao <- remify::remify(tie_data$edgelist, model = "actor")
 stats_ao <- remstats::remstats(reh_ao,
   sender_effects = ~ 1 + indegreeSender(),
-  receiver_effects = ~ inertia())
+  receiver_effects = ~ 1 + inertia())
 fit_ao <- remfrailty(reh_ao, stats_ao)
 summary(fit_ao)
 }

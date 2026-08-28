@@ -13,11 +13,30 @@
 //   log L_m = x_{case} β  -  Δt_m * Σ_{s} exp(x_s β) / π_s
 //
 // ORDINAL timing log-likelihood at event m:
-//   log L_m = x_{case} β  -  log( Σ_{s} exp(x_s β) / π_s )
+//   log L_m = x_{case} β  -  log( Σ_{s} exp(x_s β) )
 //
-// Both sums are importance-weighted: cases have π_s = 1,
-// controls have π_s = samp_prob[m,s].
-// When samp_num = D and all π_s = 1, both recover the full likelihood.
+// INTERVAL: the sum IS importance-weighted (cases have π_s = 1, controls have
+// π_s = samp_prob[m,s]).  The exponential part of the likelihood needs the total
+// rate Λ(t_m) over the FULL risk set, which a plain sum over samp_num dyads does
+// not give; weighting by 1/π_s makes the sum unbiased for Λ(t_m).  Because the
+// log-likelihood is linear in that sum, the resulting score is exactly unbiased
+// for the full-data score.  NOTE: the observed information of this weighted
+// likelihood estimates the information of the FULL-data likelihood, so inverting
+// it understates the standard errors; remstimate2.R therefore reports the
+// sandwich H^-1 J H^-1 for this branch.
+//
+// ORDINAL: the sum is NOT weighted.  Under uniform sampling without replacement
+// (sampling_scheme "uniform_wor_static_riskset") the sampling probabilities are
+// common to the case and to the controls and cancel from the multinomial ratio,
+// so the unweighted denominator is exactly the sampled partial likelihood of
+// Borgan, Goldstein and Langholz (1995) -- unbiased, with the inverse observed
+// information as the correct variance.  Applying 1/π_s here instead turns the
+// denominator into a ratio estimator, which induces an O(1/samp_num) bias:
+// coefficients come out inflated by ~49% at samp_num = 5, ~16% at 10, ~5% at 25.
+// If a NON-UNIFORM sampling scheme is ever added, this branch must use Borgan's
+// design ratios (which are not 1/π_s either), not stay unweighted.
+//
+// When samp_num = D and all π_s = 1, both branches recover the full likelihood.
 //
 // [[Rcpp::export]]
 Rcpp::List remDerivativesSampled(const arma::vec &pars,
@@ -62,20 +81,24 @@ Rcpp::List remDerivativesSampled(const arma::vec &pars,
     loglik_m = arma::accu(log_lambda(cases));
     if (gradient) grad_m += arma::sum(stats_m.cols(cases), 1);
 
-    // (2) Build importance weights: 1 for cases, 1/pi_s for controls
+    // (2) Build importance weights: 1 for cases, 1/pi_s for controls.
+    //     INTERVAL only -- the ORDINAL branch must stay unweighted; see the note
+    //     at the top of this file.
     arma::vec weights(S, arma::fill::ones);
-    for (s = 0; s < S; s++) {
-      bool is_case = false;
-      for (arma::uword c = 0; c < n_cases; c++) {
-        if (s == cases(c)) { is_case = true; break; }
-      }
-      if (!is_case) {
-        double pi_s = samp_prob(m, s);
-        weights(s) = (pi_s > 0.0) ? 1.0 / pi_s : 0.0;
+    if (!ordinal) {
+      for (s = 0; s < S; s++) {
+        bool is_case = false;
+        for (arma::uword c = 0; c < n_cases; c++) {
+          if (s == cases(c)) { is_case = true; break; }
+        }
+        if (!is_case) {
+          double pi_s = samp_prob(m, s);
+          weights(s) = (pi_s > 0.0) ? 1.0 / pi_s : 0.0;
+        }
       }
     }
 
-    // lambda_s = exp(x_s β) / pi_s
+    // lambda_s = exp(x_s β) / pi_s  (interval)  or  exp(x_s β)  (ordinal)
     arma::vec lambda_s = arma::exp(log_lambda) % weights;
     double wtd_sum = arma::accu(lambda_s);
     if (wtd_sum <= 0.0) wtd_sum = 1e-300;

@@ -122,9 +122,13 @@
 #' @param x a \code{diagnostics} object returned by \code{diagnostics()}.
 #' @param object optional \code{remstimate} fit. Required for plots 4--5
 #'   (HMC posterior diagnostics); ignored otherwise.
-#' @param which integer vector of plots to produce. Default \code{1:3} covers
-#'   waiting times, Schoenfeld residuals, and recall. Add \code{4} or \code{5}
-#'   for HMC posterior density and trace plots.
+#' @param which integer vector of plots to produce. Default
+#'   \code{c(1:3, 10:12)} covers waiting times, Schoenfeld residuals, recall,
+#'   and the simulation-based goodness-of-fit check for actor frequencies as
+#'   sender (\code{10}), as receiver (\code{11}) and for dyads (\code{12}).
+#'   Plots \code{10}-\code{12} are skipped silently when the \code{diagnostics}
+#'   object was built with \code{gof_R = 0}. Add \code{4} or \code{5} for HMC
+#'   posterior density and trace plots.
 #' @param effects character vector of effect names to include (tie model).
 #'   \code{NULL} uses all available effects.
 #' @param sender_effects character vector of sender-model effects (actor model).
@@ -139,7 +143,7 @@
 #' @export
 plot.diagnostics <- function(x,
                              object           = NULL,
-                             which            = c(1:3),
+                             which            = c(1:3, 10:12),
                              effects          = NULL,
                              sender_effects   = NULL,
                              receiver_effects = NULL,
@@ -151,7 +155,7 @@ plot.diagnostics <- function(x,
   # plots 7 (random-effect normality Q-Q), 8 (per-type recall, typed events) and
   # 9 (per-component recall, MIXREM) are backend extras; widen the flag vector so
   # they are representable alongside the 1-6 MLE/HMC plots.
-  which    <- rep(FALSE, max(9L, max(selected)))
+  which    <- rep(FALSE, max(12L, max(selected)))
   which[selected] <- TRUE
 
   if (!is.null(object) && !inherits(object, "remstimate"))
@@ -537,6 +541,32 @@ plot.diagnostics <- function(x,
     }
   }
 
+  # (10-12) simulation-based GOF. Stored at the top level of the diagnostics
+  # object for both models, so it is plotted once, outside the model branches.
+  if (any(which[10:12])) {
+    if (is.null(x$gof)) {
+      # only complain when the GOF plots were asked for specifically; they are
+      # in the default 'which', so a plain plot() on a gof_R = 0 object should
+      # simply skip them
+      if (all(selected %in% 10:12))
+        warning("no GOF output on this 'diagnostics' object; re-run diagnostics() ",
+                "with gof_R > 0 to enable plots 10-12.", call. = FALSE)
+    } else {
+      if (which[10L] && !is.null(x$gof$sender)) {
+        par(mfrow = c(1, 1))
+        .gof_panel(x$gof$sender, "GOF: sender frequencies")
+      }
+      if (which[11L] && !is.null(x$gof$receiver)) {
+        par(mfrow = c(1, 1))
+        .gof_panel(x$gof$receiver, "GOF: receiver frequencies")
+      }
+      if (which[12L] && !is.null(x$gof$dyad)) {
+        par(mfrow = c(1, 1))
+        .gof_panel(x$gof$dyad, "GOF: dyad frequencies")
+      }
+    }
+  }
+
   # (7) random-effect normality Q-Q (GLMM only; model-agnostic).
   # x$ranef is a named list per sub-model ('fit' for tie, 'sender_model' /
   # 'receiver_model' for actor); each holds the engine's native ranef object
@@ -582,7 +612,7 @@ plot.diagnostics <- function(x,
 #' @param diagnostics optional pre-computed diagnostics object of class
 #'   \code{c("diagnostics","remstimate")}. If \code{NULL}, \code{stats} must be
 #'   supplied via \code{...}.
-#' @param which integer vector selecting plots (default \code{1:4}).
+#' @param which integer vector selecting plots (default \code{c(1:5, 10:12)}).
 #' @param effects character vector of effects to plot (tie model).
 #' @param sender_effects character vector of sender-model effects (actor model).
 #' @param receiver_effects character vector of receiver-model effects (actor model).
@@ -593,7 +623,7 @@ plot.diagnostics <- function(x,
 plot.remstimate <- function(x,
                             reh,
                             diagnostics      = NULL,
-                            which            = c(1:5),
+                            which            = c(1:5, 10:12),
                             effects          = NULL,
                             sender_effects   = NULL,
                             receiver_effects = NULL,
