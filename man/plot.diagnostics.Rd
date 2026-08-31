@@ -26,8 +26,8 @@
 and the simulation-based goodness-of-fit check for actor frequencies as
 sender (\code{10}), as receiver (\code{11}) and for dyads (\code{12}).
 Plots \code{10}-\code{12} are skipped silently when the \code{diagnostics}
-object was built with \code{gof_R = 0}. Add \code{4} or \code{5} for HMC
-posterior density and trace plots.}
+object was built with \code{gof_R = 0}. Add \code{4} or \code{5} for
+posterior density and trace plots of an MCMC-based fit.}
 
 \item{effects}{character vector of effect names to include (tie model).
 \code{NULL} uses all available effects.}
@@ -51,6 +51,7 @@ Produces diagnostic plots from an object returned by
   \code{diagnostics()}. Plot 1 (waiting-time Q-Q) and plot 2 (Schoenfeld
   residuals) are computed from the diagnostics object alone. Plot 3 (recall
   scatter) is also derived from the diagnostics object. Plots 4 and 5
-  (posterior density and trace plots) are HMC-only and additionally require
-  the original \code{remstimate} fit via \code{object}.
+  (posterior density and trace plots) require the original \code{remstimate}
+  fit via \code{object} and are drawn for any backend that stores an MCMC
+  chain in \code{object$draws} (HMC, and the Bayesian shrinkem backend).
 }

@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{remstimate}(
   x,
-  reh,
+  reh = NULL,
   diagnostics = NULL,
   which = c(1:5, 10:12),
   effects = NULL,

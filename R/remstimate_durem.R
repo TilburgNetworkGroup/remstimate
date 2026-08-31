@@ -56,6 +56,10 @@
   df         <- stacked$remstats_stack
   stat_names <- stacked$stat_names
   ordinal    <- isTRUE(stacked$ordinal)
+  # This backend also serves plain pre-stacked tie models, which are not
+  # duration models; the flag drives the print/summary header.
+  is_durem   <- inherits(stacked, "remstats_stacked_durem") ||
+                identical(stacked$model, "durem")
 
   # case-control sampling correction: offset += log(weight) = -log(pi_d)
   # cases have weight 1 -> 0; controls weight 1/pi -> -log(pi). Absent => 0.
@@ -150,6 +154,7 @@
     structure(
         res,
         class             = c("remstimate_durem", "remstimate"),
+        durem             = is_durem,
         formula           = formula_obj,
         model             = "tie",
         approach          = "Frequentist",
@@ -226,7 +231,9 @@ print.remstimate_durem <- function(x, ...) {
     engine   <- attr(x, "engine")
     method   <- attr(x, "method")
 
-    cat("Relational Event Model (tie oriented, duration)\n")
+    cat(if (isFALSE(attr(x, "durem")))
+            "Relational Event Model (tie oriented)\n"
+        else "Relational Event Model (tie oriented, duration)\n")
     cat("Estimation:", method, "[", engine, "]\n")
 
     if (approach == "Frequentist") {
@@ -261,7 +268,9 @@ summary.remstimate_durem <- function(object, ...) {
     summary_out$method   <- method
     summary_out$engine   <- engine
 
-    cat("Relational Event Model (tie oriented, duration)\n")
+    cat(if (isFALSE(attr(object, "durem")))
+            "Relational Event Model (tie oriented)\n"
+        else "Relational Event Model (tie oriented, duration)\n")
     cat("Estimation:", method, "[", engine, "]\n")
     cat(strrep("-", 50), "\n")
 

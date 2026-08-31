@@ -52,7 +52,8 @@
     .remstimate_wrap(
       coefficients = coefs,
       stat_names   = s$stat_names,
-      loglik       = .glmm_loglik(fit),
+      loglik       = .glmm_loglik(fit,
+                       if (engine == "coxme") NULL else s$df, s$ordinal),
       stacked_data = s$df,
       backend_fit  = fit,
       model        = "tie",
@@ -90,7 +91,10 @@
       coefficients = list(sender_model   = .glmm_fixef(fit_s, engine_s),
                           receiver_model = .glmm_fixef(fit_r, engine_r)),
       stat_names   = s$stat_names,
-      loglik       = c(sender = .glmm_loglik(fit_s), receiver = .glmm_loglik(fit_r)),
+      loglik       = c(sender   = .glmm_loglik(fit_s,
+                                    if (engine_s == "coxme") NULL else s$df$sender,
+                                    s$ordinal),
+                       receiver = .glmm_loglik(fit_r)),
       stacked_data = s$df,
       backend_fit  = list(sender_model = fit_s, receiver_model = fit_r),
       model        = "actor",
@@ -224,9 +228,13 @@
   coef(fit)
 }
 
-.glmm_loglik <- function(fit) {
+# `df` / `ordinal` put an interval (Poisson) fit back on the REM scale; pass
+# df = NULL for conditional-logit fits (coxme), which need no correction.
+.glmm_loglik <- function(fit, df = NULL, ordinal = FALSE) {
   if (is.null(fit)) return(NULL)
-  tryCatch(as.numeric(logLik(fit)), error = function(e) NULL)
+  ll <- tryCatch(as.numeric(logLik(fit)), error = function(e) NULL)
+  if (is.null(ll)) return(NULL)
+  ll - .remstimate_offset_const(df, ordinal)
 }
 
 # Surface a non-converged backend fit (coxme or glmmTMB; flag set in

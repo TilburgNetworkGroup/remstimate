@@ -117,8 +117,9 @@
 #'   \code{diagnostics()}. Plot 1 (waiting-time Q-Q) and plot 2 (Schoenfeld
 #'   residuals) are computed from the diagnostics object alone. Plot 3 (recall
 #'   scatter) is also derived from the diagnostics object. Plots 4 and 5
-#'   (posterior density and trace plots) are HMC-only and additionally require
-#'   the original \code{remstimate} fit via \code{object}.
+#'   (posterior density and trace plots) require the original \code{remstimate}
+#'   fit via \code{object} and are drawn for any backend that stores an MCMC
+#'   chain in \code{object$draws} (HMC, and the Bayesian shrinkem backend).
 #' @param x a \code{diagnostics} object returned by \code{diagnostics()}.
 #' @param object optional \code{remstimate} fit. Required for plots 4--5
 #'   (HMC posterior diagnostics); ignored otherwise.
@@ -127,8 +128,8 @@
 #'   and the simulation-based goodness-of-fit check for actor frequencies as
 #'   sender (\code{10}), as receiver (\code{11}) and for dyads (\code{12}).
 #'   Plots \code{10}-\code{12} are skipped silently when the \code{diagnostics}
-#'   object was built with \code{gof_R = 0}. Add \code{4} or \code{5} for HMC
-#'   posterior density and trace plots.
+#'   object was built with \code{gof_R = 0}. Add \code{4} or \code{5} for
+#'   posterior density and trace plots of an MCMC-based fit.
 #' @param effects character vector of effect names to include (tie model).
 #'   \code{NULL} uses all available effects.
 #' @param sender_effects character vector of sender-model effects (actor model).
@@ -150,7 +151,12 @@ plot.diagnostics <- function(x,
                              n_per_page       = 4L,
                              ...) {
   reh      <- x$.reh.processed
-  model    <- attr(reh, "model")
+  # Panels 4-5 summarise the fitted parameters and need no diagnostics object;
+  # plot.remstimate passes x = NULL for those, so take the model from the fit.
+  model    <- attr(reh, "model") %||% attr(object, "model")
+  if (is.null(model))
+    stop("cannot determine the model: supply 'x' (diagnostics) or 'object' (fit).",
+         call. = FALSE)
   selected <- which
   # plots 7 (random-effect normality Q-Q), 8 (per-type recall, typed events) and
   # 9 (per-component recall, MIXREM) are backend extras; widen the flag vector so
@@ -308,8 +314,9 @@ plot.diagnostics <- function(x,
       }
     }
 
-    # (4) posterior density (HMC)
-    if (which[4L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+    # (4) posterior density: any backend that stores an MCMC chain in $draws
+    # (HMC, and the Bayesian shrinkem regularisation backend)
+    if (which[4L] && !is.null(object) && !is.null(object$draws)) {
       P     <- length(effects)
       pages <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
       for (pg in pages) {
@@ -323,8 +330,8 @@ plot.diagnostics <- function(x,
       }
     }
 
-    # (5) trace plots (HMC)
-    if (which[5L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+    # (5) trace plots: see (4)
+    if (which[5L] && !is.null(object) && !is.null(object$draws)) {
       nchains <- attr(object, "nchains")
       P       <- length(effects)
       pages   <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
@@ -486,8 +493,9 @@ plot.diagnostics <- function(x,
           .plot_recall(rbt[[tp]], label = .recall_label(paste0(title_model[i], " | Type: ", tp), sub))
       }
 
-      # (4) posterior density (HMC)
-      if (which[4L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+      # (4) posterior density: any backend storing a chain in $draws
+      if (which[4L] && !is.null(object) &&
+          !is.null(object[[which_model[i]]]$draws)) {
         P     <- length(effects)
         pages <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
         for (pg in pages) {
@@ -502,8 +510,9 @@ plot.diagnostics <- function(x,
         }
       }
 
-      # (5) trace plots (HMC)
-      if (which[5L] && !is.null(object) && isTRUE(attr(object, "method") == "HMC")) {
+      # (5) trace plots: see (4)
+      if (which[5L] && !is.null(object) &&
+          !is.null(object[[which_model[i]]]$draws)) {
         nchains <- attr(object, "nchains")
         P       <- length(effects)
         pages   <- split(seq_len(P), ceiling(seq_len(P) / n_per_page))
@@ -621,13 +630,28 @@ plot.diagnostics <- function(x,
 #' @method plot remstimate
 #' @export
 plot.remstimate <- function(x,
-                            reh,
+                            reh              = NULL,
                             diagnostics      = NULL,
                             which            = c(1:5, 10:12),
                             effects          = NULL,
                             sender_effects   = NULL,
                             receiver_effects = NULL,
                             ...) {
+  # Panels 4 and 5 read the fitted object only. When nothing else is asked for,
+  # skip the diagnostics computation entirely so that plot(fit, which = 4:5)
+  # works without 'reh' and 'stats'.
+  if (is.null(diagnostics) && all(which %in% c(4L, 5L))) {
+    plot.diagnostics(x                = NULL,
+                     object           = x,
+                     which            = which,
+                     effects          = effects,
+                     sender_effects   = sender_effects,
+                     receiver_effects = receiver_effects)
+    return(invisible(x))
+  }
+  if (is.null(reh))
+    stop("'reh' is required for the model-fit plots; which = 4:5 (posterior ",
+         "density and traces) can be drawn without it.", call. = FALSE)
   reh <- denormalize_reh(reh)
   if (attr(x, "model") != attr(reh, "model"))
     stop("'x' and 'reh' have different attribute 'model'")

@@ -48,6 +48,14 @@
 #'   in both. Names must match the model statistics exactly (as printed by the
 #'   remstats object, e.g. \code{"psABAB.end"}, not \code{"psABAB"}); a name that
 #'   matches nothing is ignored with a warning.
+#'   Bayesian fits additionally accept \code{group}: a vector named by statistic
+#'   that assigns each coefficient to a group, so that \pkg{shrinkem} estimates a
+#'   separate shrinkage parameter per group - for instance one for the start and
+#'   one for the end process of a duration model, which are informed by different
+#'   numbers of rows. There is no frequentist counterpart (\code{penalty.factor}
+#'   only fixes a ratio between groups while \code{cv.glmnet} still tunes a
+#'   single lambda), so \code{group} is ignored with a warning when
+#'   \code{approach = "frequentist"}.
 #' @param mixture   List of finite-mixture settings (flexmix). Recognised
 #'   elements: \code{k} (components, default \code{2}), \code{random}
 #'   (clustering formula, e.g. \code{~ (1 | dyad)}), \code{concomitant}
@@ -256,8 +264,15 @@ remstimate <- function(reh,
         type        = penalty$prior %||% "horseshoe",
         unpenalized = penalty$unpenalized %||% dep("unpenalized"),
         penalized   = penalty$penalized   %||% dep("penalized"),
+        group       = penalty$group,
         ncores = ncores, seed = seed), extra)))
     }
+    # glmnet has no per-group penalty parameter: penalty.factor only fixes a
+    # ratio between groups, while cv.glmnet still tunes a single lambda. Grouping
+    # is therefore Bayesian-only rather than silently ignored.
+    if (!is.null(penalty$group))
+      warning("'penalty$group' is only used by the Bayesian (shrinkem) backend ",
+              "and is ignored for approach = \"frequentist\".", call. = FALSE)
     return(do.call(.remstimate_glmnet, c(list(
       reh, stats,
       alpha         = penalty$alpha %||% dep("alpha") %||% 1,

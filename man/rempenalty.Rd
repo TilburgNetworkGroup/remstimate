@@ -12,6 +12,9 @@ rempenalty(
   prior = "horseshoe",
   nfolds = 10L,
   lambda_select = c("1se", "min"),
+  unpenalized = NULL,
+  penalized = NULL,
+  group = NULL,
   ...
 )
 }
@@ -33,6 +36,17 @@ rempenalty(
 
 \item{lambda_select}{Which lambda (frequentist): \code{"1se"} (default) or
 \code{"min"}.}
+
+\item{unpenalized, penalized}{Character vectors of statistic names that
+respectively \emph{add to} and \emph{remove from} the automatically
+detected unpenalised set (the intercept / baseline structure). See
+\code{\link{remstimate}} for the default rule.}
+
+\item{group}{Penalty grouping for the Bayesian fit: a vector named by
+statistic, so that \pkg{shrinkem} estimates a separate shrinkage parameter
+per group. Defaults to the start / end partition when \code{reh} is a
+duration model carrying both processes, and to no grouping otherwise.
+Ignored by the frequentist route, which has no per-group penalty parameter.}
 
 \item{...}{Additional arguments passed to \code{\link{remstimate}}.}
 }

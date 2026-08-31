@@ -66,7 +66,15 @@
     familie     <- flexmix::FLXMRglm(family = "binomial")
     respons     <- "cbind(obs, obs_fail)"
   } else {
-    familie <- flexmix::FLXMRglm(family = "poisson")
+    # flexmix::FLXMRglm() builds its model matrix with model.matrix(), which
+    # strips offset() terms, so an offset written into the formula is silently
+    # dropped and the component fits carry no exposure. Pass the interval
+    # exposure through the FLXMRglm() offset argument instead.
+    off <- df$samp_offset
+    if (!is.null(df$log_interevent)) off <- off + df$log_interevent
+    vaste_klant <- sub(" + offset(log_interevent + samp_offset)", "",
+                       vaste_klant, fixed = TRUE)
+    familie <- flexmix::FLXMRglm(family = "poisson", offset = off)
     respons <- "obs"
   }
 
@@ -89,6 +97,15 @@
   kansen   <- kansen[volgorde]
   colnames(coef_mat) <- paste0("Component.", seq_len(k))
 
+  # Information criteria on the REM scale: the Poisson loglik carries the
+  # offset constant (see .remstimate_offset_const()), and flexmix's nobs is the
+  # number of stacked rows rather than the number of events.
+  npar       <- k * nrow(coef_mat) + (k - 1L)
+  M          <- length(unique(df$time_index))
+  loglik_rem <- as.numeric(flexmix::logLik(fit)) -
+                  .remstimate_offset_const(df, ordinal)
+  bic_rem    <- -2 * loglik_rem + npar * log(M)
+
   # drop ordinal time-stratum dummies - report substantive statistics only
   keep     <- intersect(stat_names, rownames(coef_mat))
   coef_mat <- coef_mat[keep, , drop = FALSE]
@@ -96,7 +113,7 @@
   .remstimate_wrap(
     coefficients = coef_mat,
     stat_names   = stat_names,
-    loglik       = flexmix::logLik(fit),
+    loglik       = loglik_rem,
     formula      = fml,
     stacked_data = df,
     backend_fit  = fit,
@@ -104,7 +121,7 @@
     method       = "MIXREM",
     engine       = "flexmix",
     ordinal      = ordinal,
-    extra        = list(k = k, prior_probs = kansen, bic = stats::BIC(fit))
+    extra        = list(k = k, prior_probs = kansen, bic = bic_rem, npar = npar)
   )
 }
 
@@ -141,8 +158,40 @@ print.remstimate_mixrem <- function(x, ...) {
   cat("REM -", attr(x, "model"), "model - MIXREM [flexmix, k =", x$k, "]\n\n")
   cat("Mixing proportions:\n"); print(round(x$prior_probs, 4))
   cat("\nCoefficients per component:\n"); print(round(x$coefficients, 4))
+  gt <- .mixrem_group_classes(x)
+  if (!is.null(gt)) {
+    cat("\n", gt$label, " per component:\n", sep = "")
+    print(table(factor(gt$class, levels = seq_len(x$k),
+                       labels = paste0("Component.", seq_len(x$k)))))
+    cat(sprintf("Classification: %.0f%% assigned with posterior > 0.9\n",
+                100 * mean(gt$maxpost > 0.9)))
+  }
   cat("\nlogLik:", round(as.numeric(x$loglik), 4), " BIC:", round(x$bic, 2), "\n")
   invisible(x)
+}
+
+# Hard class and classification certainty per grouping unit (dyad for a DLC-REM).
+# flexmix::clusters() returns the ORIGINAL component indices, while the reported
+# coefficients were relabelled Component.1..k by decreasing mixing weight in
+# .mixrem_fit_one(); 'volgorde' undoes that so the two agree.
+.mixrem_group_classes <- function(x) {
+  if (!requireNamespace("flexmix", quietly = TRUE)) return(NULL)
+  fit <- x$backend_fit; df <- x$stacked_data
+  if (is.null(fit) || is.null(df)) return(NULL)
+  groep <- tryCatch(flexmix::group(fit), error = function(e) NULL)
+  if (is.null(groep) || !length(groep)) groep <- df$dyad
+  if (is.null(groep)) return(NULL)
+
+  volgorde <- order(flexmix::prior(fit), decreasing = TRUE)
+  cl   <- match(flexmix::clusters(fit), volgorde)
+  post <- tryCatch(flexmix::posterior(fit), error = function(e) NULL)
+  mx   <- if (is.null(post)) rep(NA_real_, length(cl)) else apply(post, 1L, max)
+
+  eerste <- !duplicated(groep)
+  list(id      = groep[eerste],
+       class   = cl[eerste],
+       maxpost = mx[eerste],
+       label   = if (identical(groep, df$dyad)) "Dyads" else "Groups")
 }
 
 #' @export
@@ -285,10 +334,103 @@ print.diagnostics_mixrem <- function(x, ...) {
   invisible(x)
 }
 
-# MIXREM has no dedicated plot method: diagnostics() returns a
-# c("diagnostics_mixrem","diagnostics","remstimate") object, so plot() on a
-# remstimate_mixrem fit falls through to plot.remstimate, which computes
-# diagnostics() and delegates to plot.diagnostics. Recall is which = 3,
-# probability ratio which = 6, per-type recall which = 8 and per-component
-# recall which = 9. A plot.remstimate_mixrem here would be shadowed by load
-# order and silently diverge.
+# plot.remstimate_mixrem below handles the latent-class matrix (which = 13) and
+# forwards everything else to plot.remstimate, which computes diagnostics() and
+# delegates to plot.diagnostics: recall is which = 3, probability ratio which =
+# 6, per-type recall which = 8 and per-component recall which = 9. Keep this the
+# only definition for the class - a second one in plot.R would be shadowed by
+# collation order and silently diverge.
+
+# ---------------------------------------------------------------------------
+# Latent-class adjacency matrix (base graphics)
+# ---------------------------------------------------------------------------
+
+#' @export
+#' @method plot remstimate_mixrem
+plot.remstimate_mixrem <- function(x, reh = NULL, diagnostics = NULL, which,
+                                   effects = NULL, max_actors = 60L,
+                                   order_actors = TRUE, ...) {
+  if (missing(which)) which <- if (is.null(reh)) 13L else c(1:3, 9L, 13L)
+
+  # 13: the class matrix. The stacked design is built with add_actors = TRUE, so
+  # the actor pairs come from the fit itself - no 'reh', no diagnostics object.
+  if (13L %in% which) {
+    .plot_dyad_classes(x, max_actors = max_actors, order_actors = order_actors)
+    which <- setdiff(which, 13L)
+    if (!length(which)) return(invisible(x))
+  }
+  x_basis <- x; class(x_basis) <- "remstimate"
+  plot.remstimate(x_basis, reh, diagnostics = diagnostics, which = which,
+                  effects = effects, ...)
+  invisible(x)
+}
+
+# Adjacency matrix of the risk set, coloured by the latent class of each dyad.
+# Actors are seriated by hierarchical clustering on their class profiles, which
+# is what makes the block structure legible; without it the matrix is noise.
+.plot_dyad_classes <- function(x, max_actors = 60L, order_actors = TRUE) {
+  gt <- .mixrem_group_classes(x)
+  df <- x$stacked_data
+  if (is.null(gt) || is.null(df))
+    stop("no class assignments available in this fit.", call. = FALSE)
+  if (!all(c("actor1", "actor2", "dyad") %in% names(df)))
+    stop("the stacked design carries no actor columns.", call. = FALSE)
+
+  # one row per dyad: the actor pair and the total number of events on it
+  eerste <- !duplicated(df$dyad)
+  idx <- match(gt$id, df$dyad[eerste])
+  a1  <- as.character(df$actor1[eerste])[idx]
+  a2  <- as.character(df$actor2[eerste])[idx]
+  klas <- gt$class
+  act <- if (!is.null(df$obs))
+    as.numeric(tapply(df$obs, df$dyad, sum)[as.character(gt$id)]) else rep(1, length(idx))
+  act[is.na(act)] <- 0
+
+  drukte <- tapply(c(act, act), c(a1, a2), sum)
+  houden <- names(sort(drukte, decreasing = TRUE))
+  bijgesneden <- length(houden) > max_actors
+  if (bijgesneden) houden <- houden[seq_len(max_actors)]
+
+  in_set <- a1 %in% houden & a2 %in% houden
+  A <- matrix(NA_integer_, length(houden), length(houden),
+              dimnames = list(houden, houden))
+  A[cbind(match(a1[in_set], houden), match(a2[in_set], houden))] <- klas[in_set]
+
+  if (isTRUE(order_actors) && length(houden) > 2L) {
+    prof <- A; prof[is.na(prof)] <- 0
+    ord  <- tryCatch(stats::hclust(stats::dist(cbind(prof, t(prof))))$order,
+                     error = function(e) seq_len(nrow(A)))
+    A <- A[ord, ord, drop = FALSE]
+  }
+
+  k <- x$k
+  kleuren <- grDevices::hcl.colors(max(k, 2L), palette = "Dark 3")[seq_len(k)]
+  op <- graphics::par(mar = c(4, 4, 3, 6), no.readonly = TRUE)
+  on.exit(graphics::par(op), add = TRUE)
+
+  n <- nrow(A)
+  graphics::plot(NA, xlim = c(0.5, n + 0.5), ylim = c(0.5, n + 0.5),
+                 xaxs = "i", yaxs = "i", axes = FALSE,
+                 xlab = "receiver", ylab = "sender",
+                 main = sprintf("Dyadic latent classes (k = %d)", k),
+                 sub = if (bijgesneden)
+                   sprintf("%d most active actors of %d", n, length(drukte)) else "")
+  graphics::rect(0.5, 0.5, n + 0.5, n + 0.5, col = "grey92", border = NA)
+  graphics::image(seq_len(n), seq_len(n),
+                  t(A)[, rev(seq_len(n)), drop = FALSE],
+                  col = kleuren, zlim = c(0.5, k + 0.5), add = TRUE)
+  if (n <= 40L) {
+    graphics::axis(1, at = seq_len(n), labels = colnames(A), las = 2,
+                   cex.axis = 0.6, tick = FALSE)
+    graphics::axis(2, at = seq_len(n), labels = rev(rownames(A)), las = 1,
+                   cex.axis = 0.6, tick = FALSE)
+  }
+  graphics::box()
+  # placed in user coordinates just past the right edge of the matrix: an
+  # 'inset' fraction is relative to the plot region, so it lands on the panel
+  # whenever the matrix is small.
+  graphics::legend(x = n + 0.75, y = n + 0.5, xpd = NA, bty = "n",
+                   fill = kleuren, cex = 0.8, y.intersp = 1.1,
+                   legend = paste0("Comp.", seq_len(k)))
+  invisible(NULL)
+}

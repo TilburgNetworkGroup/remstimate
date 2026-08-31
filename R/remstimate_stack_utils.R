@@ -167,6 +167,18 @@
   )
 }
 
+# Poisson (interval) stacked fits maximise the REM log-likelihood PLUS the
+# constant sum(log dt) taken over the observed events, which enters through the
+# log_interevent offset. Conditional-logit fits (ordinal timing, receiver
+# choice) carry no such term. Subtract this from a stacked glm / glmm / flexmix
+# logLik to put it back on the REM scale, so that log-likelihoods and
+# information criteria are comparable with remstimate()'s own.
+# See also .remstimate_glm() in remstimate_durem.R, which applies it inline.
+.remstimate_offset_const <- function(df, ordinal = FALSE) {
+  if (isTRUE(ordinal) || is.null(df) || is.null(df$log_interevent)) return(0)
+  sum(df$log_interevent[df$obs == 1L])
+}
+
 .remstimate_find_baseline <- function(stat_names) {
   idx <- which(tolower(stat_names) == "baseline")
   if (length(idx)) idx[[1L]] else NULL
@@ -209,6 +221,45 @@
   default <- .intercept_like_stats(data, stat_names)
   final   <- setdiff(union(default, unpenalized), penalized)
   intersect(final, stat_names)
+}
+
+# Column scales for the penalised backends. A shrinkage prior is not invariant
+# to the scale of the statistics: a statistic on a large scale carries a small
+# coefficient and is therefore shrunk relatively harder. GLMNET standardises its
+# design internally (standardize = TRUE) and returns coefficients on the original
+# scale, but SHRINKEM regularises a (coef, vcov) pair and never sees the design,
+# so the scales have to be supplied to it explicitly.
+#
+# The scale of a statistic is its SD over the rows where the statistic is
+# STRUCTURALLY applicable, not over every row of the stack. In a duration design
+# a '.start' statistic is zero on every end row by construction, and pooling
+# those zeros into the SD would shrink its scale and over-penalise it. Structural
+# support is therefore read from the 'process' column - never from which values
+# happen to be zero, since an incidental zero (inertia early in the sequence) is
+# real data and belongs in the SD.
+#
+# Returns a named vector of positive scales, 1 for a column without variation on
+# its support (the all-ones baseline), so that such columns pass through
+# unchanged.
+.penalty_scales <- function(data, stat_names, process = NULL) {
+  out <- stats::setNames(rep(1, length(stat_names)), stat_names)
+  present <- intersect(stat_names, colnames(data))
+  if (!length(present)) return(out)
+  getcol <- if (is.data.frame(data)) function(nm) data[[nm]] else function(nm) data[, nm]
+
+  for (nm in present) {
+    x <- getcol(nm)
+    if (!is.null(process) && length(process) == length(x)) {
+      proc <- if (grepl("\\.start$", nm)) "start"
+              else if (grepl("\\.end$", nm)) "end" else NULL
+      if (!is.null(proc)) x <- x[process == proc]
+    }
+    x <- x[is.finite(x)]
+    if (length(x) < 2L) next
+    s <- stats::sd(x)
+    if (is.finite(s) && s > 0) out[[nm]] <- s
+  }
+  out
 }
 
 # Warn (once, at the backend entry) about names passed to penalty's 'unpenalized'

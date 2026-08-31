@@ -290,6 +290,15 @@ frailty_rem <- function(reh, stats, ...) {
 #' @param nfolds Cross-validation folds (frequentist). Default \code{10}.
 #' @param lambda_select Which lambda (frequentist): \code{"1se"} (default) or
 #'   \code{"min"}.
+#' @param unpenalized,penalized Character vectors of statistic names that
+#'   respectively \emph{add to} and \emph{remove from} the automatically
+#'   detected unpenalised set (the intercept / baseline structure). See
+#'   \code{\link{remstimate}} for the default rule.
+#' @param group Penalty grouping for the Bayesian fit: a vector named by
+#'   statistic, so that \pkg{shrinkem} estimates a separate shrinkage parameter
+#'   per group. Defaults to the start / end partition when \code{reh} is a
+#'   duration model carrying both processes, and to no grouping otherwise.
+#'   Ignored by the frequentist route, which has no per-group penalty parameter.
 #' @param ... Additional arguments passed to \code{\link{remstimate}}.
 #'
 #' @return A \code{remstimate_glmnet} (frequentist) or
@@ -328,14 +337,35 @@ frailty_rem <- function(reh, stats, ...) {
 #' @export
 rempenalty <- function(reh, stats, approach = c("frequentist", "Bayesian"),
                        alpha = 1, prior = "horseshoe",
-                       nfolds = 10L, lambda_select = c("1se", "min"), ...) {
+                       nfolds = 10L, lambda_select = c("1se", "min"),
+                       unpenalized = NULL, penalized = NULL, group = NULL, ...) {
   approach      <- match.arg(approach)
   lambda_select <- match.arg(lambda_select)
 
+  # Default grouping: one shrinkage parameter per duration process. The start and
+  # end blocks are informed by different numbers of rows, so a single global
+  # shrinkage level for both is arbitrary. Only for the Bayesian route, where
+  # lambda2 is estimated per group; glmnet has no equivalent.
+  if (is.null(group) && approach == "Bayesian" && inherits(reh, "remify_durem")) {
+    proc <- stats$stacked$remstats_stack$process
+    sn_s <- stats$stacked$stat_names_start
+    sn_e <- stats$stacked$stat_names_end
+    if (!is.null(proc) && length(unique(proc)) > 1L && length(sn_s) && length(sn_e))
+      group <- stats::setNames(
+        c(rep("start", length(sn_s)), rep("end", length(sn_e))), c(sn_s, sn_e))
+  }
+
   penalty <- if (approach == "Bayesian")
-    list(prior = prior)
+    list(prior = prior, group = group)
   else
     list(alpha = alpha, nfolds = nfolds, lambda_select = lambda_select)
+
+  # Additive controls on the auto-detected unpenalised set (.resolve_unpenalized
+  # already exempts the intercept structure, including baseline.start /
+  # baseline.end); these belong in 'penalty' rather than in the deprecated
+  # top-level route.
+  penalty$unpenalized <- unpenalized
+  penalty$penalized   <- penalized
 
   remstimate(reh, stats, approach = approach, penalty = penalty, ...)
 }

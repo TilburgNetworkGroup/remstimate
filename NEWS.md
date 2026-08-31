@@ -1,3 +1,21 @@
+# remstimate 3.1.0.9000
+
+* `dlcrem()` / `remixture()`: the interval (Poisson) mixture fits were losing
+  their exposure. `flexmix::FLXMRglm()` builds its model matrix with
+  `model.matrix()`, which strips `offset()` terms, so the
+  `offset(log_interevent + samp_offset)` written into the formula was silently
+  dropped and the components were fit without interevent times. The exposure is
+  now passed through the `offset` argument of `FLXMRglm()`.
+* `dlcrem()` / `remixture()`: BIC is now reported on the REM scale, i.e.
+  `-2 * loglik + npar * log(M)` with `M` the number of events, instead of
+  `stats::BIC()` on the stacked Poisson fit (which included the offset constant
+  and used the number of stacked rows as `n`). At `k = 1` the BIC now equals the
+  one from the corresponding `remstimate()` fit. `logLik()` on a mixture fit is
+  rescaled to match, and `npar` is reported alongside `bic`.
+* GLMM backend: `logLik()` on a `"GLMM"` fit with interval timing is likewise
+  corrected for the offset constant, so it is comparable with `remstimate()`.
+  Conditional-logit fits (ordinal timing, receiver choice) are unaffected.
+
 # remstimate 3.1.0
 
 * Durem functionality.
